@@ -28,8 +28,21 @@ some pictures of cats.
 #include "cgiwebsocket.h"
 #include "cgi-test.h"
 
+#include "serbridge.h"
+#include "uart.h"
+#include "config.h"
+
+#define PROPLOADER
+
+#ifdef PROPLOADER
+#include "cgiprop.h"
+#include "httpdroffs.h"
+#include "discovery.h"
+#include "sscp.h"
+#endif
+
 //The example can print out the heap use every 3 seconds. You can use this to catch memory leaks.
-//#define SHOW_HEAP_USE
+#define SHOW_HEAP_USE
 
 //Function that tells the authentication system what users/passwords live on the system.
 //This is disabled in the default build; if you want to try it, enable the authBasic line in
@@ -150,6 +163,17 @@ HttpdBuiltInUrl builtInUrls[]={
 	{"/test/", cgiRedirect, "/test/index.html"},
 	{"/test/test.cgi", cgiTestbed, NULL},
 
+#ifdef PROPLOADER
+    { "/flash/format", cgiRoffsFormat, NULL },
+    { "/flash/write-file", cgiRoffsWriteFile, NULL },
+    { "/propeller/set-baud-rate", cgiPropSetBaudRate, NULL },
+    { "/propeller/load", cgiPropLoad, NULL },
+    { "/propeller/load-file", cgiPropLoadFile, NULL },
+    { "/propeller/reset", cgiPropReset, NULL },
+    { "/files/*", cgiRoffsHook, NULL }, //Catch-all cgi function for the flash filesystem
+    { "*", cgiSSCPHandleRequest, NULL }, //Check to see if MCU can handle the request
+#endif
+
 	{"*", cgiEspFsHook, NULL}, //Catch-all cgi function for the filesystem
 	{NULL, NULL, NULL}
 };
@@ -165,9 +189,22 @@ static void ICACHE_FLASH_ATTR prHeapTimerCb(void *arg) {
 
 //Main routine. Initialize stdout, the I/O, filesystem and the webserver and we're done.
 void user_init(void) {
-	stdoutInit();
+	//stdoutInit();
 	ioInit();
 	captdnsInit();
+
+    // init UART
+    uart_init(flashConfig.baud_rate, 115200);
+
+    // init the wifi-serial transparent bridge (port 23)
+    serbridgeInit(23);
+    uart_add_recv_cb(&serbridgeUartCb);
+
+#ifdef PROPLOADER
+    initDiscovery();
+    cgiPropInit();
+    sscp_init();
+#endif
 
 	// 0x40200000 is the base address for spi flash memory mapping, ESPFS_POS is the position
 	// where image is written in flash that is defined in Makefile.

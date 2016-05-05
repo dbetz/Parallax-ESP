@@ -4,15 +4,15 @@
 # 'ota' - Combined firmware blob with OTA upgrades.
 #Please do a 'make clean' after changing this.
 #OUTPUT_TYPE=separate
-#OUTPUT_TYPE=combined
-OUTPUT_TYPE=ota
+OUTPUT_TYPE=combined
+#OUTPUT_TYPE=ota
 
 #SPI flash size, in K
-ESP_SPI_FLASH_SIZE_K=1024
+ESP_SPI_FLASH_SIZE_K=4096
 #0: QIO, 1: QOUT, 2: DIO, 3: DOUT
 ESP_FLASH_MODE=0
 #0: 40MHz, 1: 26MHz, 2: 20MHz, 0xf: 80MHz
-ESP_FLASH_FREQ_DIV=0
+ESP_FLASH_FREQ_DIV=0xf
 
 
 ifeq ("$(OUTPUT_TYPE)","separate")
@@ -31,7 +31,8 @@ FW_BASE		= firmware
 XTENSA_TOOLS_ROOT ?= 
 
 # base directory of the ESP8266 SDK package, absolute
-SDK_BASE	?= /opt/Espressif/ESP8266_SDK
+#SDK_BASE	?= /opt/Espressif/ESP8266_SDK
+SDK_BASE	?= $(abspath ../esp_iot_sdk_v1.5.2)
 
 # Opensdk patches stdint.h when compiled with an internal SDK. If you run into compile problems pertaining to
 # redefinition of int types, try setting this to 'yes'.
@@ -51,7 +52,7 @@ APPGEN		?= $(SDK_BASE)/tools/gen_appbin.py
 TARGET		= httpd
 
 # which modules (subdirectories) of the project to include in compiling
-MODULES		= user
+MODULES		= user proploader esp-link-stuff
 EXTRA_INCDIR	= include libesphttpd/include
 
 # libraries used in this project, mainly provided by the SDK
