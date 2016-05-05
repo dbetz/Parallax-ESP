@@ -303,11 +303,47 @@ static void do_reply(int argc, char *argv[])
 // WSLISTEN,chan,path
 static void do_wslisten(int argc, char *argv[])
 {
+    WSHandler *h;
+    int chan;
+
+    if ((chan = atoi(argv[1])) < 0 || chan >= SSCP_WS_MAX) {
+        sendResponse("ERROR");
+        return;
+    }
+
+    h = &wsHandlers[chan];
+    
+    os_printf("Listening on %d for '%s'\n", chan, argv[2]);
+    os_strcpy(h->path, argv[2]);
+    h->flags |= HTTP_LISTEN;
+    
+    sendResponse("OK");
 }
 
 // WSREAD,chan
 static void do_wsread(int argc, char *argv[])
 {
+    WSHandler *h;
+    int chan;
+
+    if ((chan = atoi(argv[1])) < 0 || chan >= SSCP_WS_MAX) {
+        sendResponse("ERROR");
+        return;
+    }
+
+    h = &wsHandlers[chan];
+
+    if (!(h->flags & WS_LISTEN)) {
+        sendResponse("ERROR");
+        return;
+    }
+
+    if (!(h->flags & WS_FULL)) {
+        sendResponse("EMPTY");
+        return;
+    }
+
+    sendResponse("OK");
 }
 
 // WSWRITE,chan,payload
