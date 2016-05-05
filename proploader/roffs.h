@@ -8,15 +8,8 @@
 /* must match definitions in roffsformat.h */
 #define ROFFS_FLAG_GZIP (1<<1)
 
-#ifdef SPIFFS
-#include "spiffs.h"
-typedef struct {
-    spiffs_file fd;
-} ROFFS_FILE;
-#else
 #include "roffsformat.h"
 typedef struct ROFFS_FILE_STRUCT ROFFS_FILE;
-#endif
 
 int roffs_mount(uint32_t flashAddress);
 int roffs_format(uint32_t flashAddress);

@@ -8,8 +8,6 @@
 // This was done to simplify the code and it causes no problems with the way the
 // code is used by httpdroffs.c.
 
-#ifndef SPIFFS
-
 #include "roffsformat.h"
 
 // open file structure
@@ -454,6 +452,3 @@ os_printf("updateFlash: failed\n");
     }
     return SPI_FLASH_RESULT_OK;
 }
-
-#endif
-

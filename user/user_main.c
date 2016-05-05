@@ -44,6 +44,9 @@ some pictures of cats.
 //The example can print out the heap use every 3 seconds. You can use this to catch memory leaks.
 #define SHOW_HEAP_USE
 
+//Test WebSockets broadcast messages
+//#define TEST_BROADCAST
+
 //Function that tells the authentication system what users/passwords live on the system.
 //This is disabled in the default build; if you want to try it, enable the authBasic line in
 //the builtInUrls below.
@@ -61,6 +64,8 @@ int myPassFn(HttpdConnData *connData, int no, char *user, int userLen, char *pas
 	return 0;
 }
 
+#ifdef TEST_BROADCAST
+
 static ETSTimer websockTimer;
 
 //Broadcast the uptime in seconds every second over connected websockets
@@ -71,6 +76,8 @@ static void ICACHE_FLASH_ATTR websockTimerCb(void *arg) {
 	os_sprintf(buff, "Up for %d minutes %d seconds!\n", ctr/60, ctr%60);
 	cgiWebsockBroadcast("/websocket/ws.cgi", buff, os_strlen(buff), WEBSOCK_FLAG_NONE);
 }
+
+#endif
 
 //On reception of a message, send "You sent: " plus whatever the other side sent
 void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
@@ -171,6 +178,7 @@ HttpdBuiltInUrl builtInUrls[]={
     { "/propeller/load-file", cgiPropLoadFile, NULL },
     { "/propeller/reset", cgiPropReset, NULL },
     { "/files/*", cgiRoffsHook, NULL }, //Catch-all cgi function for the flash filesystem
+	{ "/ws/*", cgiWebsocket, sscp_websocketConnect},
     { "*", cgiSSCPHandleRequest, NULL }, //Check to see if MCU can handle the request
 #endif
 
@@ -219,9 +227,11 @@ void user_init(void) {
 	os_timer_setfn(&prHeapTimer, prHeapTimerCb, NULL);
 	os_timer_arm(&prHeapTimer, 3000, 1);
 #endif
+#ifdef TEST_BROADCAST
 	os_timer_disarm(&websockTimer);
 	os_timer_setfn(&websockTimer, websockTimerCb, NULL);
 	os_timer_arm(&websockTimer, 1000, 1);
+#endif
 	os_printf("\nReady\n");
 }
 
