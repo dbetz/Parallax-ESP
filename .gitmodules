@@ -1,3 +1,3 @@
 [submodule "libesphttpd"]
 	path = libesphttpd
-	url = https://github.com/dbetz/libesphttpd.git/
+	url = https://github.com/dbetz/libesphttpd.git
