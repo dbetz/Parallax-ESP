@@ -18,9 +18,9 @@ build:
 	$(MAKE) -C .. STA_SSID= STA_PASS=
 
 staged-files:	release $(IMAGES)
-	cp flash.sh release
+	$(CP) flash.sh release
 
-release/0x00000.bin:	patch ../firmware/0x00000.bin
+release/0x00000.bin:	../firmware/0x00000.bin patch
 	./patch $< $@
 
 release/0x40000.bin:	../firmware/0x40000.bin
