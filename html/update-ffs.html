@@ -5,15 +5,15 @@
 
     <div class="content">
       <form action='#' onsubmit="return false;">
-        <h1>Select a File to Load</h1>
+        <h2>Select a File to Load</h2>
         <p>
           <input type='file' id='file-input' onchange='on_loadFile();'>
         </p>
-        <h1>Empty the Filesystem</h1>
+        <h2>Empty the Filesystem</h2>
         <p>
           <input type='button' id='filesystem-empty' value='Empty' onclick='on_emptyFilesystem();'>
         </p>
-        <h1>Progress</h1>
+        <h2>Progress</h2>
         <p>
           <progress id='progress' min="0" max="100" value="0">0% complete</progress>
           <p id='message'>&nbsp;</p>
