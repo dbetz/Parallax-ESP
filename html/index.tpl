@@ -18,7 +18,7 @@ can <a href="flash/index.html">upgrade the firmware</a> of this module.</li>
 <li><a href="update-ffs.html">Update</a> the read-only flash filesystem.</li>
 </ul>
 </p>
-<p>The <a href="http://parallax.com">Parallax</a> ActivityBot:<br />
+<p>The <a href="https://www.parallax.com">Parallax</a> ActivityBot:<br />
 <a href="https://www.parallax.com/product/32500"><img src="images/activitybot.png"></a><br />
 </p>
 <p>And, of course, cats:<br />
