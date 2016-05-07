@@ -1,4 +1,3 @@
-#include <stdarg.h>
 #include "esp8266.h"
 #include "sscp.h"
 #include "httpd.h"
@@ -33,12 +32,12 @@ typedef struct {
 static Handler handlers[SSCP_HTTP_MAX];
 
 #define WS_LISTEN   0x0001
-#define WS_FULL     0x0002
+#define WS_RXFULL   0x0002
 
 typedef struct {
     int flags;
     char path[SSCP_PATH_MAX];
-    char buffer[SSCP_WS_BUFFER_MAX];
+    char rxBuffer[SSCP_WS_BUFFER_MAX];
     Websock *ws;
 } WSHandler;
 
@@ -80,7 +79,7 @@ int ICACHE_FLASH_ATTR cgiSSCPHandleRequest(HttpdConnData *connData)
 
         // only check channels to which the MCU is listening
         if (h->flags & HTTP_LISTEN) {
-os_printf("sscp: matching '%s' with '%s'\n", h->path, connData->url);
+os_printf("http: matching '%s' with '%s'\n", h->path, connData->url);
 
             // check for a literal match
             if (os_strcmp(h->path, connData->url) == 0) {
@@ -127,12 +126,17 @@ static void do_listen(int argc, char *argv[])
     Handler *h;
     int chan;
     
-    if (argc != 3 || os_strlen(argv[2]) >= SSCP_PATH_MAX) {
+    if (argc != 3) {
         sendResponse("ERROR");
         return;
     }
 
     if ((chan = atoi(argv[1])) < 0 || chan >= SSCP_HTTP_MAX) {
+        sendResponse("ERROR");
+        return;
+    }
+
+    if (os_strlen(argv[2]) >= SSCP_PATH_MAX) {
         sendResponse("ERROR");
         return;
     }
@@ -306,7 +310,17 @@ static void do_wslisten(int argc, char *argv[])
     WSHandler *h;
     int chan;
 
+    if (argc != 3) {
+        sendResponse("ERROR");
+        return;
+    }
+
     if ((chan = atoi(argv[1])) < 0 || chan >= SSCP_WS_MAX) {
+        sendResponse("ERROR");
+        return;
+    }
+
+    if (os_strlen(argv[2]) >= SSCP_PATH_MAX) {
         sendResponse("ERROR");
         return;
     }
@@ -326,6 +340,11 @@ static void do_wsread(int argc, char *argv[])
     WSHandler *h;
     int chan;
 
+    if (argc != 2) {
+        sendResponse("ERROR");
+        return;
+    }
+
     if ((chan = atoi(argv[1])) < 0 || chan >= SSCP_WS_MAX) {
         sendResponse("ERROR");
         return;
@@ -338,12 +357,13 @@ static void do_wsread(int argc, char *argv[])
         return;
     }
 
-    if (!(h->flags & WS_FULL)) {
+    if (!(h->flags & WS_RXFULL)) {
         sendResponse("EMPTY");
         return;
     }
 
-    sendResponse("OK");
+    sendResponse(h->rxBuffer);
+    h->flags &= ~WS_RXFULL;
 }
 
 // WSWRITE,chan,payload
@@ -351,6 +371,11 @@ static void do_wswrite(int argc, char *argv[])
 {
     WSHandler *h;
     int chan;
+
+    if (argc != 3) {
+        sendResponse("ERROR");
+        return;
+    }
 
     if ((chan = atoi(argv[1])) < 0 || chan >= SSCP_WS_MAX) {
         sendResponse("ERROR");
@@ -365,29 +390,67 @@ static void do_wswrite(int argc, char *argv[])
         return;
     }
     
-    if (argc != 3) {
-        sendResponse("ERROR");
-        return;
-    }
-
+    char sendBuff[1024];
+    httpdSetSendBuffer(h->ws->conn, sendBuff, sizeof(sendBuff));
     cgiWebsocketSend(h->ws, argv[2], os_strlen(argv[2]), WEBSOCK_FLAG_NONE);
 }
 
-static void websocketRecv(Websock *ws, char *data, int len, int flags)
+static void websocketRecvCb(Websock *ws, char *data, int len, int flags)
 {
-	int i;
-	char buff[128];
-	os_sprintf(buff, "You sent SSCP: ");
-	for (i=0; i<len; i++) buff[i+10]=data[i];
-	buff[i+10]=0;
-	cgiWebsocketSend(ws, buff, os_strlen(buff), WEBSOCK_FLAG_NONE);
+	WSHandler *h = (WSHandler *)ws->userData;
+    if (!(h->flags & WS_RXFULL)) {
+        if (len > SSCP_WS_BUFFER_MAX)
+            len = SSCP_WS_BUFFER_MAX;
+        strncpy(h->rxBuffer, data, len);
+        h->rxBuffer[SSCP_WS_BUFFER_MAX - 1] = '\0';
+        h->flags |= WS_RXFULL;
+    }
+}
+
+static void websocketSentCb(Websock *ws)
+{
+}
+
+static void websocketCloseCb(Websock *ws)
+{
+    WSHandler *h = (WSHandler *)ws->userData;
+    h->ws = NULL;
 }
 
 void sscp_websocketConnect(Websock *ws)
 {
-	ws->recvCb = websocketRecv;
+    char *path = ws->conn->url + strlen("/ws/");
+    int match = 0;
+    WSHandler *h;
+    int chan;
+    
+    // find a matching handler
+    for (chan = 0, h = wsHandlers; chan < SSCP_WS_MAX; ++chan, ++h) {
+
+        // only check channels to which the MCU is listening
+        if (h->flags & WS_LISTEN) {
+os_printf("ws: matching '%s' with '%s'\n", h->path, path);
+
+            // check for a literal match
+            if (os_strcmp(h->path, path) == 0) {
+                match = 1;
+                break;
+            }
+        }
+    }
+
+	if (!match || h->ws != NULL) {
+        cgiWebsocketClose(ws, 0);
+        return;
+    }
+
     os_printf("sscp_websocketConnect: url '%s'\n", ws->conn->url);
-	cgiWebsocketSend(ws, "Hi, SSCP Websocket!", 14, WEBSOCK_FLAG_NONE);
+    ws->recvCb = websocketRecvCb;
+    ws->sentCb = websocketSentCb;
+    ws->closeCb = websocketCloseCb;
+
+    h->ws = ws;
+    ws->userData = h;
 }
 
 static struct {

@@ -3,10 +3,13 @@
 */
 #include "simpletools.h"
 #include "abdrive.h"
+#include "ping.h"
 
 // uncomment these if the wifi module is on pins other than 31/30
 //#define WIFI_RX     12
 //#define WIFI_TX     11
+
+#define PING_PIN    13
 
 #define DEBUG
 
@@ -37,7 +40,7 @@ int main(void)
     
     init_robot();
 
-    request("LISTEN,0,/robot");
+    request("LISTEN,0,/robot*");
     waitFor("$=OK\r");
     
     for (;;) {
@@ -49,14 +52,21 @@ int main(void)
         collectUntil('\r', url, sizeof(url));
         if (verb[0]) {
             dprint(debug, "VERB '%s', URL '%s'\n", verb, url);
-            request("POSTARG,0,gto");
-            waitFor("$=");
-            collectUntil('\r', arg, sizeof(arg));
-            dprint(debug, "gto='%s'\n", arg);
-            if (process_robot_command(arg[0]) != 0)
-              dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
-            request("REPLY,0,200,OK");
-            waitFor("$=OK\r");
+            if (os_strcmp(verb, "/robot") == 0) {
+                request("POSTARG,0,gto");
+                waitFor("$=");
+                collectUntil('\r', arg, sizeof(arg));
+                dprint(debug, "gto='%s'\n", arg);
+                if (process_robot_command(arg[0]) != 0)
+                  dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
+                request("REPLY,0,200,OK");
+                waitFor("$=OK\r");
+            }
+            else if (strcmp(verb, "/robot-ping") == 0) {
+                int cmDist = ping_cm(PING_PIN);
+                request("REPLY,0,200,%d", cmDist);
+                waitFor("$=OK\r");
+            }
         }
     }
     
