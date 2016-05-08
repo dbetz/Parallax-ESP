@@ -6,10 +6,10 @@
 #include "ping.h"
 
 // uncomment these if the wifi module is on pins other than 31/30
-//#define WIFI_RX     12
-//#define WIFI_TX     11
+//#define WIFI_RX     9
+//#define WIFI_TX     8
 
-#define PING_PIN    13
+#define PING_PIN    10
 
 #define DEBUG
 
@@ -52,7 +52,7 @@ int main(void)
         collectUntil('\r', url, sizeof(url));
         if (verb[0]) {
             dprint(debug, "VERB '%s', URL '%s'\n", verb, url);
-            if (os_strcmp(verb, "/robot") == 0) {
+            if (strcmp(verb, "POST") == 0 && strcmp(url, "/robot") == 0) {
                 request("POSTARG,0,gto");
                 waitFor("$=");
                 collectUntil('\r', arg, sizeof(arg));
@@ -62,10 +62,15 @@ int main(void)
                 request("REPLY,0,200,OK");
                 waitFor("$=OK\r");
             }
-            else if (strcmp(verb, "/robot-ping") == 0) {
+            else if (strcmp(verb, "GET") == 0 && strcmp(url, "/robot-ping") == 0) {
                 int cmDist = ping_cm(PING_PIN);
-                request("REPLY,0,200,%d", cmDist);
+                char buf[128];
+                sprintf(buf, "REPLY,0,200,%d", cmDist);
+                request(buf);
                 waitFor("$=OK\r");
+            }
+            else {
+                dprint(debug, "Unknown command\n");
             }
         }
     }
