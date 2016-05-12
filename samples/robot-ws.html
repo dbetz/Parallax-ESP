@@ -1,0 +1,97 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <style>
+      a{
+        background-color:#637aad;
+        border:1px solid navy;
+        display:inline-block;
+        color:white;
+        font-size:18px;
+        margin:20px;
+        width:100px;
+        height:55px;
+        font-family:Arial;
+        cursor:pointer;
+        padding-top:37px
+      }
+      a:hover{background-color:white;color:navy;}
+    </style>
+    <script>
+    
+      var output;
+      var wsURL = "ws://" + window.location.host + "/ws/robot";
+      var ws;
+      
+      function gt(ik)
+      {
+        var req = new XMLHttpRequest();
+        var url = "/robot";
+        var params = "gto="+ik;
+        req.open("POST", url, true);
+        req.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+        req.send(params);
+      }
+      
+      function onOpen(evt)
+      {
+        appendOutput("onOpen");
+      }
+      
+      function onClose(evt)
+      {
+        appendOutput("onClose");
+      }
+      
+      function onMessage(evt)
+      {
+        var ping = document.getElementById("ping");
+        ping.innerHTML = evt.data;
+        appendOutput("onMessage");
+      }
+      
+      function onError(evt)
+      {
+        appendOutput("onError");
+      }
+      
+      function init()
+      {
+        output = document.getElementById("output");
+        ws = new WebSocket(wsURL);
+        ws.onopen = onOpen;
+        ws.onclose = onClose;
+        ws.onmessage = function (evt) { onMessage(evt); };
+        ws.onerror = onError;
+      }
+      
+      function appendOutput(msg)
+      {
+        var p = document.createElement("p");
+        p.style.wordWrap = "break-word";
+        p.innerHTML = msg;
+        output.appendChild(p);
+      }
+      
+      window.addEventListener("load", init, false);
+      
+    </script>
+  </head>
+  <body bgcolor="3b5898">
+    <div align="center">
+      <font face="Arial" size=6 color="white">
+        Hi! I'm WebSockets ActivityBot :)
+      </font><br>
+      <a onclick="gt('F');">Forward</a><br>
+      <a onclick="gt('L');">Left</a><a onclick="gt('S');">Stop</a><a onclick="gt('R');">Right</a><br>
+      <a onclick="gt('B');">Reverse</a>
+      <font face="Arial" size=6 color="white">
+        <p>
+    	  PING))) Distance:<br>
+          <div id="ping">(waiting)</div>
+        </p>
+      </font>
+    </div>
+    <div id="output"></div>
+  </body>
+<html>
