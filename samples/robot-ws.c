@@ -42,10 +42,10 @@ int main(void)
     
     init_robot();
 
-    request("LISTEN,0,/robot*");
+    request("LISTEN,0,/robot");
     waitFor("$=OK\r");
     
-    request("WSLISTEN,0,/ws/robot*");
+    request("WSLISTEN,0,/ws/robot");
     waitFor("$=OK\r");
     
     for (;;) {
@@ -54,7 +54,6 @@ int main(void)
         
         waitcnt(CNT + CLKFREQ/4);
 
-#if 0
         request("POLL,0");
         waitFor("$=");
         collectUntil(',', verb, sizeof(verb));
@@ -76,7 +75,6 @@ int main(void)
                 dprint(debug, "Unknown command\n");
             }
         }
-#endif
         
         if ((pingDistance = ping_cm(PING_PIN)) != lastPingDistance) {
             char buf[20];

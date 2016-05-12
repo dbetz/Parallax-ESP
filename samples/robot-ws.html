@@ -47,7 +47,7 @@
       {
         var ping = document.getElementById("ping");
         ping.innerHTML = evt.data;
-        appendOutput("onMessage");
+        appendOutput("onMessage: " + evt.data);
       }
       
       function onError(evt)
