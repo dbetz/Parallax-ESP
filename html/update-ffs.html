@@ -32,8 +32,10 @@ function on_loadFile() {
         setMessage("Couldn't find the file-input element.");
     else if (!input.files[0])
         setMessage("No files selected.");
-    else
+    else {
         loadFile(input.files[0]);
+        input.value = "";
+    }
 }
 
 function on_emptyFilesystem() {
@@ -48,6 +50,7 @@ function setMessage(msg) {
 function loadFile(file) {
 
   var req = new XMLHttpRequest();
+  setMessage("Loading...");
   req.open('POST', '/flash/write-file?file=' + file.name, true);
   req.onload = function (e) {
     if (this.readyState == 4) {
@@ -70,6 +73,7 @@ function loadFile(file) {
 function emptyFilesystem() {
 
   var req = new XMLHttpRequest();
+  setMessage("Emptying...");
   req.open('POST', '/flash/format?address=0x100000', true);
   req.onload = function (e) {
     if (this.readyState == 4) {

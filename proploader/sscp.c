@@ -393,6 +393,8 @@ static void do_wswrite(int argc, char *argv[])
     char sendBuff[1024];
     httpdSetSendBuffer(h->ws->conn, sendBuff, sizeof(sendBuff));
     cgiWebsocketSend(h->ws, argv[2], os_strlen(argv[2]), WEBSOCK_FLAG_NONE);
+
+    sendResponse("OK");
 }
 
 static void websocketRecvCb(Websock *ws, char *data, int len, int flags)
