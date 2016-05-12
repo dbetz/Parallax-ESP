@@ -42,7 +42,7 @@ some pictures of cats.
 #endif
 
 //The example can print out the heap use every 3 seconds. You can use this to catch memory leaks.
-#define SHOW_HEAP_USE
+//#define SHOW_HEAP_USE
 
 //Test WebSockets broadcast messages
 //#define TEST_BROADCAST

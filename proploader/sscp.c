@@ -419,7 +419,6 @@ static void websocketCloseCb(Websock *ws)
 
 void sscp_websocketConnect(Websock *ws)
 {
-    char *path = ws->conn->url + strlen("/ws/");
     int match = 0;
     WSHandler *h;
     int chan;
@@ -429,10 +428,10 @@ void sscp_websocketConnect(Websock *ws)
 
         // only check channels to which the MCU is listening
         if (h->flags & WS_LISTEN) {
-os_printf("ws: matching '%s' with '%s'\n", h->path, path);
+os_printf("ws: matching '%s' with '%s'\n", h->path, ws->conn->url);
 
             // check for a literal match
-            if (os_strcmp(h->path, path) == 0) {
+            if (os_strcmp(h->path, ws->conn->url) == 0) {
                 match = 1;
                 break;
             }

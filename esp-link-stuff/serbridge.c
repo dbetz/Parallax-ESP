@@ -128,9 +128,8 @@ console_process(char *buf, short len)
 {
   // push the buffer into each open connection
   for (short i=0; i<MAX_CONN; i++) {
-    if (connData[i].conn) {
+    if (connData[i].conn)
       espbuffsend(&connData[i], buf, len);
-    }
   }
 }
 
