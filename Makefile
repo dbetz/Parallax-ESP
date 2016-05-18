@@ -4,16 +4,18 @@
 # 'ota' - Combined firmware blob with OTA upgrades.
 #Please do a 'make clean' after changing this.
 #OUTPUT_TYPE=separate
-OUTPUT_TYPE=combined
-#OUTPUT_TYPE=ota
+#OUTPUT_TYPE=combined
+OUTPUT_TYPE=ota
 
 #SPI flash size, in K
 ESP_SPI_FLASH_SIZE_K=4096
+#Amount of the flash to use for the image(s)
+ESP_SPI_IMAGE_SIZE_K=1024
 #0: QIO, 1: QOUT, 2: DIO, 3: DOUT
 ESP_FLASH_MODE=0
 #0: 40MHz, 1: 26MHz, 2: 20MHz, 0xf: 80MHz
-ESP_FLASH_FREQ_DIV=0xf
-
+#ESP_FLASH_FREQ_DIV=0xf
+ESP_FLASH_FREQ_DIV=15
 
 ifeq ("$(OUTPUT_TYPE)","separate")
 #In case of separate ESPFS and binaries, set the pos and length of the ESPFS here. 
@@ -38,6 +40,8 @@ SDK_BASE	?= $(abspath ../esp_iot_sdk_v1.5.2)
 # redefinition of int types, try setting this to 'yes'.
 USE_OPENSDK?=no
 
+USE_AT?=no
+
 #Esptool.py path and port
 ESPTOOL		?= esptool.py
 ESPPORT		?= /dev/ttyUSB0
@@ -60,10 +64,18 @@ LIBS		= c gcc hal phy pp net80211 wpa main lwip crypto
 #Add in esphttpd lib
 LIBS += esphttpd
 
+ifeq ("$(USE_AT)","yes")
+LIBS += at airkiss wps smartconfig ssl
+endif
+
 # compiler flags using during compilation of source files
 CFLAGS		= -Os -ggdb -std=gnu99 -Werror -Wpointer-arith -Wundef -Wall -Wl,-EL -fno-inline-functions \
 		-nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH \
 		-Wno-address
+
+ifeq ("$(USE_AT)","yes")
+CFLAGS += -DUSE_AT
+endif
 
 # linker flags used to generate the main object file
 LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
@@ -132,7 +144,7 @@ CFLAGS += -DESPFS_POS=$(ESPFS_POS) -DESPFS_SIZE=$(ESPFS_SIZE)
 endif
 
 ifeq ("$(OUTPUT_TYPE)","ota")
-CFLAGS += -DOTA_FLASH_SIZE_K=$(ESP_SPI_FLASH_SIZE_K)
+CFLAGS += -DOTA_FLASH_SIZE_K=$(ESP_SPI_IMAGE_SIZE_K)
 endif
 
 
@@ -159,8 +171,8 @@ INCDIR	:= $(addprefix -I,$(SRC_DIR))
 EXTRA_INCDIR	:= $(addprefix -I,$(EXTRA_INCDIR))
 MODULE_INCDIR	:= $(addsuffix /include,$(INCDIR))
 
-ESP_FLASH_SIZE_IX=$(call maplookup,$(ESP_SPI_FLASH_SIZE_K),512:0 1024:2 2048:5 4096:6)
-ESPTOOL_FREQ=$(call maplookup,$(ESP_FLASH_FREQ_DIV),0:40m 1:26m 2:20m 0xf:80m)
+ESP_FLASH_SIZE_IX=$(call maplookup,$(ESP_SPI_FLASH_SIZE_K),512:0 1024:2 2048:5 4096:4)
+ESPTOOL_FREQ=$(call maplookup,$(ESP_FLASH_FREQ_DIV),0:40m 1:26m 2:20m 0xf:80m 15:80m)
 ESPTOOL_MODE=$(call maplookup,$(ESP_FLASH_MODE),0:qio 1:qout 2:dio 3:dout)
 ESPTOOL_SIZE=$(call maplookup,$(ESP_SPI_FLASH_SIZE_K),512:4m 256:2m 1024:8m 2048:16m 4096:32m)
 

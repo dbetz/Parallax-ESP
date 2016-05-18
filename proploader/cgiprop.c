@@ -5,6 +5,7 @@
 #include "cgiprop.h"
 #include "proploader.h"
 #include "serbridge.h"
+#include "sscp.h"
 #include "uart.h"
 #include "roffs.h"
 
@@ -104,6 +105,40 @@ int ICACHE_FLASH_ATTR cgiPropSetBaudRate(HttpdConnData *connData)
     httpdStartResponse(connData, 200);
     httpdEndHeaders(connData);
     httpdSend(connData, "", 0);
+
+    return HTTPD_CGI_DONE;
+}
+
+int ICACHE_FLASH_ATTR cgiPropEnableSerialProtocol(HttpdConnData *connData)
+{
+    char response[128];
+    int enable;
+    
+    // check for the cleanup call
+    if (connData->conn == NULL)
+        return HTTPD_CGI_DONE;
+
+    // check for GET
+    if (connData->requestType == HTTPD_METHOD_GET)
+        strcpy(response, sscp_isEnabled() ? "1" : "0");
+
+    // only other option is POST
+    else {
+
+        if (!getIntArg(connData, "enable", &enable)) {
+            httpdSendResponse(connData, 400, "No enable specified\r\n", -1);
+            return HTTPD_CGI_DONE;
+        }
+
+        DBG("enable-serial-protocol: enable %d\n", enable);
+
+        sscp_enable(enable);
+        strcpy(response, "");
+    }
+
+    httpdStartResponse(connData, 200);
+    httpdEndHeaders(connData);
+    httpdSend(connData, response, -1);
 
     return HTTPD_CGI_DONE;
 }
@@ -225,6 +260,9 @@ int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
     }
     connData->cgiData = connection;
     connection->connData = connData;
+
+    // turn off SSCP during loading
+    sscp_enable(0);
 
     os_timer_setfn(&connection->timer, timerCallback, connection);
     
@@ -472,6 +510,11 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
 #endif
 }
 
-
-
+#ifdef USE_AT
+void ICACHE_FLASH_ATTR
+uart0_baud(int rate) {
+  os_printf("UART %d baud\n", rate);
+  uart_div_modify(UART0, UART_CLK_FREQ / rate);
+}
+#endif
 

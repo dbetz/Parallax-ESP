@@ -14,6 +14,9 @@ some pictures of cats.
 */
 
 #include <esp8266.h>
+#ifdef USE_AT
+#include <at_custom.h>
+#endif
 #include "httpd.h"
 #include "io.h"
 #include "httpdespfs.h"
@@ -50,7 +53,7 @@ some pictures of cats.
 //Function that tells the authentication system what users/passwords live on the system.
 //This is disabled in the default build; if you want to try it, enable the authBasic line in
 //the builtInUrls below.
-int myPassFn(HttpdConnData *connData, int no, char *user, int userLen, char *pass, int passLen) {
+int ICACHE_FLASH_ATTR myPassFn(HttpdConnData *connData, int no, char *user, int userLen, char *pass, int passLen) {
 	if (no==0) {
 		os_strcpy(user, "admin");
 		os_strcpy(pass, "s3cr3t");
@@ -80,7 +83,7 @@ static void ICACHE_FLASH_ATTR websockTimerCb(void *arg) {
 #endif
 
 //On reception of a message, send "You sent: " plus whatever the other side sent
-void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
+void ICACHE_FLASH_ATTR myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
 	int i;
 	char buff[128];
 	os_sprintf(buff, "You sent: ");
@@ -90,19 +93,19 @@ void myWebsocketRecv(Websock *ws, char *data, int len, int flags) {
 }
 
 //Websocket connected. Install reception handler and send welcome message.
-void myWebsocketConnect(Websock *ws) {
+void ICACHE_FLASH_ATTR myWebsocketConnect(Websock *ws) {
 	ws->recvCb=myWebsocketRecv;
 	cgiWebsocketSend(ws, "Hi, Websocket!", 14, WEBSOCK_FLAG_NONE);
 }
 
 //On reception of a message, echo it back verbatim
-void myEchoWebsocketRecv(Websock *ws, char *data, int len, int flags) {
+void ICACHE_FLASH_ATTR myEchoWebsocketRecv(Websock *ws, char *data, int len, int flags) {
 	os_printf("EchoWs: echo, len=%d\n", len);
 	cgiWebsocketSend(ws, data, len, flags);
 }
 
 //Echo websocket connected. Install reception handler.
-void myEchoWebsocketConnect(Websock *ws) {
+void ICACHE_FLASH_ATTR myEchoWebsocketConnect(Websock *ws) {
 	os_printf("EchoWs: connect\n");
 	ws->recvCb=myEchoWebsocketRecv;
 }
@@ -174,6 +177,7 @@ HttpdBuiltInUrl builtInUrls[]={
     { "/flash/format", cgiRoffsFormat, NULL },
     { "/flash/write-file", cgiRoffsWriteFile, NULL },
     { "/propeller/set-baud-rate", cgiPropSetBaudRate, NULL },
+    { "/propeller/enable-serial-protocol", cgiPropEnableSerialProtocol, NULL },
     { "/propeller/load", cgiPropLoad, NULL },
     { "/propeller/load-file", cgiPropLoadFile, NULL },
     { "/propeller/reset", cgiPropReset, NULL },
@@ -196,17 +200,22 @@ static void ICACHE_FLASH_ATTR prHeapTimerCb(void *arg) {
 #endif
 
 //Main routine. Initialize stdout, the I/O, filesystem and the webserver and we're done.
-void user_init(void) {
+void ICACHE_FLASH_ATTR user_init(void) {
 	//stdoutInit();
 	ioInit();
 	captdnsInit();
 
+#ifdef USE_AT
+    at_init();
+#else
     // init UART
     uart_init(flashConfig.baud_rate, 115200);
 
     // init the wifi-serial transparent bridge (port 23)
     serbridgeInit(23);
     uart_add_recv_cb(&serbridgeUartCb);
+
+#endif
 
 #ifdef PROPLOADER
     initDiscovery();
@@ -235,6 +244,6 @@ void user_init(void) {
 	os_printf("\nReady\n");
 }
 
-void user_rf_pre_init() {
+void ICACHE_FLASH_ATTR user_rf_pre_init() {
 	//Not needed, but some SDK versions want this defined.
 }

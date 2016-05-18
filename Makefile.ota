@@ -8,8 +8,8 @@ TAGNAME ?= "generic"
 
 LD_MAP_1:=512:eagle.app.v6.new.512.app1.ld 1024:eagle.app.v6.new.1024.app1.ld 2048:eagle.app.v6.new.2048.ld 4096:eagle.app.v6.new.2048.ld
 LD_MAP_2:=512:eagle.app.v6.new.512.app2.ld 1024:eagle.app.v6.new.1024.app2.ld 2048:eagle.app.v6.new.2048.ld 4096:eagle.app.v6.new.2048.ld
-LD_SCRIPT_USR1	:= $(call maplookup,$(ESP_SPI_FLASH_SIZE_K),$(LD_MAP_1))
-LD_SCRIPT_USR2	:= $(call maplookup,$(ESP_SPI_FLASH_SIZE_K),$(LD_MAP_2))
+LD_SCRIPT_USR1	:= $(call maplookup,$(ESP_SPI_IMAGE_SIZE_K),$(LD_MAP_1))
+LD_SCRIPT_USR2	:= $(call maplookup,$(ESP_SPI_IMAGE_SIZE_K),$(LD_MAP_2))
 
 TARGET_OUT_USR1 := $(addprefix $(BUILD_BASE)/,$(TARGET).user1.out)
 TARGET_OUT_USR2 := $(addprefix $(BUILD_BASE)/,$(TARGET).user2.out)
@@ -26,7 +26,7 @@ INITDATAPOS="$$(printf "0x%X" $$(($(ESP_SPI_FLASH_SIZE_K)*512-0x4000)))"
 
 #Convert SPI size into arg for appgen. Format: no=size
 FLASH_MAP_CONV:=0:512 2:1024 5:2048 6:4096
-ESP_FLASH_SIZE_IX:=$(maplookup $(ESP_SPI_FLASH_SIZE_K),,$(FLASH_MAP_CONV))
+ESP_FLASH_SIZE_IX:=$(maplookup $(ESP_SPI_IMAGE_SIZE_K),,$(FLASH_MAP_CONV))
 
 CFLAGS += -DOTA_TAGNAME=\"$(TAGNAME)\"
 

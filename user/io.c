@@ -40,7 +40,7 @@ static void ICACHE_FLASH_ATTR resetBtnTimerCb(void *arg) {
 	}
 }
 
-void ioInit() {
+void ICACHE_FLASH_ATTR ioInit() {
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0);
 	gpio_output_set(0, 0, (1<<LEDGPIO), (1<<BTNGPIO));

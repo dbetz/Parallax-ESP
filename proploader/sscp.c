@@ -15,7 +15,10 @@
 #define SSCP_WS_MAX         4
 #define SSCP_WS_BUFFER_MAX  128
 
+#define SSCP_DEF_ENABLE     1
+
 static int sscp_initialized = 0;
+static int sscp_enabled;
 static char sscp_buffer[SSCP_BUFFER_MAX + 1];
 static int sscp_inside;
 static int sscp_length;
@@ -53,15 +56,15 @@ static void dump(char *tag, char *buf, int len);
 static void ICACHE_FLASH_ATTR sendResponse(char *fmt, ...)
 {
     char buf[100];
-    uart0_write_char(SSCP_START);
-    uart0_write_char('=');
+    uart_tx_one_char(UART0, SSCP_START);
+    uart_tx_one_char(UART0, '=');
     va_list ap;
     va_start(ap, fmt);
     ets_vsnprintf(buf, sizeof(buf), fmt, ap);
     os_printf("Replying '%c=%s'\n", SSCP_START, buf);
     uart0_tx_buffer(buf, os_strlen(buf));
     va_end(ap);
-    uart0_write_char('\r');
+    uart_tx_one_char(UART0, '\r');
 }
 
 int ICACHE_FLASH_ATTR cgiSSCPHandleRequest(HttpdConnData *connData)
@@ -118,10 +121,21 @@ void ICACHE_FLASH_ATTR sscp_init(void)
     sscp_inside = 0;
     sscp_length = 0;
     sscp_initialized = 1;
+    sscp_enabled = SSCP_DEF_ENABLE;
+}
+
+void ICACHE_FLASH_ATTR sscp_enable(int enable)
+{
+    sscp_enabled = enable;
+}
+
+int ICACHE_FLASH_ATTR sscp_isEnabled(void)
+{
+    return sscp_enabled;
 }
 
 // LISTEN,chan,path
-static void do_listen(int argc, char *argv[])
+static void ICACHE_FLASH_ATTR do_listen(int argc, char *argv[])
 {
     Handler *h;
     int chan;
@@ -151,7 +165,7 @@ static void do_listen(int argc, char *argv[])
 }
 
 // POLL,chan
-static void do_poll(int argc, char *argv[])
+static void ICACHE_FLASH_ATTR do_poll(int argc, char *argv[])
 {
     char *requestType = "";
     char *url = "";
@@ -189,7 +203,7 @@ static void do_poll(int argc, char *argv[])
 }
 
 // ARG,chan
-static void do_arg(int argc, char *argv[])
+static void ICACHE_FLASH_ATTR do_arg(int argc, char *argv[])
 {
     char buf[128];
     Handler *h;
@@ -222,7 +236,7 @@ static void do_arg(int argc, char *argv[])
 }
 
 // POSTARG,chan
-static void do_postarg(int argc, char *argv[])
+static void ICACHE_FLASH_ATTR do_postarg(int argc, char *argv[])
 {
     char buf[128];
     Handler *h;
@@ -262,7 +276,7 @@ static void do_postarg(int argc, char *argv[])
 #define MAX_SENDBUFF_LEN 1024
 
 // REPLY,code,payload
-static void do_reply(int argc, char *argv[])
+static void ICACHE_FLASH_ATTR do_reply(int argc, char *argv[])
 {
     Handler *h;
     int chan;
@@ -305,7 +319,7 @@ static void do_reply(int argc, char *argv[])
 }
 
 // WSLISTEN,chan,path
-static void do_wslisten(int argc, char *argv[])
+static void ICACHE_FLASH_ATTR do_wslisten(int argc, char *argv[])
 {
     WSHandler *h;
     int chan;
@@ -335,7 +349,7 @@ static void do_wslisten(int argc, char *argv[])
 }
 
 // WSREAD,chan
-static void do_wsread(int argc, char *argv[])
+static void ICACHE_FLASH_ATTR do_wsread(int argc, char *argv[])
 {
     WSHandler *h;
     int chan;
@@ -367,7 +381,7 @@ static void do_wsread(int argc, char *argv[])
 }
 
 // WSWRITE,chan,payload
-static void do_wswrite(int argc, char *argv[])
+static void ICACHE_FLASH_ATTR do_wswrite(int argc, char *argv[])
 {
     WSHandler *h;
     int chan;
@@ -397,7 +411,7 @@ static void do_wswrite(int argc, char *argv[])
     sendResponse("OK");
 }
 
-static void websocketRecvCb(Websock *ws, char *data, int len, int flags)
+static void ICACHE_FLASH_ATTR websocketRecvCb(Websock *ws, char *data, int len, int flags)
 {
 	WSHandler *h = (WSHandler *)ws->userData;
     if (!(h->flags & WS_RXFULL)) {
@@ -409,17 +423,17 @@ static void websocketRecvCb(Websock *ws, char *data, int len, int flags)
     }
 }
 
-static void websocketSentCb(Websock *ws)
+static void ICACHE_FLASH_ATTR websocketSentCb(Websock *ws)
 {
 }
 
-static void websocketCloseCb(Websock *ws)
+static void ICACHE_FLASH_ATTR websocketCloseCb(Websock *ws)
 {
     WSHandler *h = (WSHandler *)ws->userData;
     h->ws = NULL;
 }
 
-void sscp_websocketConnect(Websock *ws)
+void ICACHE_FLASH_ATTR sscp_websocketConnect(Websock *ws)
 {
     int match = 0;
     WSHandler *h;
@@ -508,6 +522,11 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
     
     if (!sscp_initialized)
         sscp_init();
+
+    if (!sscp_enabled) {
+        (*outOfBand)(data, buf, len);
+        return;
+    }
 
     dump("filter", buf, len);
 
