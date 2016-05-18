@@ -25,6 +25,5 @@ esptool \
 -bz $FLASH_SIZE \
 -bf $FLASH_SPEED \
 -bm $FLASH_INTERFACE \
--ca 0x00000 -cf 0x00000.bin \
--ca 0x40000 -cf 0x40000.bin \
--ca $WIFI_SETTINGS -cf blank.bin
+-ca 0x00000 -cf boot_v1.5.bin \
+-ca 0x01000 -cf httpd.user1.bin

@@ -1,6 +1,8 @@
 IMAGES=\
-release/0x00000.bin \
-release/0x40000.bin \
+release/boot_v1.5.bin \
+release/httpd.user1.bin \
+release/httpd.user2.bin \
+release/httpd.ota \
 release/blank.bin
 
 CP=cp
@@ -18,12 +20,12 @@ build:
 	$(MAKE) -C .. STA_SSID= STA_PASS=
 
 staged-files:	release $(IMAGES)
-	$(CP) flash.sh release
+	$(CP) flash.sh clear.sh release
 
-release/0x00000.bin:	../firmware/0x00000.bin patch
+release/boot_v1.5.bin:	../../esp_iot_sdk_v1.5.2/bin/boot_v1.5.bin patch
 	./patch $< $@
 
-release/0x40000.bin:	../firmware/0x40000.bin
+release/%:	../build/%
 	$(CP) $< $@
 
 release/blank.bin:	../../esp_iot_sdk_v1.5.2/bin/blank.bin
