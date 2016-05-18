@@ -87,31 +87,41 @@ int ICACHE_FLASH_ATTR cgiPropInit()
 
 int ICACHE_FLASH_ATTR cgiPropSetBaudRate(HttpdConnData *connData)
 {
+    char response[32];
     int baudRate;
     
     // check for the cleanup call
     if (connData->conn == NULL)
         return HTTPD_CGI_DONE;
 
-    if (!getIntArg(connData, "baud-rate", &baudRate)) {
-        httpdSendResponse(connData, 400, "No baud-rate specified\r\n", -1);
-        return HTTPD_CGI_DONE;
+    // check for GET
+    if (connData->requestType == HTTPD_METHOD_GET)
+        os_strcpy(response, sscp_isEnabled() ? "1" : "0");
+
+    // only other option is POST
+    else {
+
+        if (!getIntArg(connData, "baud-rate", &baudRate)) {
+            httpdSendResponse(connData, 400, "No baud-rate specified\r\n", -1);
+            return HTTPD_CGI_DONE;
+        }
+
+        DBG("set-baud-rate: baud-rate %d\n", baudRate);
+
+        uart0_baud(baudRate);
+        os_strcpy(response, "");
     }
-
-    DBG("set-baud-rate: baud-rate %d\n", baudRate);
-
-    uart0_baud(baudRate);
 
     httpdStartResponse(connData, 200);
     httpdEndHeaders(connData);
-    httpdSend(connData, "", 0);
+    httpdSend(connData, response, -1);
 
     return HTTPD_CGI_DONE;
 }
 
 int ICACHE_FLASH_ATTR cgiPropEnableSerialProtocol(HttpdConnData *connData)
 {
-    char response[128];
+    char response[32];
     int enable;
     
     // check for the cleanup call
@@ -120,7 +130,7 @@ int ICACHE_FLASH_ATTR cgiPropEnableSerialProtocol(HttpdConnData *connData)
 
     // check for GET
     if (connData->requestType == HTTPD_METHOD_GET)
-        strcpy(response, sscp_isEnabled() ? "1" : "0");
+        os_sprintf(response, "%d", uart0_baudRate);
 
     // only other option is POST
     else {
@@ -133,7 +143,7 @@ int ICACHE_FLASH_ATTR cgiPropEnableSerialProtocol(HttpdConnData *connData)
         DBG("enable-serial-protocol: enable %d\n", enable);
 
         sscp_enable(enable);
-        strcpy(response, "");
+        os_strcpy(response, "");
     }
 
     httpdStartResponse(connData, 200);

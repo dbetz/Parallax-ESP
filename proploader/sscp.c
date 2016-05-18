@@ -15,7 +15,7 @@
 #define SSCP_WS_MAX         4
 #define SSCP_WS_BUFFER_MAX  128
 
-#define SSCP_DEF_ENABLE     1
+#define SSCP_DEF_ENABLE     0
 
 static int sscp_initialized = 0;
 static int sscp_enabled;

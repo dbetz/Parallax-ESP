@@ -34,6 +34,7 @@ some pictures of cats.
 #include "serbridge.h"
 #include "uart.h"
 #include "config.h"
+#include "status.h"
 
 #define PROPLOADER
 
@@ -201,6 +202,11 @@ static void ICACHE_FLASH_ATTR prHeapTimerCb(void *arg) {
 
 //Main routine. Initialize stdout, the I/O, filesystem and the webserver and we're done.
 void ICACHE_FLASH_ATTR user_init(void) {
+    int restoreOk;
+
+    if (!(restoreOk = configRestore()))
+        configSave();
+
 	//stdoutInit();
 	ioInit();
 	captdnsInit();
@@ -210,6 +216,10 @@ void ICACHE_FLASH_ATTR user_init(void) {
 #else
     // init UART
     uart_init(flashConfig.baud_rate, 115200);
+
+    os_printf("Flash config restore %s\n", restoreOk ? "ok" : "*FAILED*");
+
+    statusInit();
 
     // init the wifi-serial transparent bridge (port 23)
     serbridgeInit(23);

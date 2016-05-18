@@ -27,6 +27,8 @@
 #define DBG_UART(format, ...) do { } while(0)
 #endif
 
+int uart0_baudRate = -1;
+
 LOCAL uint8_t uart_recvTaskNum;
 
 // UartDev is defined and initialized in rom code.
@@ -273,8 +275,11 @@ done:
 
 void ICACHE_FLASH_ATTR
 uart0_baud(int rate) {
-  os_printf("UART %d baud\n", rate);
-  uart_div_modify(UART0, UART_CLK_FREQ / rate);
+  if (rate != uart0_baudRate) {
+    os_printf("UART %d baud\n", rate);
+    uart_div_modify(UART0, UART_CLK_FREQ / rate);
+    uart0_baudRate = rate;
+   }
 }
 
 static void write_char(int ch)
