@@ -177,7 +177,8 @@ HttpdBuiltInUrl builtInUrls[]={
 #ifdef PROPLOADER
     { "/flash/format", cgiRoffsFormat, NULL },
     { "/flash/write-file", cgiRoffsWriteFile, NULL },
-    { "/propeller/set-baud-rate", cgiPropSetBaudRate, NULL },
+    { "/propeller/baud-rate", cgiPropBaudRate, NULL },
+    { "/propeller/set-baud-rate", cgiPropBaudRate, NULL }, // deprecated
     { "/propeller/enable-serial-protocol", cgiPropEnableSerialProtocol, NULL },
     { "/propeller/load", cgiPropLoad, NULL },
     { "/propeller/load-file", cgiPropLoadFile, NULL },

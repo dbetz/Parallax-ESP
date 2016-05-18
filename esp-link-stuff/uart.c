@@ -62,6 +62,8 @@ uart_config(uint8 uart_no)
   }
 
   uart_div_modify(uart_no, UART_CLK_FREQ / UartDev.baud_rate);
+  if (uart_no == UART0)
+    uart0_baudRate = UartDev.baud_rate;
 
   if (uart_no == UART1)  //UART 1 always 8 N 1
     WRITE_PERI_REG(UART_CONF0(uart_no),

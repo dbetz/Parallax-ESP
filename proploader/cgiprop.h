@@ -4,7 +4,7 @@
 #include <httpd.h>
 
 int cgiPropInit();
-int cgiPropSetBaudRate(HttpdConnData *connData);
+int cgiPropBaudRate(HttpdConnData *connData);
 int cgiPropEnableSerialProtocol(HttpdConnData *connData);
 int cgiPropLoad(HttpdConnData *connData);
 int cgiPropLoadFile(HttpdConnData *connData);

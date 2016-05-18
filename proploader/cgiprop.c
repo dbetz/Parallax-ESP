@@ -85,7 +85,7 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     return 1;
 }
 
-int ICACHE_FLASH_ATTR cgiPropSetBaudRate(HttpdConnData *connData)
+int ICACHE_FLASH_ATTR cgiPropBaudRate(HttpdConnData *connData)
 {
     char response[32];
     int baudRate;
@@ -96,7 +96,7 @@ int ICACHE_FLASH_ATTR cgiPropSetBaudRate(HttpdConnData *connData)
 
     // check for GET
     if (connData->requestType == HTTPD_METHOD_GET)
-        os_strcpy(response, sscp_isEnabled() ? "1" : "0");
+        os_sprintf(response, "%d", uart0_baudRate);
 
     // only other option is POST
     else {
@@ -130,7 +130,7 @@ int ICACHE_FLASH_ATTR cgiPropEnableSerialProtocol(HttpdConnData *connData)
 
     // check for GET
     if (connData->requestType == HTTPD_METHOD_GET)
-        os_sprintf(response, "%d", uart0_baudRate);
+        os_strcpy(response, sscp_isEnabled() ? "1" : "0");
 
     // only other option is POST
     else {
