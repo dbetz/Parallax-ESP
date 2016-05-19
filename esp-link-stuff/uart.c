@@ -250,7 +250,7 @@ uart_recvTask(os_event_t *events)
 {
   if (READ_PERI_REG(UART_INT_RAW(UART0)) & UART_BRK_DET_INT_RAW) {
     WRITE_PERI_REG(UART_INT_CLR(UART0), UART_BRK_DET_INT_CLR);
-    os_printf("UART break detected\n");
+    os_printf("UART break detected. Switching on SSCP command parsing.\n");
     sscp_enable(1);
   }
 
