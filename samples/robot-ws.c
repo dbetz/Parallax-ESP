@@ -9,6 +9,9 @@
 //#define WIFI_RX     9
 //#define WIFI_TX     8
 
+#define SSCP_PREFIX "\xFE"
+#define SSCP_START  0xFE
+
 #define PING_PIN    10
 
 #define DEBUG
@@ -43,10 +46,10 @@ int main(void)
     init_robot();
 
     request("LISTEN,0,/robot");
-    waitFor("$=OK\r");
+    waitFor(SSCP_PREFIX "=OK\r");
     
     request("WSLISTEN,0,/ws/robot");
-    waitFor("$=OK\r");
+    waitFor(SSCP_PREFIX "=OK\r");
     
     for (;;) {
         char verb[128], url[128], arg[128];
@@ -55,7 +58,7 @@ int main(void)
         waitcnt(CNT + CLKFREQ/4);
 
         request("POLL,0");
-        waitFor("$=");
+        waitFor(SSCP_PREFIX "=");
         collectUntil(',', verb, sizeof(verb));
         collectUntil('\r', url, sizeof(url));
         
@@ -63,13 +66,13 @@ int main(void)
             dprint(debug, "VERB '%s', URL '%s'\n", verb, url);
             if (strcmp(verb, "POST") == 0 && strcmp(url, "/robot") == 0) {
                 request("POSTARG,0,gto");
-                waitFor("$=");
+                waitFor(SSCP_PREFIX "=");
                 collectUntil('\r', arg, sizeof(arg));
                 dprint(debug, "gto='%s'\n", arg);
                 if (process_robot_command(arg[0]) != 0)
                   dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
                 request("REPLY,0,200,OK");
-                waitFor("$=OK\r");
+                waitFor(SSCP_PREFIX "=OK\r");
             }
             else {
                 dprint(debug, "Unknown command\n");
@@ -82,7 +85,7 @@ int main(void)
             lastPingDistance = pingDistance;
             sprintf(buf, "WSWRITE,0,%d", pingDistance);
             request(buf);
-            waitFor("$=");
+            waitFor(SSCP_PREFIX "=");
             collectUntil('\r', buf, sizeof(buf));
             dprint(debug, "Got: %s\n", buf);
         }
@@ -183,7 +186,7 @@ void set_robot_speed(int left, int right)
 
 void request(char *req)
 {
-    fdserial_txChar(wifi, '$');
+    fdserial_txChar(wifi, SSCP_START);
     while (*req)
         fdserial_txChar(wifi, *req++);
     fdserial_txChar(wifi, '\n');

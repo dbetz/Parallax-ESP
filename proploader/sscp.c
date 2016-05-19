@@ -5,7 +5,7 @@
 
 //#define DUMP
 
-#define SSCP_START          '$'
+#define SSCP_START          0xFE
 #define SSCP_BUFFER_MAX     128
 #define SSCP_MAX_ARGS       8
 #define SSCP_PATH_MAX       32
