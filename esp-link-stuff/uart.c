@@ -20,6 +20,7 @@
 #include "esp8266.h"
 #include "task.h"
 #include "uart.h"
+#include "sscp.h"
 
 #ifdef UART_DBG
 #define DBG_UART(format, ...) os_printf(format, ## __VA_ARGS__)
@@ -91,7 +92,7 @@ uart_config(uint8 uart_no)
                    UART_RX_FLOW_EN |
                    (4 & UART_RX_TOUT_THRHD) << UART_RX_TOUT_THRHD_S |
                    UART_RX_TOUT_EN);
-    SET_PERI_REG_MASK(UART_INT_ENA(uart_no), UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA);
+    SET_PERI_REG_MASK(UART_INT_ENA(uart_no), UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA | UART_BRK_DET_INT_RAW);
   } else {
     WRITE_PERI_REG(UART_CONF1(uart_no),
                    ((UartDev.rcv_buff.TrigLvl & UART_RXFIFO_FULL_THRHD) << UART_RXFIFO_FULL_THRHD_S));
@@ -222,10 +223,19 @@ uart0_rx_intr_handler(void *para)
     last_frm_err = 0;
   }
 
+  int schedule = 0;
+
+  if (READ_PERI_REG(UART_INT_RAW(uart_no)) & UART_BRK_DET_INT_RAW)
+    schedule = 1;
+
   if (UART_RXFIFO_FULL_INT_ST == (READ_PERI_REG(UART_INT_ST(uart_no)) & UART_RXFIFO_FULL_INT_ST)
   ||  UART_RXFIFO_TOUT_INT_ST == (READ_PERI_REG(UART_INT_ST(uart_no)) & UART_RXFIFO_TOUT_INT_ST))
   {
     //DBG_UART("stat:%02X",*(uint8 *)UART_INT_ENA(uart_no));
+    schedule = 1;
+  }
+
+  if (schedule) {
     ETS_UART_INTR_DISABLE();
     post_usr_task(uart_recvTaskNum, 0);
   }
@@ -238,6 +248,12 @@ uart0_rx_intr_handler(void *para)
 static void ICACHE_FLASH_ATTR
 uart_recvTask(os_event_t *events)
 {
+  if (READ_PERI_REG(UART_INT_RAW(UART0)) & UART_BRK_DET_INT_RAW) {
+    WRITE_PERI_REG(UART_INT_CLR(UART0), UART_BRK_DET_INT_CLR);
+    os_printf("UART break detected\n");
+    sscp_enable(1);
+  }
+
   while (READ_PERI_REG(UART_STATUS(UART0)) & (UART_RXFIFO_CNT << UART_RXFIFO_CNT_S)) {
     //WRITE_PERI_REG(0X60000914, 0x73); //WTD // commented out by TvE
 
