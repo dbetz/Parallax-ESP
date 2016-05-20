@@ -175,6 +175,7 @@ int ICACHE_FLASH_ATTR cgiSSCPHandleRequest(HttpdConnData *connData)
     if (!(connection = allocateConnection(listener))) {
         httpdStartResponse(connData, 400);
         httpdEndHeaders(connData);
+os_printf("sscp: no connections available for %s request\n", connData->url);
         httpdSend(connData, "No connections available", -1);
         return HTTPD_CGI_DONE;
     }
@@ -248,7 +249,8 @@ static void ICACHE_FLASH_ATTR do_poll(int argc, char *argv[])
     int i;
 
     if (argc != 1) {
-        sendResponse("ERROR");
+//        sendResponse("ERROR");
+        sendResponse("E:0,invalid arguments");
         return;
     }
 
@@ -262,13 +264,16 @@ static void ICACHE_FLASH_ATTR do_poll(int argc, char *argv[])
                     if (connData) {
                         switch (connData->requestType) {
                         case HTTPD_METHOD_GET:
-                            sendResponse("H:%d,GET,%s", connection->index, connData->url);
+//                            sendResponse("H:%d,GET,%s", connection->index, connData->url);
+                            sendResponse("G:%d,%s", connection->index, connData->url);
                             break;
                         case HTTPD_METHOD_POST:
-                            sendResponse("H:%d,POST,%s", connection->index, connData->url);
+//                            sendResponse("H:%d,POST,%s", connection->index, connData->url);
+                            sendResponse("P:%d,%s", connection->index, connData->url);
                             break;
                         default:
-                            sendResponse("E:invalid request type");
+//                            sendResponse("E:invalid request type");
+                            sendResponse("E:0,invalid request type");
                             break;
                         }
                         return;
@@ -292,7 +297,8 @@ static void ICACHE_FLASH_ATTR do_poll(int argc, char *argv[])
             }
         }
     }
-    sendResponse("N:nothing");
+//    sendResponse("N:nothing");
+    sendResponse("N:0,");
 }
 
 // ARG,chan

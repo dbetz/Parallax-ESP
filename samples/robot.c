@@ -33,9 +33,10 @@ void init_robot(void);
 int process_robot_command(int whichWay);            
 void set_robot_speed(int left, int right);
 
-void request(char *req);
+void request(char *fmt, ...);
 int waitFor(char *target);
 void collectUntil(int term, char *buf, int size);
+void skipUntil(int term);
 
 int main(void)
 {    
@@ -64,34 +65,87 @@ int main(void)
     waitFor(SSCP_PREFIX "=OK\r");
     
     for (;;) {
-        char verb[128], url[128], arg[128];
+        char type[16], verb[128], url[128], arg[128];
+        int chan;
+
         waitcnt(CNT + CLKFREQ/4);
-        request("POLL,0");
+
+        request("POLL");
         waitFor(SSCP_PREFIX "=");
-        collectUntil(',', verb, sizeof(verb));
-        collectUntil('\r', url, sizeof(url));
-        if (verb[0]) {
-            dprint(debug, "VERB '%s', URL '%s'\n", verb, url);
-            if (strcmp(verb, "POST") == 0 && strcmp(url, "/robot") == 0) {
-                request("POSTARG,0,gto");
+        collectUntil(':', type, sizeof(type));
+        if (type[0] != 'N')
+            dprint(debug, "Got %c\n", type[0]);
+        
+        switch (type[0]) {
+#if 0
+        case 'H':
+            collectUntil(',', arg, sizeof(arg));
+            chan = atoi(arg);
+            collectUntil(',', verb, sizeof(verb));
+            collectUntil('\r', url, sizeof(url));
+            
+            if (verb[0]) {
+                dprint(debug, "%d: VERB '%s', URL '%s'\n", chan, verb, url);
+                if (strcmp(verb, "POST") == 0 && strcmp(url, "/robot") == 0) {
+                    request("POSTARG,%d,gto", chan);
+                    waitFor(SSCP_PREFIX "=");
+                    collectUntil('\r', arg, sizeof(arg));
+                    dprint(debug, "gto='%s'\n", arg);
+                    if (process_robot_command(arg[0]) != 0)
+                        dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
+                    request("REPLY,%d,200,OK", chan);
+                    waitFor(SSCP_PREFIX "=OK\r");
+                }
+                else {
+                    dprint(debug, "Unknown command\n");
+                }
+            }
+            break;
+#else
+        case 'P':
+            collectUntil(',', arg, sizeof(arg));
+            chan = atoi(arg);
+            collectUntil('\r', url, sizeof(url));
+            dprint(debug, "%d: URL '%s'\n", chan, url);
+            if (strcmp(url, "/robot") == 0) {
+                request("POSTARG,%d,gto", chan);
                 waitFor(SSCP_PREFIX "=");
                 collectUntil('\r', arg, sizeof(arg));
                 dprint(debug, "gto='%s'\n", arg);
                 if (process_robot_command(arg[0]) != 0)
-                  dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
-                request("REPLY,0,200,OK");
-                waitFor(SSCP_PREFIX "=OK\r");
-            }
-            else if (strcmp(verb, "GET") == 0 && strcmp(url, "/robot-ping") == 0) {
-                int cmDist = ping_cm(PING_PIN);
-                char buf[128];
-                sprintf(buf, "REPLY,0,200,%d", cmDist);
-                request(buf);
+                    dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
+                request("REPLY,%d,200,OK", chan);
                 waitFor(SSCP_PREFIX "=OK\r");
             }
             else {
-                dprint(debug, "Unknown command\n");
+                dprint(debug, "Unknown POST URL\n");
+                request("REPLY,%d,400,unknown", chan);
+                waitFor(SSCP_PREFIX "=OK\r");
             }
+            break;
+        case 'G':
+            collectUntil(',', arg, sizeof(arg));
+            chan = atoi(arg);
+            collectUntil('\r', url, sizeof(url));
+            dprint(debug, "%d: URL '%s'\n", chan, url);
+            if (strcmp(url, "/robot-ping") == 0) {
+                request("REPLY,%d,200,%d", chan, ping_cm(PING_PIN));
+                waitFor(SSCP_PREFIX "=OK\r");
+            }
+            else {
+                dprint(debug, "Unknown POST URL\n");
+                request("REPLY,%d,400,unknown", chan);
+                dprint(debug, "Unknown GET URL\n");
+            }
+            break;
+#endif
+        case 'N':
+            skipUntil('\r');
+            break;
+        default:
+            skipUntil('\r');
+            dprint(debug, "unknown response\n");
+            break;
         }
     }
     
@@ -188,12 +242,17 @@ void set_robot_speed(int left, int right)
   drive_speed(wheelLeft, wheelRight);
 }
 
-void request(char *req)
+void request(char *fmt, ...)
 {
+    char buf[100], *p = buf;
+    va_list ap;
+    va_start(ap, fmt);
     fdserial_txChar(wifi, SSCP_START);
-    while (*req)
-        fdserial_txChar(wifi, *req++);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    while (*p != '\0')
+        fdserial_txChar(wifi, *p++);
     fdserial_txChar(wifi, '\n');
+    va_end(ap);
 }
 
 int waitFor(char *target)
@@ -230,4 +289,11 @@ void collectUntil(int term, char *buf, int size)
             buf[i++] = ch;
     }
     buf[i] = '\0';
+}
+
+void skipUntil(int term)
+{
+    int ch;
+    while ((ch = fdserial_rxChar(wifi)) != EOF && ch != term)
+        ;
 }
