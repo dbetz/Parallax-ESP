@@ -1,13 +1,21 @@
 /*
   Robot test program
 */
+#include <stdarg.h>
 #include "simpletools.h"
 #include "abdrive.h"
 #include "ping.h"
 
-// uncomment these if the wifi module is on pins other than 31/30
-//#define WIFI_RX     9
-//#define WIFI_TX     8
+// uncomment this if the wifi module is on pins other than 31/30
+//#define SEPARATE_WIFI_PINS
+
+#ifdef SEPARATE_WIFI_PINS
+#define WIFI_RX     9
+#define WIFI_TX     8
+#else
+#define WIFI_RX     31
+#define WIFI_TX     30
+#endif
 
 #define SSCP_PREFIX "\xFE"
 #define SSCP_START  0xFE
@@ -26,68 +34,84 @@ void init_robot(void);
 int process_robot_command(int whichWay);            
 void set_robot_speed(int left, int right);
 
-void request(char *req);
+void request(char *fmt, ...);
 int waitFor(char *target);
 void collectUntil(int term, char *buf, int size);
 
 int main(void)
 {    
+    int pingChannel = -1;
     int lastPingDistance = -1;
     
-    simpleterm_close();                         // Close default same-cog terminal
-    debug = fdserial_open(31, 30, 0, 115200);
+    // Close default same-cog terminal
+    simpleterm_close();                         
 
-#ifdef WIFI_RX
-    wifi = fdserial_open(WIFI_RX, WIFI_TX, 0, 115200);
+    // Set to open collector instead of driven
+    wifi = fdserial_open(WIFI_RX, WIFI_TX, 0b0100, 115200);
+
+    // Generate a BREAK to enter SSCP command mode
+    pause(10);
+    low(WIFI_TX);
+    pause(1);
+    input(WIFI_TX);
+    pause(1);
+
+#ifdef SEPARATE_WIFI_PINS
+    debug = fdserial_open(31, 30, 0, 115200);
 #else
-    wifi = debug;
+    debug = wifi;
 #endif
     
     init_robot();
 
-    request("LISTEN,0,/robot");
-    waitFor(SSCP_PREFIX "=OK\r");
-    
     request("WSLISTEN,0,/ws/robot");
     waitFor(SSCP_PREFIX "=OK\r");
     
     for (;;) {
-        char verb[128], url[128], arg[128];
-        int pingDistance;
+        char type[16], verb[128], url[128], arg[128];
+        int chan, pingDistance;
         
         waitcnt(CNT + CLKFREQ/4);
 
-        request("POLL,0");
+        request("POLL");
         waitFor(SSCP_PREFIX "=");
-        collectUntil(',', verb, sizeof(verb));
-        collectUntil('\r', url, sizeof(url));
+        collectUntil(':', type, sizeof(type));
+        if (type[0] != 'N')
+            dprint(debug, "Got %c\n", type[0]);
         
-        if (verb[0]) {
-            dprint(debug, "VERB '%s', URL '%s'\n", verb, url);
-            if (strcmp(verb, "POST") == 0 && strcmp(url, "/robot") == 0) {
-                request("POSTARG,0,gto");
-                waitFor(SSCP_PREFIX "=");
-                collectUntil('\r', arg, sizeof(arg));
-                dprint(debug, "gto='%s'\n", arg);
-                if (process_robot_command(arg[0]) != 0)
-                  dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
-                request("REPLY,0,200,OK");
-                waitFor(SSCP_PREFIX "=OK\r");
-            }
-            else {
-                dprint(debug, "Unknown command\n");
-            }
+        switch (type[0]) {
+        case 'W':
+            collectUntil(',', arg, sizeof(arg));
+            pingChannel = atoi(arg);
+            collectUntil('\r', url, sizeof(url));
+            dprint(debug, "%d: URL '%s'\n", pingChannel, url);
+            break;
+        case 'D':
+            collectUntil(',', arg, sizeof(arg));
+            chan = atoi(arg);
+            collectUntil('\r', arg, sizeof(arg));
+            dprint(debug, "%d: PAYLOAD '%s'\n", chan, arg);
+            if (process_robot_command(arg[0]) != 0)
+                dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
+            break;
+        case 'N':
+            break;
+        default:
+            dprint(debug, "unknown response\n");
+            break;
         }
+
         
-        if ((pingDistance = ping_cm(PING_PIN)) != lastPingDistance) {
-            char buf[20];
-            dprint(debug, "New PING))) distance: %d\n", pingDistance);
-            lastPingDistance = pingDistance;
-            sprintf(buf, "WSWRITE,0,%d", pingDistance);
-            request(buf);
-            waitFor(SSCP_PREFIX "=");
-            collectUntil('\r', buf, sizeof(buf));
-            dprint(debug, "Got: %s\n", buf);
+        if (pingChannel >= 0) {
+            if ((pingDistance = ping_cm(PING_PIN)) != lastPingDistance) {
+                char buf[128];
+                dprint(debug, "New PING))) distance: %d\n", pingDistance);
+                lastPingDistance = pingDistance;
+                request("WSWRITE,%d,%d", pingChannel, pingDistance);
+                waitFor(SSCP_PREFIX "=");
+                collectUntil('\r', buf, sizeof(buf));
+                dprint(debug, "Got: %s\n", buf);
+            }
         }
     }
     
@@ -184,12 +208,17 @@ void set_robot_speed(int left, int right)
   drive_speed(wheelLeft, wheelRight);
 }
 
-void request(char *req)
+void request(char *fmt, ...)
 {
+    char buf[100], *p = buf;
+    va_list ap;
+    va_start(ap, fmt);
     fdserial_txChar(wifi, SSCP_START);
-    while (*req)
-        fdserial_txChar(wifi, *req++);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    while (*p != '\0')
+        fdserial_txChar(wifi, *p++);
     fdserial_txChar(wifi, '\n');
+    va_end(ap);
 }
 
 int waitFor(char *target)

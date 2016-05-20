@@ -5,9 +5,16 @@
 #include "abdrive.h"
 #include "ping.h"
 
-// uncomment these if the wifi module is on pins other than 31/30
-//#define WIFI_RX     9
-//#define WIFI_TX     8
+// uncomment this if the wifi module is on pins other than 31/30
+//#define SEPARATE_WIFI_PINS
+
+#ifdef SEPARATE_WIFI_PINS
+#define WIFI_RX     9
+#define WIFI_TX     8
+#else
+#define WIFI_RX     31
+#define WIFI_TX     30
+#endif
 
 #define SSCP_PREFIX "\xFE"
 #define SSCP_START  0xFE
@@ -32,13 +39,23 @@ void collectUntil(int term, char *buf, int size);
 
 int main(void)
 {    
-    simpleterm_close();                         // Close default same-cog terminal
-    debug = fdserial_open(31, 30, 0, 115200);
+    // Close default same-cog terminal
+    simpleterm_close();                         
 
-#ifdef WIFI_RX
-    wifi = fdserial_open(WIFI_RX, WIFI_TX, 0, 115200);
+    // Set to open collector instead of driven
+    wifi = fdserial_open(WIFI_RX, WIFI_TX, 0b0100, 115200);
+
+    // Generate a BREAK to enter SSCP command mode
+    pause(10);
+    low(WIFI_TX);
+    pause(1);
+    input(WIFI_TX);
+    pause(1);
+
+#ifdef SEPARATE_WIFI_PINS
+    debug = fdserial_open(31, 30, 0, 115200);
 #else
-    wifi = debug;
+    debug = wifi;
 #endif
     
     init_robot();

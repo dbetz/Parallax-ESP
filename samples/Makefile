@@ -1,13 +1,14 @@
-#TARGET=robot
-TARGET=robot-ws
+TARGET=robot-ws.elf
+
+all:	robot.elf robot-ws.elf
 
 CFLAGS=-mcmm -Os -m32bit-doubles -I include -L lib
 
-$(TARGET).elf:	$(TARGET).c
+%.elf:	%.c
 	propeller-elf-gcc $(CFLAGS) -o $@ $< -lsimple-cmm -lm
 
-run:	$(TARGET).elf
-	proploader -v $< -t
+run:	$(TARGET)
+	proploader $< -t
 
 clean:
-	rm -f $(TARGET).elf
+	rm -f *.elf
