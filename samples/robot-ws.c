@@ -64,6 +64,9 @@ int main(void)
     
     init_robot();
 
+    request("SET,pause-time,5");
+    waitFor(SSCP_PREFIX "=OK");
+
     request("WSLISTEN,0,/ws/robot");
     waitFor(SSCP_PREFIX "=OK\r");
     
@@ -97,7 +100,7 @@ int main(void)
         case 'N':
             break;
         default:
-            dprint(debug, "unknown response\n");
+            dprint(debug, "unknown response: 0x%02x\n", type[0]);
             break;
         }
 

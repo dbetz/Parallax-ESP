@@ -13,14 +13,10 @@ extern int uart0_baudRate;
 // calls use uart1 for output (for debugging purposes)
 void uart_init(UartBaudRate uart0_br, UartBaudRate uart1_br);
 
-// Transmit a buffer of characters on UART0
-void uart0_tx_buffer(char *buf, uint16 len);
-
-void uart0_write_char(char c);
+void uart_tx_buffer(uint8 uart, char *buf, uint16 len);
 STATUS uart_tx_one_char(uint8 uart, uint8 c);
 STATUS uart_try_tx_one_char(uint8 uart, uint8 c);
-
-void uart1_write_char(char c);
+STATUS uart_drain_tx_buffer(uint8 uart);
 
 // Add a receive callback function, this is called on the uart receive task each time a chunk
 // of bytes are received. A small number of callbacks can be added and they are all called

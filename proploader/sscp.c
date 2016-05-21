@@ -56,18 +56,54 @@ static void dump(char *tag, uint8_t *buf, int len);
 #define dump(tag, buf, len)
 #endif
 
+static char needPause[16] = { ':', ',' };
+static int needPauseCnt = 2;
+static int pauseTimeMS = 0;
+
 static void ICACHE_FLASH_ATTR sendResponse(char *fmt, ...)
 {
-    char buf[100];
-    uart_tx_one_char(UART0, SSCP_START);
-    uart_tx_one_char(UART0, '=');
+    char buf[128];
+    int cnt;
+
+    // insert the header
+    buf[0] = SSCP_START;
+    buf[1] = '=';
+
+    // insert the formatted response
     va_list ap;
     va_start(ap, fmt);
-    ets_vsnprintf(buf, sizeof(buf), fmt, ap);
-    os_printf("Replying '%c=%s'\n", SSCP_START, buf);
-    uart0_tx_buffer(buf, os_strlen(buf));
+    cnt = ets_vsnprintf(&buf[2], sizeof(buf) - 3, fmt, ap);
     va_end(ap);
-    uart_tx_one_char(UART0, '\r');
+
+    // check to see if the response was truncated
+    if (cnt >= sizeof(buf) - 3)
+        cnt = sizeof(buf) - 3 - 1;
+
+    // display the response before inserting the final \r
+    os_printf("Replying: '%s'\n", &buf[1]);
+
+    // terminate the response with a \r
+    buf[2 + cnt] = '\r';
+    cnt += 3;
+
+    if (pauseTimeMS > 0) {
+        char *p = buf;
+        while (--cnt >= 0) {
+            int byte = *p++;
+            int i;
+            uart_tx_one_char(UART0, byte);
+            for (i = 0; i < needPauseCnt; ++i) {
+                if (byte == needPause[i]) {
+//os_printf("Delaying after '%c' 0x%02x for %d MS\n", byte, byte, pauseTimeMS);
+                    uart_drain_tx_buffer(UART0);
+                    os_delay_us(pauseTimeMS * 1000);
+                }
+            }
+        }
+    }
+    else {
+        uart_tx_buffer(UART0, buf, cnt);
+    }
 }
 
 static Listener ICACHE_FLASH_ATTR *findListener(const char *path, int type)
@@ -207,6 +243,75 @@ void ICACHE_FLASH_ATTR sscp_enable(int enable)
 int ICACHE_FLASH_ATTR sscp_isEnabled(void)
 {
     return sscp_enabled;
+}
+
+static int intGetHandler(void *data, char *buf, int size)
+{
+    int *pValue = (int *)data;
+    os_sprintf(buf, "%d", *pValue);
+    return 0;
+}
+
+static int intSetHandler(void *data, char *value)
+{
+    int *pValue = (int *)data;
+    *pValue = atoi(value);
+    return 0;
+}
+
+static struct {
+    char *name;
+    int (*getHandler)(void *data, char *buf, int size);
+    int (*setHandler)(void *data, char *value);
+    void *data;
+} vars[] = {
+{   "pause-time",       intGetHandler,  intSetHandler,  &pauseTimeMS    },
+{   NULL,               NULL,           NULL,           NULL            }
+};
+
+// GET,var
+static void ICACHE_FLASH_ATTR do_get(int argc, char *argv[])
+{
+    char buf[128];
+    int i;
+    
+    if (argc != 2) {
+        sendResponse("ERROR");
+        return;
+    }
+    
+    for (i = 0; vars[i].name != NULL; ++i) {
+        if (os_strcmp(argv[1], vars[i].name) == 0) {
+            if ((*vars[i].getHandler)(vars[i].data, buf, sizeof(buf)) == 0)
+                sendResponse(buf);
+            else
+                sendResponse("ERROR");
+        }
+    }
+
+    sendResponse("ERROR");
+}
+
+// SET,var,value
+static void ICACHE_FLASH_ATTR do_set(int argc, char *argv[])
+{
+    int i;
+    
+    if (argc != 3) {
+        sendResponse("ERROR");
+        return;
+    }
+    
+    for (i = 0; vars[i].name != NULL; ++i) {
+        if (os_strcmp(argv[1], vars[i].name) == 0) {
+            if ((*vars[i].setHandler)(vars[i].data, argv[2]) == 0)
+                sendResponse("OK");
+            else
+                sendResponse("ERROR");
+        }
+    }
+
+    sendResponse("ERROR");
 }
 
 // LISTEN,chan
@@ -576,6 +681,8 @@ static struct {
     char *cmd;
     void (*handler)(int argc, char *argv[]);
 } cmds[] = {
+{   "GET",      do_get      },
+{   "SET",      do_set      },
 {   "LISTEN",   do_listen   },
 {   "POLL",     do_poll     },
 {   "ARG",      do_arg      },

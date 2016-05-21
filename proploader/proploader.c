@@ -145,7 +145,7 @@ static void txLong(uint32_t x);
 
 int ICACHE_FLASH_ATTR ploadInitiateHandshake(PropellerConnection *connection)
 {
-    uart0_tx_buffer((char *)txHandshake, (uint16_t)sizeof(txHandshake));
+    uart_tx_buffer(UART0, (char *)txHandshake, (uint16_t)sizeof(txHandshake));
     connection->bytesRemaining = sizeof(rxHandshake) + 4;
     connection->bytesReceived = 0;
     return 0;
@@ -205,16 +205,16 @@ static int ICACHE_FLASH_ATTR startLoad(PropellerConnection *connection, LoadType
 {
     switch (loadType) {
     case ltShutdown:
-        uart0_tx_buffer((char *)shutdownCmd, (uint16_t)sizeof(shutdownCmd));
+        uart_tx_buffer(UART0, (char *)shutdownCmd, (uint16_t)sizeof(shutdownCmd));
         break;
     case ltDownloadAndRun:
-        uart0_tx_buffer((char *)loadRunCmd, (uint16_t)sizeof(loadRunCmd));
+        uart_tx_buffer(UART0, (char *)loadRunCmd, (uint16_t)sizeof(loadRunCmd));
         break;
     case ltDownloadAndProgram:
-        uart0_tx_buffer((char *)programShutdownCmd, (uint16_t)sizeof(loadRunCmd));
+        uart_tx_buffer(UART0, (char *)programShutdownCmd, (uint16_t)sizeof(loadRunCmd));
         break;
     case ltDownloadAndProgramAndRun:
-        uart0_tx_buffer((char *)programRunCmd, (uint16_t)sizeof(loadRunCmd));
+        uart_tx_buffer(UART0, (char *)programRunCmd, (uint16_t)sizeof(loadRunCmd));
         break;
     default:
         return -1;

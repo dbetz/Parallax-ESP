@@ -25,7 +25,7 @@ serbridgeRecvCb(void *arg, char *data, unsigned short len)
   serbridgeConnData *conn = ((struct espconn*)arg)->reverse;
   //os_printf("Receive callback on conn %p\n", conn);
   if (conn == NULL) return;
-  uart0_tx_buffer(data, len);
+  uart_tx_buffer(UART0, data, len);
 }
 
 //===== UART -> TCP

@@ -103,13 +103,13 @@ uart_config(uint8 uart_no)
 }
 
 /******************************************************************************
- * FunctionName : uart1_tx_one_char
- * Description  : Internal used function
- *                Use uart1 interface to transfer one char
- * Parameters   : uint8 TxChar - character to tx
+ * FunctionName : uart_tx_one_char
+ * Description  : Transmit a character
+ * Parameters   : uint8 uart - uart to use
+ *                uint8 TxChar - character to tx
  * Returns      : OK
 *******************************************************************************/
-STATUS
+STATUS ICACHE_FLASH_ATTR
 uart_tx_one_char(uint8 uart, uint8 c)
 {
   //Wait until there is room in the FIFO
@@ -120,13 +120,13 @@ uart_tx_one_char(uint8 uart, uint8 c)
 }
 
 /******************************************************************************
- * FunctionName : uart1_try_tx_one_char
- * Description  : Internal used function
- *                Use uart1 interface to attempt to transfer one char
- * Parameters   : uint8 TxChar - character to tx
+ * FunctionName : uart_try_tx_one_char
+ * Description  : Transmit a character if there is space in the buffer
+ * Parameters   : uint8 uart - uart to use
+ *                uint8 TxChar - character to tx
  * Returns      : OK if character was sent, FAIL otherwise
 *******************************************************************************/
-STATUS
+STATUS ICACHE_FLASH_ATTR
 uart_try_tx_one_char(uint8 uart, uint8 c)
 {
   //Check for room in the FIFO
@@ -138,55 +138,35 @@ uart_try_tx_one_char(uint8 uart, uint8 c)
 }
 
 /******************************************************************************
- * FunctionName : uart1_write_char
- * Description  : Internal used function
- *                Do some special deal while tx char is '\r' or '\n'
- * Parameters   : char c - character to tx
- * Returns      : NONE
+ * FunctionName : uart_drain_tx_buffer
+ * Description  : Wait until the tx buffer is empty
+ * Parameters   : uint8 uart - uart to use
+ * Returns      : OK
 *******************************************************************************/
-void ICACHE_FLASH_ATTR
-uart1_write_char(char c)
+STATUS ICACHE_FLASH_ATTR
+uart_drain_tx_buffer(uint8 uart)
 {
-  //if (c == '\n') uart_tx_one_char(UART1, '\r');
-  uart_tx_one_char(UART1, c);
+  //Check for room in the FIFO
+  while (((READ_PERI_REG(UART_STATUS(uart))>>UART_TXFIFO_CNT_S)&UART_TXFIFO_CNT)>0) ;
+  return OK;
 }
-void ICACHE_FLASH_ATTR
-uart0_write_char(char c)
-{
-  //if (c == '\n') uart_tx_one_char(UART0, '\r');
-  uart_tx_one_char(UART0, c);
-}
+
 /******************************************************************************
- * FunctionName : uart0_tx_buffer
- * Description  : use uart0 to transfer buffer
- * Parameters   : uint8 *buf - point to send buffer
+ * FunctionName : uart_tx_buffer
+ * Description  : use uart to transfer buffer
+ * Parameters   : uint8 uart - uart to use
+ *                uint8 *buf - point to send buffer
  *                uint16 len - buffer len
  * Returns      :
 *******************************************************************************/
 void ICACHE_FLASH_ATTR
-uart0_tx_buffer(char *buf, uint16 len)
+uart_tx_buffer(uint8 uart, char *buf, uint16 len)
 {
   uint16 i;
 
   for (i = 0; i < len; i++)
   {
-    uart_tx_one_char(UART0, buf[i]);
-  }
-}
-
-/******************************************************************************
- * FunctionName : uart0_sendStr
- * Description  : use uart0 to transfer buffer
- * Parameters   : uint8 *buf - point to send buffer
- *                uint16 len - buffer len
- * Returns      :
-*******************************************************************************/
-void ICACHE_FLASH_ATTR
-uart0_sendStr(const char *str)
-{
-  while(*str)
-  {
-    uart_tx_one_char(UART0, *str++);
+    uart_tx_one_char(uart, buf[i]);
   }
 }
 
@@ -300,11 +280,11 @@ uart0_baud(int rate) {
    }
 }
 
-static void write_char(int ch)
+static void ICACHE_FLASH_ATTR write_char(int ch)
 {
     if (ch == '\n')
-        uart1_write_char('\r');
-    uart1_write_char(ch);
+        uart_tx_one_char(UART1, '\r');
+    uart_tx_one_char(UART1, ch);
 }
 
 /******************************************************************************
