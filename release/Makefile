@@ -5,6 +5,12 @@ release/httpd.user2.bin \
 release/httpd.ota \
 release/blank.bin
 
+SAMPLES=\
+release/robot.c \
+release/robot.html \
+release/robot-ws.c \
+release/robot-ws.html
+
 CP=cp
 
 # this rule doesn't seem to work but running build followed by zip does
@@ -19,13 +25,16 @@ build:
 	$(MAKE) -C .. STA_SSID= STA_PASS= clean
 	$(MAKE) -C .. STA_SSID= STA_PASS=
 
-staged-files:	release $(IMAGES)
+staged-files:	release $(IMAGES) $(SAMPLES)
 	$(CP) flash.sh clear.sh release
 
 release/boot_v1.5.bin:	../../esp_iot_sdk_v1.5.2/bin/boot_v1.5.bin patch
 	./patch $< $@
 
 release/%:	../build/%
+	$(CP) $< $@
+
+release/%:	../samples/%
 	$(CP) $< $@
 
 release/blank.bin:	../../esp_iot_sdk_v1.5.2/bin/blank.bin

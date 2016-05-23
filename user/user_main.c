@@ -178,8 +178,12 @@ HttpdBuiltInUrl builtInUrls[]={
     { "/flash/format", cgiRoffsFormat, NULL },
     { "/flash/write-file", cgiRoffsWriteFile, NULL },
     { "/propeller/baud-rate", cgiPropBaudRate, NULL },
-    { "/propeller/set-baud-rate", cgiPropBaudRate, NULL }, // deprecated
+    { "/propeller/set-baud-rate", cgiPropBaudRate, NULL },  // deprecated, use baud-rate instead
+    { "/propeller/loader-baud-rate", cgiPropLoaderBaudRate, NULL },
     { "/propeller/enable-serial-protocol", cgiPropEnableSerialProtocol, NULL },
+    { "/propeller/save-settings", cgiPropSaveSettings, NULL },
+    { "/propeller/restore-settings", cgiPropRestoreSettings, NULL },
+    { "/propeller/restore-default-settings", cgiPropRestoreDefaultSettings, NULL },
     { "/propeller/load", cgiPropLoad, NULL },
     { "/propeller/load-file", cgiPropLoadFile, NULL },
     { "/propeller/reset", cgiPropReset, NULL },

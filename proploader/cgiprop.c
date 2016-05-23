@@ -96,7 +96,7 @@ int ICACHE_FLASH_ATTR cgiPropBaudRate(HttpdConnData *connData)
 
     // check for GET
     if (connData->requestType == HTTPD_METHOD_GET)
-        os_sprintf(response, "%d", uart0_baudRate);
+        os_sprintf(response, "%d", (int)flashConfig.baud_rate);
 
     // only other option is POST
     else {
@@ -106,9 +106,44 @@ int ICACHE_FLASH_ATTR cgiPropBaudRate(HttpdConnData *connData)
             return HTTPD_CGI_DONE;
         }
 
-        DBG("set-baud-rate: baud-rate %d\n", baudRate);
+        DBG("set baud-rate: baud-rate %d\n", baudRate);
 
-        uart0_baud(baudRate);
+        flashConfig.baud_rate = baudRate;
+        uart0_baud(flashConfig.baud_rate);
+        os_strcpy(response, "");
+    }
+
+    httpdStartResponse(connData, 200);
+    httpdEndHeaders(connData);
+    httpdSend(connData, response, -1);
+
+    return HTTPD_CGI_DONE;
+}
+
+int ICACHE_FLASH_ATTR cgiPropLoaderBaudRate(HttpdConnData *connData)
+{
+    char response[32];
+    int baudRate;
+    
+    // check for the cleanup call
+    if (connData->conn == NULL)
+        return HTTPD_CGI_DONE;
+
+    // check for GET
+    if (connData->requestType == HTTPD_METHOD_GET)
+        os_sprintf(response, "%d", (int)flashConfig.loader_baud_rate);
+
+    // only other option is POST
+    else {
+
+        if (!getIntArg(connData, "baud-rate", &baudRate)) {
+            httpdSendResponse(connData, 400, "No baud-rate specified\r\n", -1);
+            return HTTPD_CGI_DONE;
+        }
+
+        DBG("set loader-baud-rate: baud-rate %d\n", baudRate);
+
+        flashConfig.loader_baud_rate = baudRate;
         os_strcpy(response, "");
     }
 
@@ -153,6 +188,31 @@ int ICACHE_FLASH_ATTR cgiPropEnableSerialProtocol(HttpdConnData *connData)
     return HTTPD_CGI_DONE;
 }
 
+int ICACHE_FLASH_ATTR cgiPropSaveSettings(HttpdConnData *connData)
+{
+    httpdStartResponse(connData, configSave() ? 200 : 400);
+    httpdEndHeaders(connData);
+    httpdSend(connData, "", -1);
+    return HTTPD_CGI_DONE;
+}
+
+int ICACHE_FLASH_ATTR cgiPropRestoreSettings(HttpdConnData *connData)
+{
+    httpdStartResponse(connData, configRestore() ? 200 : 400);
+    httpdEndHeaders(connData);
+    httpdSend(connData, "", -1);
+    return HTTPD_CGI_DONE;
+}
+
+int ICACHE_FLASH_ATTR cgiPropRestoreDefaultSettings(HttpdConnData *connData)
+{
+    flashConfig = flashDefault;
+    httpdStartResponse(connData, 200);
+    httpdEndHeaders(connData);
+    httpdSend(connData, "", -1);
+    return HTTPD_CGI_DONE;
+}
+
 int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
 {
     PropellerConnection *connection = &myConnection;
@@ -183,9 +243,9 @@ int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
     }
     
     if (!getIntArg(connData, "baud-rate", &connection->baudRate))
-        connection->baudRate = flashConfig.baud_rate;
+        connection->baudRate = flashConfig.loader_baud_rate;
     if (!getIntArg(connData, "final-baud-rate", &connection->finalBaudRate))
-        connection->finalBaudRate = connection->baudRate;
+        connection->finalBaudRate = flashConfig.baud_rate;
     if (!getIntArg(connData, "reset-pin", &connection->resetPin))
         connection->resetPin = flashConfig.reset_pin;
     if (!getIntArg(connData, "response-size", &connection->responseSize))
@@ -241,9 +301,9 @@ int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
     fileSize = roffs_file_size(connection->file);
 
     if (!getIntArg(connData, "baud-rate", &connection->baudRate))
-        connection->baudRate = flashConfig.baud_rate;
+        connection->baudRate = flashConfig.loader_baud_rate;
     if (!getIntArg(connData, "final-baud-rate", &connection->finalBaudRate))
-        connection->finalBaudRate = connection->baudRate;
+        connection->finalBaudRate = flashConfig.baud_rate;
     if (!getIntArg(connData, "reset-pin", &connection->resetPin))
         connection->resetPin = flashConfig.reset_pin;
     

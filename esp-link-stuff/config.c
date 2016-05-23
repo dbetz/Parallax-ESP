@@ -6,44 +6,27 @@
 #include "config.h"
 #include "espfs.h"
 #include "crc16.h"
-//#include "log.h"
 
-#define MCU_RESET_PIN   12
-#define LED_CONN_PIN    5
-#define FIRMWARE_SIZE   0x7b000
+#define MCU_RESET_PIN       12
+#define LED_CONN_PIN        5
+#define LOADER_BAUD_RATE    115200
+#define BAUD_RATE           115200
+
+#define FIRMWARE_SIZE       0x7b000
 #define CHIP_IN_HOSTNAME
 
 FlashConfig flashConfig;
 FlashConfig flashDefault = {
   .seq = 33, .magic = 0, .crc = 0,
-  .reset_pin    = MCU_RESET_PIN,
-//  .isp_pin      = MCU_ISP_PIN,
-  .conn_led_pin = LED_CONN_PIN,
-//  .ser_led_pin  = LED_SERIAL_PIN,
-  .baud_rate    = 115200,
-  .hostname     = "esp-httpd\0",
-  .staticip     = 0,
-  .netmask      = 0x00ffffff,
-  .gateway      = 0,
-//  .log_mode     = LOG_MODE_AUTO,
-//  .log_mode     = LOG_MODE_ON1,
-  .swap_uart    = 0,
-#if 0
-  .tcp_enable   = 1, .rssi_enable = 0,
-  .api_key      = "",
-  .slip_enable  = 0, .mqtt_enable = 0, .mqtt_status_enable = 0,
-  .mqtt_timeout = 2, .mqtt_clean_session = 1,
-  .mqtt_port    = 1883, .mqtt_keepalive = 60,
-  .mqtt_host    = "\0", .mqtt_clientid = "\0",
-  .mqtt_username= "\0", .mqtt_password = "\0", .mqtt_status_topic = "\0",
-#endif
-  .sys_descr 	  = "\0",
-  .rx_pullup	  = 1,  
-#if 0
-  .sntp_server  = "us.pool.ntp.org\0",
-  .syslog_host = "\0", .syslog_minheap = 8192, .syslog_filter = 7, .syslog_showtick = 1, .syslog_showdate = 0,
-  .mdns_enable = 1, .mdns_servername = "http\0", .timezone_offset = 0
-#endif
+  .version          = 1,
+  .reset_pin        = MCU_RESET_PIN,
+  .conn_led_pin     = LED_CONN_PIN,
+  .loader_baud_rate = LOADER_BAUD_RATE,
+  .baud_rate        = BAUD_RATE,
+  .hostname         = "esp-httpd",
+  .sys_descr 	    = "",
+  .rx_pullup	    = 1,
+  .enable_sscp      = 0
 };
 
 typedef union {
@@ -52,10 +35,11 @@ typedef union {
 } FlashFull;
 
 // magic number to recognize thet these are our flash settings as opposed to some random stuff
-#define FLASH_MAGIC  (0xaa55)
+#define FLASH_MAGIC     0x55aa
+#define FLASH_VERSION   1
 
 // size of the setting sector
-#define FLASH_SECT   (4096)
+#define FLASH_SECT      4096
 
 // address where to flash the settings: if we have >512KB flash then there are 16KB of reserved
 // space at the end of the first flash partition, we use the upper 8KB (2 sectors). If we only
@@ -90,6 +74,7 @@ bool ICACHE_FLASH_ATTR configSave(void) {
   // calculate CRC
   ff.fc.seq = seq;
   ff.fc.magic = FLASH_MAGIC;
+  ff.fc.version = FLASH_VERSION;
   ff.fc.crc = 0;
   //os_printf("cksum of: ");
   //memDump(&ff, sizeof(ff));
@@ -179,13 +164,13 @@ static int ICACHE_FLASH_ATTR selectPrimary(FlashFull *ff0, FlashFull *ff1) {
   bool ff1_crc_ok = crc16_data((unsigned char*)ff1, sizeof(FlashFull), 0) == crc;
 
   // decided which we like better
-  if (ff0_crc_ok)
-    if (!ff1_crc_ok || ff0->fc.seq >= ff1->fc.seq)
+  if (ff0_crc_ok && ff0->fc.magic == FLASH_MAGIC && ff0->fc.version == FLASH_VERSION)
+    if (!ff1_crc_ok || ff1->fc.magic != FLASH_MAGIC || ff1->fc.version != FLASH_VERSION || ff0->fc.seq >= ff1->fc.seq)
       return 0; // use first sector as primary
     else
       return 1; // second sector is newer
   else
-    return ff1_crc_ok ? 1 : -1;
+    return ff1_crc_ok && ff1->fc.magic == FLASH_MAGIC && ff1->fc.version == FLASH_VERSION? 1 : -1;
 }
 
 // returns the flash chip's size, in BYTES

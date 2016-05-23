@@ -2,6 +2,7 @@
 #include "sscp.h"
 #include "httpd.h"
 #include "uart.h"
+#include "config.h"
 
 //#define DUMP
 
@@ -16,7 +17,6 @@
 #define SSCP_DEF_ENABLE     0
 
 static int sscp_initialized = 0;
-static int sscp_enabled;
 static uint8_t sscp_buffer[SSCP_BUFFER_MAX + 1];
 static int sscp_inside;
 static int sscp_length;
@@ -232,47 +232,53 @@ void ICACHE_FLASH_ATTR sscp_init(void)
     sscp_inside = 0;
     sscp_length = 0;
     sscp_initialized = 1;
-    sscp_enabled = SSCP_DEF_ENABLE;
+    flashConfig.enable_sscp = SSCP_DEF_ENABLE;
 }
 
 void ICACHE_FLASH_ATTR sscp_enable(int enable)
 {
-    sscp_enabled = enable;
+    flashConfig.enable_sscp = enable;
 }
 
 int ICACHE_FLASH_ATTR sscp_isEnabled(void)
 {
-    return sscp_enabled;
+    return flashConfig.enable_sscp;
+}
+static void setBaudrate(void *data, char *value)
+{
+    sendResponse("OK");
+    uart_drain_tx_buffer(UART0);
+    uart0_baud(atoi(value));
 }
 
-static int intGetHandler(void *data, char *buf, int size)
+static void intGetHandler(void *data)
 {
     int *pValue = (int *)data;
-    os_sprintf(buf, "%d", *pValue);
-    return 0;
+    sendResponse("%d", *pValue);
 }
 
-static int intSetHandler(void *data, char *value)
+static void intSetHandler(void *data, char *value)
 {
     int *pValue = (int *)data;
     *pValue = atoi(value);
-    return 0;
+    sendResponse("OK");
 }
 
 static struct {
     char *name;
-    int (*getHandler)(void *data, char *buf, int size);
-    int (*setHandler)(void *data, char *value);
+    void (*getHandler)(void *data);
+    void (*setHandler)(void *data, char *value);
     void *data;
 } vars[] = {
-{   "pause-time",       intGetHandler,  intSetHandler,  &pauseTimeMS    },
-{   NULL,               NULL,           NULL,           NULL            }
+{   "pause-time",       intGetHandler,  intSetHandler,  &pauseTimeMS                },
+{   "enable-sscp",      intGetHandler,  intSetHandler,  &flashConfig.enable_sscp    },
+{   "baud-rate",        intGetHandler,  setBaudrate,    &uart0_baudRate             },
+{   NULL,               NULL,           NULL,           NULL                        }
 };
 
 // GET,var
 static void ICACHE_FLASH_ATTR do_get(int argc, char *argv[])
 {
-    char buf[128];
     int i;
     
     if (argc != 2) {
@@ -282,10 +288,8 @@ static void ICACHE_FLASH_ATTR do_get(int argc, char *argv[])
     
     for (i = 0; vars[i].name != NULL; ++i) {
         if (os_strcmp(argv[1], vars[i].name) == 0) {
-            if ((*vars[i].getHandler)(vars[i].data, buf, sizeof(buf)) == 0)
-                sendResponse(buf);
-            else
-                sendResponse("ERROR");
+            (*vars[i].getHandler)(vars[i].data);
+            return;
         }
     }
 
@@ -304,10 +308,8 @@ static void ICACHE_FLASH_ATTR do_set(int argc, char *argv[])
     
     for (i = 0; vars[i].name != NULL; ++i) {
         if (os_strcmp(argv[1], vars[i].name) == 0) {
-            if ((*vars[i].setHandler)(vars[i].data, argv[2]) == 0)
-                sendResponse("OK");
-            else
-                sendResponse("ERROR");
+            (*vars[i].setHandler)(vars[i].data, argv[2]);
+            return;
         }
     }
 
@@ -723,8 +725,12 @@ static void ICACHE_FLASH_ATTR sscp_process(char *buf, short len)
         if (strcmp(argv[0], cmds[i].cmd) == 0) {
             os_printf("Calling '%s' handler\n", argv[0]);
             (*cmds[i].handler)(argc, argv);
+            return;
         }
     }
+
+    os_printf("No handler for '%s'\n", argv[0]);
+    sendResponse("ERROR");
 }
 
 void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void *data, char *buf, short len), void *data)
@@ -735,7 +741,7 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
     if (!sscp_initialized)
         sscp_init();
 
-    if (!sscp_enabled) {
+    if (!flashConfig.enable_sscp) {
         (*outOfBand)(data, (char *)buf, len);
         return;
     }
