@@ -1,0 +1,161 @@
+<html>
+<head><title>ESP8266 Web Server - Update Settings</title>
+<link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+  <div id="main">
+    <div class="header">
+      <h1>Settings</h1>
+    </div>
+    <div class="content">
+      <form action='#' onsubmit="return false;">
+        <h2>Loader Baud Rate</h2>
+        <select id="loader-baud-rate">
+          <option value="1200">1200</option>
+          <option value="4800">4800</option>
+          <option value="9600">9600</option>
+          <option value="19200">19200</option>
+          <option value="38400">38400</option>
+          <option value="57600">57600</option>
+          <option value="74880">74880</option>
+          <option value="115200">115200</option>
+          <option value="230400">230400</option>
+          <option value="460800">460800</option>
+          <option value="921600">921600</option>
+        </select>
+        <h2>Communications Baud Rate</h2>
+        <select id="baud-rate">
+          <option value="1200">1200</option>
+          <option value="4800">4800</option>
+          <option value="9600">9600</option>
+          <option value="19200">19200</option>
+          <option value="38400">38400</option>
+          <option value="57600">57600</option>
+          <option value="74880">74880</option>
+          <option value="115200">115200</option>
+          <option value="230400">230400</option>
+          <option value="460800">460800</option>
+          <option value="921600">921600</option>
+        </select>
+        <h2>Serial Protocol</h2>
+        <select id="enable-serial-protocol">
+          <option value="0">Disabled</option>
+          <option value="1">Enabled</option>
+        </select>
+        <h2>Save Settings</h2>
+        <p>
+          <input type='button' value='Save' onclick='on_save();'>
+          <input type='button' value='Save to Flash' onclick='on_saveToFlash();'>
+          <input type='button' value='Restore from Flash' onclick='on_restore();'>
+          <input type='button' value='Restore Defaults' onclick='on_restoreDefaults();'>
+        </p>
+      </form>
+      <h3><p id='message'></p></h3>
+    </div>
+  </div>
+  <div id="logo"></div>
+
+<script type='text/javascript'>
+
+var loaderBaudRateCtl;
+var baudRateCtl;
+var enableSerialProtocolCtl;
+
+function init()
+{
+    loaderBaudRateCtl = document.getElementById('loader-baud-rate');
+    baudRateCtl = document.getElementById('baud-rate');
+    enableSerialProtocolCtl = document.getElementById('enable-serial-protocol');
+    loadSettings();
+}
+
+function loadSettings() {
+    var loaderBaudRate, baudRate;
+
+    loaderBaudRate = getBaudRate('loader-baud-rate');
+    for (var i = 0; i < loaderBaudRateCtl.length; ++i)
+        if (loaderBaudRate == loaderBaudRateCtl[i].value) {
+            loaderBaudRateCtl.selectedIndex = i;
+            break;
+        }
+
+    baudRate = getBaudRate('baud-rate');
+    for (var i = 0; i < baudRateCtl.length; ++i)
+        if (baudRate == baudRateCtl[i].value) {
+            baudRateCtl.selectedIndex = i;
+            break;
+        }
+
+    if (getEnableSerialProtocol() == "0")
+        enableSerialProtocolCtl.selectedIndex = 0;
+    else
+        enableSerialProtocolCtl.selectedIndex = 1;
+}
+
+function on_save() {
+    setBaudRate('loader-baud-rate', loaderBaudRateCtl.value);
+    setBaudRate('baud-rate', baudRateCtl.value);
+    setEnableSerialProtocol(enableSerialProtocolCtl.value);
+}
+
+function on_saveToFlash() {
+    on_save();
+    var req = new XMLHttpRequest();
+    req.open('POST', '/propeller/save-settings', false);
+    req.send();
+}
+
+function on_restore() {
+    var req = new XMLHttpRequest();
+    req.open('POST', '/propeller/restore-settings', false);
+    req.send();
+    loadSettings();
+}
+
+function on_restoreDefaults() {
+    var req = new XMLHttpRequest();
+    req.open('POST', '/propeller/restore-default-settings', false);
+    req.send();
+    loadSettings();
+}
+
+function setMessage(msg) {
+    var message = document.getElementById('message');
+    message.innerHTML = msg;
+}
+
+function getBaudRate(which) {
+    var req = new XMLHttpRequest();
+    var url = '/propeller/' + which;
+    req.open('GET', url, false);
+    req.send();
+    return req.responseText;
+}
+
+function setBaudRate(which, baudRate) {
+    var req = new XMLHttpRequest();
+    var url = '/propeller/' + which + '?baud-rate=' + baudRate;
+    req.open('POST', url, false);
+    req.send();
+}
+
+function getEnableSerialProtocol() {
+    var req = new XMLHttpRequest();
+    req.open('GET', '/propeller/enable-serial-protocol', false);
+    req.send();
+    return req.responseText;
+}
+
+function setEnableSerialProtocol(enable) {
+    var req = new XMLHttpRequest();
+    var url = '/propeller/enable-serial-protocol?enable=' + enable;
+    req.open('POST', url, false);
+    req.send();
+}
+
+window.addEventListener("load", init, false);
+
+</script>
+</body>
+</html>
+

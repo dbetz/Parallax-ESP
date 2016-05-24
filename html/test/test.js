@@ -164,7 +164,7 @@ function nextTest(lastOk) {
 	tstState++;
 	if (tstState==1) {
 		log("Testing parallel load of espfs files...");
-		testParLdImg("../cats/kitten-loves-toy.jpg", 3, nextTest);
+		testParLdImg("../logo.png", 3, nextTest);
 	} else if (tstState==2) {
 		log("Testing GET request of 32K...");
 		testDownloadCgi(32*1024, nextTest);

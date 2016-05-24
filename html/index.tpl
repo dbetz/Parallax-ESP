@@ -9,10 +9,10 @@ Configuration and Test</h1>
 <h2 id="version">Version %version%</h2>
 <p>
 <ul>
-<li>If you haven't connected this device to your WLAN network now, you can <a href="/wifi">do so.</a></li>
-<li><a href="flash/index.html">Update the firmware</a> of the module.</li>
+<li>If you haven't connected this device to your WLAN network, you can <a href="/wifi">do so now.</a></li>
+<li><a href="flash/index.html">Update</a> the firmware.</li>
 <li><a href="update-ffs.html">Update</a> the read-only flash filesystem.</li>
-<li>Update <a href="settings.html">Settings</a>.</li>
+<li><a href="settings.html">Update</a> the settings.</li>
 </ul>
 </p>
 </div>

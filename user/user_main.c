@@ -167,6 +167,8 @@ HttpdBuiltInUrl builtInUrls[]={
 	{"/wifi/connstatus.cgi", cgiWiFiConnStatus, NULL},
 	{"/wifi/setmode.cgi", cgiWiFiSetMode, NULL},
 
+	{"/websocket", cgiRedirect, "/websocket/index.html"},
+	{"/websocket/", cgiRedirect, "/websocket/index.html"},
 	{"/websocket/ws.cgi", cgiWebsocket, myWebsocketConnect},
 	{"/websocket/echo.cgi", cgiWebsocket, myEchoWebsocketConnect},
 
