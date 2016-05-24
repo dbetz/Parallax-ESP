@@ -67,6 +67,7 @@ PropellerConnection myConnection;
 
 int ICACHE_FLASH_ATTR cgiPropInit()
 {
+    os_printf("Version %s\n", VERSION);
     memset(&myConnection, 0, sizeof(PropellerConnection));
     myConnection.state = stIdle;
     resetButtonState = 1;
@@ -83,6 +84,14 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     os_printf("Flash filesystem mounted!\n");
 
     return 1;
+}
+
+int ICACHE_FLASH_ATTR cgiPropVersion(HttpdConnData *connData)
+{
+    httpdStartResponse(connData, 200);
+    httpdEndHeaders(connData);
+    httpdSend(connData, VERSION, -1);
+    return HTTPD_CGI_DONE;
 }
 
 int ICACHE_FLASH_ATTR cgiPropBaudRate(HttpdConnData *connData)

@@ -71,6 +71,9 @@ int ICACHE_FLASH_ATTR tplCounter(HttpdConnData *connData, char *token, void **ar
 		hitCounter++;
 		os_sprintf(buff, "%ld", hitCounter);
 	}
+	else if (os_strcmp(token, "version")==0) {
+		os_strcpy(buff, VERSION);
+	}
 	httpdSend(connData, buff, -1);
 	return HTTPD_CGI_DONE;
 }

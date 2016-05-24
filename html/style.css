@@ -8,6 +8,10 @@ body {
     text-align: center;
 }
 
+#version {
+    text-align: center;
+}
+
 #main {
 	background-color: #d0d0FF;
 	-moz-border-radius: 5px;

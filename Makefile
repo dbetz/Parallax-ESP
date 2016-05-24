@@ -7,6 +7,10 @@
 #OUTPUT_TYPE=combined
 OUTPUT_TYPE=ota
 
+MAJOR_VERSION=0.9
+VERSION=$(MAJOR_VERSION)_$(shell date "+%Y-%m-%d_%H:%M")
+$(info VERSION $(VERSION))
+
 #SPI flash size, in K
 ESP_SPI_FLASH_SIZE_K=4096
 #Amount of the flash to use for the image(s)
@@ -71,7 +75,7 @@ endif
 # compiler flags using during compilation of source files
 CFLAGS		= -Os -ggdb -std=gnu99 -Werror -Wpointer-arith -Wundef -Wall -Wl,-EL -fno-inline-functions \
 		-nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH \
-		-Wno-address
+		-Wno-address -DVERSION=\"$(VERSION)\"
 
 ifeq ("$(USE_AT)","yes")
 CFLAGS += -DUSE_AT

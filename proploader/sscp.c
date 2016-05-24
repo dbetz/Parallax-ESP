@@ -276,6 +276,12 @@ static struct {
 {   NULL,               NULL,           NULL,           NULL                        }
 };
 
+// (nothing)
+static void ICACHE_FLASH_ATTR do_nothing(int argc, char *argv[])
+{
+    sendResponse("OK");
+}
+
 // GET,var
 static void ICACHE_FLASH_ATTR do_get(int argc, char *argv[])
 {
@@ -683,6 +689,7 @@ static struct {
     char *cmd;
     void (*handler)(int argc, char *argv[]);
 } cmds[] = {
+{   "",         do_nothing  },
 {   "GET",      do_get      },
 {   "SET",      do_set      },
 {   "LISTEN",   do_listen   },

@@ -6,6 +6,7 @@
 <div id="main">
 <h1 id="title"><a href="https://www.parallax.com">Parallax</a> ESP8266 WiFi Module<br />
 Configuration and Test</h1>
+<h2 id="version">Version %version%</h2>
 <p>
 If you see this, it means the tiny li'l website in your ESP8266 does actually work. FYI, this page has
 been loaded <b>%counter%</b> times.
