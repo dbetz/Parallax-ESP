@@ -20,16 +20,39 @@ struct sscp_listener {
     sscp_connection *connections;
 };
 
-#define CONNECTION_INIT     0x0001
-#define CONNECTION_RXFULL   0x0002
+enum {
+    CONNECTION_INIT     = 0x00000001
+    CONNECTION_RXFULL   = 0x00000002
+    CONNECTION_SENDING  = 0x00000004
+};
+
+enum {
+    SSCP_STATE_IDLE = 0,
+    SSCP_STATE_CONNECTING,
+    SSCP_STATE_CONNECTED
+};
 
 struct sscp_connection {
     int index;
+    int state;
     int flags;
-    sscp_listener *listener;
+    union {
+        struct {
+            sscp_listener *listener;
+            sscp_connection *next;
+            HttpConnData *conn;
+        } http;
+        struct {
+            sscp_listener *listener;
+            sscp_connection *next;
+            Websock *sock;
+        } ws;
+        struct {
+            struct espconn conn;
+            esp_tcp tcp;
+        } tcp;
+    } d;
     char rxBuffer[SSCP_RX_BUFFER_MAX];
-    void *data; // HttpConnData or Websock
-    sscp_connection *next;
 };
 
 int cgiSSCPHandleRequest(HttpdConnData *connData);

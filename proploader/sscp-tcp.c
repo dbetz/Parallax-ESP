@@ -6,17 +6,17 @@
 #include "cgiwifi.h"
 
 typedef enum {
-    TCP_STATE_IDLE = 0,
-    TCP_STATE_CONNECTING,
-    TCP_STATE_CONNECTED
-} tcp_state;
+    SSCP_STATE_IDLE = 0,
+    SSCP_STATE_CONNECTING,
+    SSCP_STATE_CONNECTED
+} sscp_state;
 
 typedef enum {
     TCP_FLAG_SENDING = 0x00000001
 } tcp_flag;
 
 typedef struct {
-    tcp_state state;
+    sscp_state state;
     struct espconn conn;
     esp_tcp tcp;
     int flags;
@@ -42,7 +42,7 @@ static void ICACHE_FLASH_ATTR tcp_discon_cb(void *arg)
 {
     struct espconn *conn = (struct espconn *)arg;
     tcp_connection *c = (tcp_connection *)conn->reverse;
-    c->state = TCP_STATE_IDLE;
+    c->state = SSCP_STATE_IDLE;
 }
 
 static void ICACHE_FLASH_ATTR tcp_connect_cb(void *arg)
@@ -54,7 +54,7 @@ static void ICACHE_FLASH_ATTR tcp_connect_cb(void *arg)
     espconn_regist_recvcb(conn, tcp_recv_cb);
     espconn_regist_sentcb(conn, tcp_sent_cb);
 
-    c->state = TCP_STATE_CONNECTED;
+    c->state = SSCP_STATE_CONNECTED;
     sscp_sendResponse("OK");
 }
 
@@ -63,7 +63,7 @@ static void ICACHE_FLASH_ATTR tcp_recon_cb(void *arg, sint8 errType)
     struct espconn *conn = (struct espconn *)arg;
     tcp_connection *c = (tcp_connection *)conn->reverse;
 
-    c->state = TCP_STATE_IDLE;
+    c->state = SSCP_STATE_IDLE;
     sscp_sendResponse("ERROR");
 }
 
@@ -97,19 +97,19 @@ void ICACHE_FLASH_ATTR tcp_do_connect(int argc, char *argv[])
     }
 
     // response sent by tcp_connect_cb or tcp_recon_cb
-    c->state = TCP_STATE_CONNECTING;
+    c->state = SSCP_STATE_CONNECTING;
 }
 
 void ICACHE_FLASH_ATTR tcp_do_disconnect(int argc, char *argv[])
 {
     tcp_connection *c = &myConnection;
     struct espconn *conn = &c->conn;
-    if (c->state != TCP_STATE_CONNECTED && c->state != TCP_STATE_CONNECTING) {
+    if (c->state != SSCP_STATE_CONNECTED && c->state != SSCP_STATE_CONNECTING) {
         sscp_sendResponse("ERROR");
         return;
     }
     espconn_disconnect(conn);
-    c->state = TCP_STATE_IDLE;
+    c->state = SSCP_STATE_IDLE;
     sscp_sendResponse("OK");
 }
 
@@ -117,7 +117,7 @@ void ICACHE_FLASH_ATTR tcp_do_send(int argc, char *argv[])
 {
     tcp_connection *c = &myConnection;
 //    struct espconn *conn = &c->conn;
-    if (c->state != TCP_STATE_CONNECTED) {
+    if (c->state != SSCP_STATE_CONNECTED) {
         sscp_sendResponse("ERROR");
         return;
     }
@@ -128,7 +128,7 @@ void ICACHE_FLASH_ATTR tcp_do_recv(int argc, char *argv[])
 {
     tcp_connection *c = &myConnection;
 //    struct espconn *conn = &c->conn;
-    if (c->state != TCP_STATE_CONNECTED) {
+    if (c->state != SSCP_STATE_CONNECTED) {
         sscp_sendResponse("ERROR");
         return;
     }
