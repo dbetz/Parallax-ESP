@@ -3,6 +3,7 @@
 #include "httpd.h"
 #include "uart.h"
 #include "config.h"
+#include "cgiwifi.h"
 
 //#define DUMP
 
@@ -11,8 +12,6 @@
 #define SSCP_MAX_ARGS       8
 #define SSCP_LISTENER_MAX   2
 #define SSCP_CONNECTION_MAX 4
-#define SSCP_PATH_MAX       32
-#define SSCP_RX_BUFFER_MAX  1024
 
 #define SSCP_DEF_ENABLE     0
 
@@ -21,33 +20,7 @@ static uint8_t sscp_buffer[SSCP_BUFFER_MAX + 1];
 static int sscp_inside;
 static int sscp_length;
 
-typedef struct Listener Listener;
-typedef struct Connection Connection;
-
-#define LISTENER_UNUSED     0
-#define LISTENER_HTTP       1
-#define LISTENER_WEBSOCKET  2
-
-struct Listener {
-    int type;
-    char path[SSCP_PATH_MAX];
-    Connection *connections;
-};
-
 static Listener listeners[SSCP_LISTENER_MAX];
-
-#define CONNECTION_INIT     0x0001
-#define CONNECTION_RXFULL   0x0002
-
-struct Connection {
-    int index;
-    int flags;
-    Listener *listener;
-    char rxBuffer[SSCP_RX_BUFFER_MAX];
-    void *data; // HttpConnData or Websock
-    Connection *next;
-};
-
 static Connection connections[SSCP_CONNECTION_MAX];
 
 #ifdef DUMP
@@ -60,7 +33,7 @@ static char needPause[16] = { ':', ',' };
 static int needPauseCnt = 2;
 static int pauseTimeMS = 0;
 
-static void ICACHE_FLASH_ATTR sendResponse(char *fmt, ...)
+void ICACHE_FLASH_ATTR sscp_sendResponse(char *fmt, ...)
 {
     char buf[128];
     int cnt;
@@ -244,9 +217,31 @@ int ICACHE_FLASH_ATTR sscp_isEnabled(void)
 {
     return flashConfig.enable_sscp;
 }
+
+static void getIPAddress(void *data)
+{
+    struct ip_info info;
+	char buf[128];
+    if (wifi_get_ip_info(STATION_IF, &info)) {
+	    os_sprintf(buf, "%d.%d.%d.%d", 
+		    (info.ip.addr >> 0) & 0xff,
+            (info.ip.addr >> 8) & 0xff, 
+		    (info.ip.addr >>16) & 0xff,
+            (info.ip.addr >>24) & 0xff);
+        sscp_sendResponse(buf);
+    }
+    else
+        sscp_sendResponse("ERROR");
+}
+
+static void setIPAddress(void *data, char *value)
+{
+    sscp_sendResponse("ERROR");
+}
+
 static void setBaudrate(void *data, char *value)
 {
-    sendResponse("OK");
+    sscp_sendResponse("OK");
     uart_drain_tx_buffer(UART0);
     uart0_baud(atoi(value));
 }
@@ -254,14 +249,14 @@ static void setBaudrate(void *data, char *value)
 static void intGetHandler(void *data)
 {
     int *pValue = (int *)data;
-    sendResponse("%d", *pValue);
+    sscp_sendResponse("%d", *pValue);
 }
 
 static void intSetHandler(void *data, char *value)
 {
     int *pValue = (int *)data;
     *pValue = atoi(value);
-    sendResponse("OK");
+    sscp_sendResponse("OK");
 }
 
 static struct {
@@ -270,6 +265,7 @@ static struct {
     void (*setHandler)(void *data, char *value);
     void *data;
 } vars[] = {
+{   "ip-address",       getIPAddress,   setIPAddress,   NULL                        },
 {   "pause-time",       intGetHandler,  intSetHandler,  &pauseTimeMS                },
 {   "enable-sscp",      intGetHandler,  intSetHandler,  &flashConfig.enable_sscp    },
 {   "baud-rate",        intGetHandler,  setBaudrate,    &uart0_baudRate             },
@@ -279,7 +275,7 @@ static struct {
 // (nothing)
 static void ICACHE_FLASH_ATTR do_nothing(int argc, char *argv[])
 {
-    sendResponse("OK");
+    sscp_sendResponse("OK");
 }
 
 // GET,var
@@ -288,7 +284,7 @@ static void ICACHE_FLASH_ATTR do_get(int argc, char *argv[])
     int i;
     
     if (argc != 2) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
     
@@ -299,7 +295,7 @@ static void ICACHE_FLASH_ATTR do_get(int argc, char *argv[])
         }
     }
 
-    sendResponse("ERROR");
+    sscp_sendResponse("ERROR");
 }
 
 // SET,var,value
@@ -308,7 +304,7 @@ static void ICACHE_FLASH_ATTR do_set(int argc, char *argv[])
     int i;
     
     if (argc != 3) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
     
@@ -319,7 +315,7 @@ static void ICACHE_FLASH_ATTR do_set(int argc, char *argv[])
         }
     }
 
-    sendResponse("ERROR");
+    sscp_sendResponse("ERROR");
 }
 
 // LISTEN,chan
@@ -329,17 +325,17 @@ static void ICACHE_FLASH_ATTR do_listen(int argc, char *argv[])
     int i;
     
     if (argc != 3) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
     if ((i = atoi(argv[1])) < 0 || i >= SSCP_LISTENER_MAX) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
     if (os_strlen(argv[2]) >= SSCP_PATH_MAX) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
@@ -350,7 +346,7 @@ static void ICACHE_FLASH_ATTR do_listen(int argc, char *argv[])
     os_strcpy(listener->path, argv[2]);
     listener->type = LISTENER_HTTP;
     
-    sendResponse("OK");
+    sscp_sendResponse("OK");
 }
 
 // POLL
@@ -362,8 +358,8 @@ static void ICACHE_FLASH_ATTR do_poll(int argc, char *argv[])
     int i;
 
     if (argc != 1) {
-//        sendResponse("ERROR");
-        sendResponse("E:0,invalid arguments");
+//        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E:0,invalid arguments");
         return;
     }
 
@@ -377,16 +373,16 @@ static void ICACHE_FLASH_ATTR do_poll(int argc, char *argv[])
                     if (connData) {
                         switch (connData->requestType) {
                         case HTTPD_METHOD_GET:
-//                            sendResponse("H:%d,GET,%s", connection->index, connData->url);
-                            sendResponse("G:%d,%s", connection->index, connData->url);
+//                            sscp_sendResponse("H:%d,GET,%s", connection->index, connData->url);
+                            sscp_sendResponse("G:%d,%s", connection->index, connData->url);
                             break;
                         case HTTPD_METHOD_POST:
-//                            sendResponse("H:%d,POST,%s", connection->index, connData->url);
-                            sendResponse("P:%d,%s", connection->index, connData->url);
+//                            sscp_sendResponse("H:%d,POST,%s", connection->index, connData->url);
+                            sscp_sendResponse("P:%d,%s", connection->index, connData->url);
                             break;
                         default:
-//                            sendResponse("E:invalid request type");
-                            sendResponse("E:0,invalid request type");
+//                            sscp_sendResponse("E:invalid request type");
+                            sscp_sendResponse("E:0,invalid request type");
                             break;
                         }
                         return;
@@ -395,7 +391,7 @@ static void ICACHE_FLASH_ATTR do_poll(int argc, char *argv[])
                 case LISTENER_WEBSOCKET:
                     ws = (Websock *)connection->data;
                     if (ws) {
-                        sendResponse("W:%d,%s", connection->index, ws->conn->url);
+                        sscp_sendResponse("W:%d,%s", connection->index, ws->conn->url);
                         return;
                     }
                     break;
@@ -405,13 +401,13 @@ static void ICACHE_FLASH_ATTR do_poll(int argc, char *argv[])
             }
             else if (connection->flags & CONNECTION_RXFULL) {
                 connection->flags &= ~CONNECTION_RXFULL;
-                sendResponse("D:%d,%s", connection->index, connection->rxBuffer);
+                sscp_sendResponse("D:%d,%s", connection->index, connection->rxBuffer);
                 return;
             }
         }
     }
-//    sendResponse("N:nothing");
-    sendResponse("N:0,");
+//    sscp_sendResponse("N:nothing");
+    sscp_sendResponse("N:0,");
 }
 
 // ARG,chan
@@ -423,32 +419,32 @@ static void ICACHE_FLASH_ATTR do_arg(int argc, char *argv[])
     int i;
     
     if (argc != 3) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
     
     if ((i = atoi(argv[1])) < 0 || i >= SSCP_CONNECTION_MAX) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
     connection = &connections[i];
     if (!connection->listener || connection->listener->type != LISTENER_HTTP) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
     
     if (!(connData = (HttpdConnData *)connection->data) || connData->conn == NULL) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
     
     if (httpdFindArg(connData->getArgs, argv[2], buf, sizeof(buf)) == -1) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
-    sendResponse(buf);
+    sscp_sendResponse(buf);
 }
 
 // POSTARG,chan
@@ -460,37 +456,37 @@ static void ICACHE_FLASH_ATTR do_postarg(int argc, char *argv[])
     int i;
     
     if (argc != 3) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
     
     if ((i = atoi(argv[1])) < 0 || i >= SSCP_CONNECTION_MAX) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
     connection = &connections[i];
     if (!connection->listener || connection->listener->type != LISTENER_HTTP) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
     
     if (!(connData = (HttpdConnData *)connection->data) || connData->conn == NULL) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
     
     if (!connData->post->buff) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
     
     if (httpdFindArg(connData->post->buff, argv[2], buf, sizeof(buf)) == -1) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
-    sendResponse(buf);
+    sscp_sendResponse(buf);
 }
 
 #define MAX_SENDBUFF_LEN 1024
@@ -503,23 +499,23 @@ static void ICACHE_FLASH_ATTR do_reply(int argc, char *argv[])
     int i;
 
     if (argc != 4) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
     
     if ((i = atoi(argv[1])) < 0 || i >= SSCP_CONNECTION_MAX) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
     connection = &connections[i];
     if (!connection->listener || connection->listener->type != LISTENER_HTTP) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
         
     if (!(connData = (HttpdConnData *)connection->data) || connData->conn == NULL) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
@@ -539,7 +535,7 @@ static void ICACHE_FLASH_ATTR do_reply(int argc, char *argv[])
     removeConnection(connection);
     connData->cgi = NULL;
 
-    sendResponse("OK");
+    sscp_sendResponse("OK");
 }
 
 // WSLISTEN,chan,path
@@ -549,17 +545,17 @@ static void ICACHE_FLASH_ATTR do_wslisten(int argc, char *argv[])
     int i;
 
     if (argc != 3) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
     if ((i = atoi(argv[1])) < 0 || i >= SSCP_LISTENER_MAX) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
     if (os_strlen(argv[2]) >= SSCP_PATH_MAX) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
@@ -570,7 +566,7 @@ static void ICACHE_FLASH_ATTR do_wslisten(int argc, char *argv[])
     os_strcpy(listener->path, argv[2]);
     listener->type = LISTENER_WEBSOCKET;
     
-    sendResponse("OK");
+    sscp_sendResponse("OK");
 }
 
 // WSREAD,chan
@@ -580,28 +576,28 @@ static void ICACHE_FLASH_ATTR do_wsread(int argc, char *argv[])
     int i;
 
     if (argc != 2) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
     if ((i = atoi(argv[1])) < 0 || i >= SSCP_CONNECTION_MAX) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
     connection = &connections[i];
 
     if (!connection->listener || connection->listener->type != LISTENER_WEBSOCKET) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
     if (!(connection->flags & CONNECTION_RXFULL)) {
-        sendResponse("EMPTY");
+        sscp_sendResponse("EMPTY");
         return;
     }
 
-    sendResponse(connection->rxBuffer);
+    sscp_sendResponse(connection->rxBuffer);
     connection->flags &= ~CONNECTION_RXFULL;
 }
 
@@ -613,19 +609,19 @@ static void ICACHE_FLASH_ATTR do_wswrite(int argc, char *argv[])
     int i;
 
     if (argc != 3) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
     if ((i = atoi(argv[1])) < 0 || i >= SSCP_CONNECTION_MAX) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
 
     connection = &connections[i];
 
     if (!connection->listener || connection->listener->type != LISTENER_WEBSOCKET) {
-        sendResponse("ERROR");
+        sscp_sendResponse("ERROR");
         return;
     }
     
@@ -635,7 +631,7 @@ static void ICACHE_FLASH_ATTR do_wswrite(int argc, char *argv[])
     httpdSetSendBuffer(ws->conn, sendBuff, sizeof(sendBuff));
     cgiWebsocketSend(ws, argv[2], os_strlen(argv[2]), WEBSOCK_FLAG_NONE);
 
-    sendResponse("OK");
+    sscp_sendResponse("OK");
 }
 
 static void ICACHE_FLASH_ATTR websocketRecvCb(Websock *ws, char *data, int len, int flags)
@@ -689,18 +685,22 @@ static struct {
     char *cmd;
     void (*handler)(int argc, char *argv[]);
 } cmds[] = {
-{   "",         do_nothing  },
-{   "GET",      do_get      },
-{   "SET",      do_set      },
-{   "LISTEN",   do_listen   },
-{   "POLL",     do_poll     },
-{   "ARG",      do_arg      },
-{   "POSTARG",  do_postarg  },
-{   "REPLY",    do_reply    },
-{   "WSLISTEN", do_wslisten },
-{   "WSREAD",   do_wsread   },
-{   "WSWRITE",  do_wswrite  },
-{   NULL,       NULL        }
+{   "",                 do_nothing          },
+{   "GET",              do_get              },
+{   "SET",              do_set              },
+{   "LISTEN",           do_listen           },
+{   "POLL",             do_poll             },
+{   "ARG",              do_arg              },
+{   "POSTARG",          do_postarg          },
+{   "REPLY",            do_reply            },
+{   "WSLISTEN",         do_wslisten         },
+{   "WSREAD",           do_wsread           },
+{   "WSWRITE",          do_wswrite          },
+{   "TCP-CONNECT",      tcp_do_connect      },
+{   "TCP-DISCONNECT",   tcp_do_disconnect   },
+{   "TCP-SEND",         tcp_do_send         },
+{   "TCP-RECV",         tcp_do_recv         },
+{   NULL,               NULL                }
 };
 
 static void ICACHE_FLASH_ATTR sscp_process(char *buf, short len)
@@ -737,7 +737,7 @@ static void ICACHE_FLASH_ATTR sscp_process(char *buf, short len)
     }
 
     os_printf("No handler for '%s'\n", argv[0]);
-    sendResponse("ERROR");
+    sscp_sendResponse("ERROR");
 }
 
 void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void *data, char *buf, short len), void *data)

@@ -29,3 +29,10 @@ body {
   background-position: right;
   padding-top:115px;
 }
+
+#ack {
+  font-size: 12;
+  text-align: right;
+  margin-bottom: -15px;
+}
+

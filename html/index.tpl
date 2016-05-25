@@ -15,6 +15,7 @@ Configuration and Test</h1>
 <li><a href="settings.html">Update</a> the settings.</li>
 </ul>
 </p>
+<p id="ack">Based on ESP-HTTPD by Jeroen Domburg and ESP-LINK by Thorsten von Eicken</p>
 </div>
 <div id="logo"></div>
 </body>
