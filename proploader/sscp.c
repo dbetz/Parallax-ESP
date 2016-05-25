@@ -20,8 +20,8 @@ static uint8_t sscp_buffer[SSCP_BUFFER_MAX + 1];
 static int sscp_inside;
 static int sscp_length;
 
-static Listener listeners[SSCP_LISTENER_MAX];
-static Connection connections[SSCP_CONNECTION_MAX];
+static sscp_listener listeners[SSCP_LISTENER_MAX];
+static sscp_connection connections[SSCP_CONNECTION_MAX];
 
 #ifdef DUMP
 static void dump(char *tag, uint8_t *buf, int len);
@@ -79,9 +79,9 @@ void ICACHE_FLASH_ATTR sscp_sendResponse(char *fmt, ...)
     }
 }
 
-static Listener ICACHE_FLASH_ATTR *findListener(const char *path, int type)
+static sscp_listener ICACHE_FLASH_ATTR *findsscp_listener(const char *path, int type)
 {
-    Listener *listener;
+    sscp_listener *listener;
     int i;
 
     // find a matching listener
@@ -108,9 +108,9 @@ os_printf("listener: matching '%s' with '%s'\n", listener->path, path);
     return NULL;
 }
 
-static void ICACHE_FLASH_ATTR closeListener(Listener *listener)
+static void ICACHE_FLASH_ATTR closesscp_listener(sscp_listener *listener)
 {
-    Connection *connection = listener->connections;
+    sscp_connection *connection = listener->connections;
     while (connection) {
         // close the connection!!
         switch (listener->type) {
@@ -135,9 +135,9 @@ static void ICACHE_FLASH_ATTR closeListener(Listener *listener)
     listener->connections = NULL;
 }
 
-static Connection ICACHE_FLASH_ATTR *allocateConnection(Listener *listener)
+static sscp_connection ICACHE_FLASH_ATTR *allocatesscp_connection(sscp_listener *listener)
 {
-    Connection *connection;
+    sscp_connection *connection;
     int i;
     for (i = 0, connection = connections; i < SSCP_CONNECTION_MAX; ++i, ++connection) {
         if (!connection->listener) {
@@ -151,12 +151,12 @@ static Connection ICACHE_FLASH_ATTR *allocateConnection(Listener *listener)
     return NULL;
 }
 
-static void ICACHE_FLASH_ATTR removeConnection(Connection *connection)
+static void ICACHE_FLASH_ATTR removesscp_connection(sscp_connection *connection)
 {
-    Listener *listener = connection->listener;
+    sscp_listener *listener = connection->listener;
     if (listener) {
-        Connection **pNext = &listener->connections;
-        Connection *c;
+        sscp_connection **pNext = &listener->connections;
+        sscp_connection *c;
         while ((c = *pNext) != NULL && c != connection)
             pNext = &c->next;
         if (c) {
@@ -169,19 +169,19 @@ static void ICACHE_FLASH_ATTR removeConnection(Connection *connection)
 
 int ICACHE_FLASH_ATTR cgiSSCPHandleRequest(HttpdConnData *connData)
 {
-    Listener *listener;
-    Connection *connection;
+    sscp_listener *listener;
+    sscp_connection *connection;
     
     // check for the cleanup call
     if (connData->conn == NULL)
         return HTTPD_CGI_DONE;
     
     // find a matching listener
-    if (!(listener = findListener(connData->url, LISTENER_HTTP)))
+    if (!(listener = findsscp_listener(connData->url, LISTENER_HTTP)))
         return HTTPD_CGI_NOTFOUND;
 
     // find an unused connection
-    if (!(connection = allocateConnection(listener))) {
+    if (!(connection = allocatesscp_connection(listener))) {
         httpdStartResponse(connData, 400);
         httpdEndHeaders(connData);
 os_printf("sscp: no connections available for %s request\n", connData->url);
@@ -321,7 +321,7 @@ static void ICACHE_FLASH_ATTR do_set(int argc, char *argv[])
 // LISTEN,chan
 static void ICACHE_FLASH_ATTR do_listen(int argc, char *argv[])
 {
-    Listener *listener;
+    sscp_listener *listener;
     int i;
     
     if (argc != 3) {
@@ -340,7 +340,7 @@ static void ICACHE_FLASH_ATTR do_listen(int argc, char *argv[])
     }
 
     listener = &listeners[i];
-    closeListener(listener);
+    closesscp_listener(listener);
 
     os_printf("Listening on %d for '%s'\n", i, argv[2]);
     os_strcpy(listener->path, argv[2]);
@@ -352,7 +352,7 @@ static void ICACHE_FLASH_ATTR do_listen(int argc, char *argv[])
 // POLL
 static void ICACHE_FLASH_ATTR do_poll(int argc, char *argv[])
 {
-    Connection *connection;
+    sscp_connection *connection;
     HttpdConnData *connData;
     Websock *ws;
     int i;
@@ -414,7 +414,7 @@ static void ICACHE_FLASH_ATTR do_poll(int argc, char *argv[])
 static void ICACHE_FLASH_ATTR do_arg(int argc, char *argv[])
 {
     char buf[128];
-    Connection *connection;
+    sscp_connection *connection;
     HttpdConnData *connData;
     int i;
     
@@ -451,7 +451,7 @@ static void ICACHE_FLASH_ATTR do_arg(int argc, char *argv[])
 static void ICACHE_FLASH_ATTR do_postarg(int argc, char *argv[])
 {
     char buf[128];
-    Connection *connection;
+    sscp_connection *connection;
     HttpdConnData *connData;
     int i;
     
@@ -494,7 +494,7 @@ static void ICACHE_FLASH_ATTR do_postarg(int argc, char *argv[])
 // REPLY,chan,code,payload
 static void ICACHE_FLASH_ATTR do_reply(int argc, char *argv[])
 {
-    Connection *connection;
+    sscp_connection *connection;
     HttpdConnData *connData;
     int i;
 
@@ -532,7 +532,7 @@ static void ICACHE_FLASH_ATTR do_reply(int argc, char *argv[])
     httpdSend(connData, argv[3], len);
     httpdFlushSendBuffer(connData);
     
-    removeConnection(connection);
+    removesscp_connection(connection);
     connData->cgi = NULL;
 
     sscp_sendResponse("OK");
@@ -541,7 +541,7 @@ static void ICACHE_FLASH_ATTR do_reply(int argc, char *argv[])
 // WSLISTEN,chan,path
 static void ICACHE_FLASH_ATTR do_wslisten(int argc, char *argv[])
 {
-    Listener *listener;
+    sscp_listener *listener;
     int i;
 
     if (argc != 3) {
@@ -560,7 +560,7 @@ static void ICACHE_FLASH_ATTR do_wslisten(int argc, char *argv[])
     }
 
     listener = &listeners[i];
-    closeListener(listener);
+    closesscp_listener(listener);
 
     os_printf("Listening on %d for '%s'\n", i, argv[2]);
     os_strcpy(listener->path, argv[2]);
@@ -572,7 +572,7 @@ static void ICACHE_FLASH_ATTR do_wslisten(int argc, char *argv[])
 // WSREAD,chan
 static void ICACHE_FLASH_ATTR do_wsread(int argc, char *argv[])
 {
-    Connection *connection;
+    sscp_connection *connection;
     int i;
 
     if (argc != 2) {
@@ -604,7 +604,7 @@ static void ICACHE_FLASH_ATTR do_wsread(int argc, char *argv[])
 // WSWRITE,chan,payload
 static void ICACHE_FLASH_ATTR do_wswrite(int argc, char *argv[])
 {
-    Connection *connection;
+    sscp_connection *connection;
     Websock *ws;
     int i;
 
@@ -636,7 +636,7 @@ static void ICACHE_FLASH_ATTR do_wswrite(int argc, char *argv[])
 
 static void ICACHE_FLASH_ATTR websocketRecvCb(Websock *ws, char *data, int len, int flags)
 {
-	Connection *connection = (Connection *)ws->userData;
+	sscp_connection *connection = (sscp_connection *)ws->userData;
     if (!(connection->flags & CONNECTION_RXFULL)) {
         if (len > SSCP_RX_BUFFER_MAX)
             len = SSCP_RX_BUFFER_MAX;
@@ -652,23 +652,23 @@ static void ICACHE_FLASH_ATTR websocketSentCb(Websock *ws)
 
 static void ICACHE_FLASH_ATTR websocketCloseCb(Websock *ws)
 {
-	Connection *connection = (Connection *)ws->userData;
+	sscp_connection *connection = (sscp_connection *)ws->userData;
     connection->data = NULL;
 }
 
 void ICACHE_FLASH_ATTR sscp_websocketConnect(Websock *ws)
 {
-    Listener *listener;
-    Connection *connection;
+    sscp_listener *listener;
+    sscp_connection *connection;
     
     // find a matching listener
-    if (!(listener = findListener(ws->conn->url, LISTENER_WEBSOCKET))) {
+    if (!(listener = findsscp_listener(ws->conn->url, LISTENER_WEBSOCKET))) {
         cgiWebsocketClose(ws, 0);
         return;
     }
 
     // find an unused connection
-    if (!(connection = allocateConnection(listener))) {
+    if (!(connection = allocatesscp_connection(listener))) {
         cgiWebsocketClose(ws, 0);
         return;
     }
