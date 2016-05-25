@@ -8,8 +8,7 @@
 typedef enum {
     TCP_STATE_IDLE = 0,
     TCP_STATE_CONNECTING,
-    TCP_STATE_CONNECTED,
-    TCP_STATE_ERROR
+    TCP_STATE_CONNECTED
 } tcp_state;
 
 typedef enum {
