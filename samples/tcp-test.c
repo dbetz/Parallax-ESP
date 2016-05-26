@@ -53,22 +53,54 @@ int main(void)
     debug = wifi;
 #endif
     
+for (;;) {
+    char result[2];
+
     request("TCP-CONNECT,www-eng-x.llnl.gov,80");
     waitFor(SSCP_PREFIX "=");
+    collectUntil(',', result, sizeof(result));
     collectUntil('\r', buf, sizeof(buf));
     chan = atoi(buf);
-    dprint(debug, "Connect returned '%d'\n", chan);
+    dprint(debug, "Connect returned '%s'\n", result);
     
-#define REQ "GET /documents/a_document.txt HTTP/1.1\r\n\r\n"
+if (result[0] == 'S') {
+    dprint(debug, "Connected on channel %d\n", chan);
+    
+#define REQ "\
+GET /documents/a_document.txt HTTP/1.1\r\n\
+Host: www-eng-x.llnl.gov\r\n\
+\r\n"
 
     request("TCP-SEND,%d,%d", chan, strlen(REQ));
     requestPayload(REQ, strlen(REQ));
     waitFor(SSCP_PREFIX "=");
     collectUntil('\r', buf, sizeof(buf));
     dprint(debug, "Send returned '%s'\n", buf);
+
+    if (buf[0] == 'S') {
+        int retries = 10;
+        while (--retries >= 0) {
+
+            request("TCP-RECV,%d", chan);
+            waitFor(SSCP_PREFIX "=");
+            collectUntil('\r', buf, sizeof(buf));
+            dprint(debug, "Recv returned '%s'\n", buf);
+        
+            if (buf[0] == 'S')
+                break;
     
-    for (;;) {
+            waitcnt(CNT + CLKFREQ/4);
+        }
     }
+}
+    
+    request("TCP-DISCONNECT,%d", chan);
+    waitFor(SSCP_PREFIX "=");
+    collectUntil('\r', buf, sizeof(buf));
+    dprint(debug, "Disconnect returned '%s'\n", buf);
+    
+    waitcnt(CNT + CLKFREQ/4);
+}
     
     return 0;
 }
