@@ -1,9 +1,6 @@
 #include "esp8266.h"
 #include "sscp.h"
 #include "httpd.h"
-#include "uart.h"
-#include "config.h"
-#include "cgiwifi.h"
 
 // LISTEN,chan
 void ICACHE_FLASH_ATTR http_do_listen(int argc, char *argv[])

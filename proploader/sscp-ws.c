@@ -1,9 +1,5 @@
 #include "esp8266.h"
 #include "sscp.h"
-#include "httpd.h"
-#include "uart.h"
-#include "config.h"
-#include "cgiwifi.h"
 
 // WSLISTEN,chan,path
 void ICACHE_FLASH_ATTR ws_do_wslisten(int argc, char *argv[])
@@ -99,8 +95,8 @@ static void ICACHE_FLASH_ATTR websocketRecvCb(Websock *ws, char *data, int len, 
     if (!(connection->flags & CONNECTION_RXFULL)) {
         if (len > SSCP_RX_BUFFER_MAX)
             len = SSCP_RX_BUFFER_MAX;
-        strncpy(connection->rxBuffer, data, len);
-        connection->rxBuffer[SSCP_RX_BUFFER_MAX - 1] = '\0';
+        os_memcpy(connection->rxBuffer, data, len);
+        connection->rxCount = len;
         connection->flags |= CONNECTION_RXFULL;
     }
 }

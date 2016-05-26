@@ -1,6 +1,5 @@
 #include "esp8266.h"
 #include "sscp.h"
-#include "httpd.h"
 #include "uart.h"
 #include "config.h"
 #include "cgiwifi.h"
@@ -15,13 +14,21 @@
 
 #define SSCP_DEF_ENABLE     0
 
-static int sscp_initialized = 0;
 static uint8_t sscp_buffer[SSCP_BUFFER_MAX + 1];
 static int sscp_inside;
 static int sscp_length;
 
+static char *sscp_payload;
+static int sscp_payload_length;
+static void (*sscp_payload_cb)(void *data);
+static void *sscp_payload_data;
+
 static sscp_listener listeners[SSCP_LISTENER_MAX];
 static sscp_connection connections[SSCP_CONNECTION_MAX];
+
+static char needPause[16] = { ':', ',' };
+static int needPauseCnt = 2;
+static int pauseTimeMS = 0;
 
 #ifdef DUMP
 static void dump(char *tag, uint8_t *buf, int len);
@@ -29,54 +36,35 @@ static void dump(char *tag, uint8_t *buf, int len);
 #define dump(tag, buf, len)
 #endif
 
-static char needPause[16] = { ':', ',' };
-static int needPauseCnt = 2;
-static int pauseTimeMS = 0;
-
-void ICACHE_FLASH_ATTR sscp_sendResponse(char *fmt, ...)
+void ICACHE_FLASH_ATTR sscp_init(void)
 {
-    char buf[128];
-    int cnt;
+    int i;
+    os_memset(&listeners, 0, sizeof(listeners));
+    os_memset(&connections, 0, sizeof(connections));
+    for (i = 0; i < SSCP_CONNECTION_MAX; ++i)
+        connections[i].index = i;
+    sscp_inside = 0;
+    sscp_length = 0;
+    sscp_payload = NULL;
+    flashConfig.enable_sscp = SSCP_DEF_ENABLE;
+}
 
-    // insert the header
-    buf[0] = SSCP_START;
-    buf[1] = '=';
+void ICACHE_FLASH_ATTR sscp_enable(int enable)
+{
+    flashConfig.enable_sscp = enable;
+}
 
-    // insert the formatted response
-    va_list ap;
-    va_start(ap, fmt);
-    cnt = ets_vsnprintf(&buf[2], sizeof(buf) - 3, fmt, ap);
-    va_end(ap);
+int ICACHE_FLASH_ATTR sscp_isEnabled(void)
+{
+    return flashConfig.enable_sscp;
+}
 
-    // check to see if the response was truncated
-    if (cnt >= sizeof(buf) - 3)
-        cnt = sizeof(buf) - 3 - 1;
-
-    // display the response before inserting the final \r
-    os_printf("Replying: '%s'\n", &buf[1]);
-
-    // terminate the response with a \r
-    buf[2 + cnt] = '\r';
-    cnt += 3;
-
-    if (pauseTimeMS > 0) {
-        char *p = buf;
-        while (--cnt >= 0) {
-            int byte = *p++;
-            int i;
-            uart_tx_one_char(UART0, byte);
-            for (i = 0; i < needPauseCnt; ++i) {
-                if (byte == needPause[i]) {
-//os_printf("Delaying after '%c' 0x%02x for %d MS\n", byte, byte, pauseTimeMS);
-                    uart_drain_tx_buffer(UART0);
-                    os_delay_us(pauseTimeMS * 1000);
-                }
-            }
-        }
-    }
-    else {
-        uart_tx_buffer(UART0, buf, cnt);
-    }
+void ICACHE_FLASH_ATTR sscp_capturePayload(char *buf, int length, void (*cb)(void *data), void *data)
+{
+    sscp_payload = buf;
+    sscp_payload_length = length;
+    sscp_payload_cb = cb;
+    sscp_payload_data = data;
 }
 
 sscp_listener ICACHE_FLASH_ATTR *sscp_get_listener(int i)
@@ -161,6 +149,11 @@ sscp_connection ICACHE_FLASH_ATTR *sscp_allocate_connection(sscp_listener *liste
     return NULL;
 }
 
+void ICACHE_FLASH_ATTR sscp_free_connection(sscp_connection *connection)
+{
+    connection->listener = NULL;
+}
+
 void ICACHE_FLASH_ATTR sscp_remove_connection(sscp_connection *connection)
 {
     sscp_listener *listener = connection->listener;
@@ -169,8 +162,8 @@ void ICACHE_FLASH_ATTR sscp_remove_connection(sscp_connection *connection)
         sscp_connection *c;
         while ((c = *pNext) != NULL) {
             if (c == connection) {
-                c->listener = NULL;
                 *pNext = c->next;
+                sscp_free_connection(c);
                 break;
             }
             pNext = &c->next;
@@ -178,27 +171,50 @@ void ICACHE_FLASH_ATTR sscp_remove_connection(sscp_connection *connection)
     }
 }
 
-void ICACHE_FLASH_ATTR sscp_init(void)
+void ICACHE_FLASH_ATTR sscp_sendResponse(char *fmt, ...)
 {
-    int i;
-    os_memset(&listeners, 0, sizeof(listeners));
-    os_memset(&connections, 0, sizeof(connections));
-    for (i = 0; i < SSCP_CONNECTION_MAX; ++i)
-        connections[i].index = i;
-    sscp_inside = 0;
-    sscp_length = 0;
-    sscp_initialized = 1;
-    flashConfig.enable_sscp = SSCP_DEF_ENABLE;
-}
+    char buf[128];
+    int cnt;
 
-void ICACHE_FLASH_ATTR sscp_enable(int enable)
-{
-    flashConfig.enable_sscp = enable;
-}
+    // insert the header
+    buf[0] = SSCP_START;
+    buf[1] = '=';
 
-int ICACHE_FLASH_ATTR sscp_isEnabled(void)
-{
-    return flashConfig.enable_sscp;
+    // insert the formatted response
+    va_list ap;
+    va_start(ap, fmt);
+    cnt = ets_vsnprintf(&buf[2], sizeof(buf) - 3, fmt, ap);
+    va_end(ap);
+
+    // check to see if the response was truncated
+    if (cnt >= sizeof(buf) - 3)
+        cnt = sizeof(buf) - 3 - 1;
+
+    // display the response before inserting the final \r
+    os_printf("Replying: '%s'\n", &buf[1]);
+
+    // terminate the response with a \r
+    buf[2 + cnt] = '\r';
+    cnt += 3;
+
+    if (pauseTimeMS > 0) {
+        char *p = buf;
+        while (--cnt >= 0) {
+            int byte = *p++;
+            int i;
+            uart_tx_one_char(UART0, byte);
+            for (i = 0; i < needPauseCnt; ++i) {
+                if (byte == needPause[i]) {
+//os_printf("Delaying after '%c' 0x%02x for %d MS\n", byte, byte, pauseTimeMS);
+                    uart_drain_tx_buffer(UART0);
+                    os_delay_us(pauseTimeMS * 1000);
+                }
+            }
+        }
+    }
+    else {
+        uart_tx_buffer(UART0, buf, cnt);
+    }
 }
 
 static void getIPAddress(void *data)
@@ -426,9 +442,6 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
     uint8_t *p = (uint8_t *)buf;
     uint8_t *start = p;
     
-    if (!sscp_initialized)
-        sscp_init();
-
     if (!flashConfig.enable_sscp) {
         (*outOfBand)(data, (char *)buf, len);
         return;
@@ -437,7 +450,15 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
     dump("filter", p, len);
 
     while (--len >= 0) {
-        if (sscp_inside) {
+        if (sscp_payload) {
+            *sscp_payload++ = *p++;
+            if (--sscp_payload_length == 0) {
+                sscp_payload = NULL;
+                (*sscp_payload_cb)(sscp_payload_data);
+            }
+            ++start;
+        }
+        else if (sscp_inside) {
             if (*p == '\n') {
                 sscp_buffer[sscp_length] = '\0';
                 sscp_process((char *)sscp_buffer, sscp_length);

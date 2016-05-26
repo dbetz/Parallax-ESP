@@ -64,6 +64,7 @@ struct sscp_connection {
 void sscp_init(void);
 void sscp_enable(int enable);
 int sscp_isEnabled(void);
+void sscp_capturePayload(char *buf, int length, void (*cb)(void *data), void *data);
 void sscp_filter(char *buf, short len, void (*outOfBand)(void *data, char *buf, short len), void *data);
 void sscp_websocketConnect(Websock *ws);
 
@@ -72,6 +73,7 @@ sscp_listener *sscp_find_listener(const char *path, int type);
 void sscp_close_listener(sscp_listener *listener);
 sscp_connection *sscp_get_connection(int i);
 sscp_connection *sscp_allocate_connection(sscp_listener *listener);
+void sscp_free_connection(sscp_connection *connection);
 void sscp_remove_connection(sscp_connection *connection);
 void sscp_sendResponse(char *fmt, ...);
 

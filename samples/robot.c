@@ -60,7 +60,7 @@ int main(void)
 #endif
     
     init_robot();
-
+    
     request("SET,pause-time,5");
     waitFor(SSCP_PREFIX "=OK");
 
