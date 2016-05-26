@@ -62,10 +62,10 @@ int main(void)
     init_robot();
     
     request("SET,pause-time,5");
-    waitFor(SSCP_PREFIX "=OK");
+    waitFor(SSCP_PREFIX "=S,0\r");
 
     request("LISTEN,0,/robot*");
-    waitFor(SSCP_PREFIX "=OK\r");
+    waitFor(SSCP_PREFIX "=S,0\r");
     
     for (;;) {
         char type[16], verb[128], url[128], arg[128];
@@ -80,31 +80,6 @@ int main(void)
             dprint(debug, "Got %c\n", type[0]);
         
         switch (type[0]) {
-#if 0
-        case 'H':
-            collectUntil(',', arg, sizeof(arg));
-            chan = atoi(arg);
-            collectUntil(',', verb, sizeof(verb));
-            collectUntil('\r', url, sizeof(url));
-            
-            if (verb[0]) {
-                dprint(debug, "%d: VERB '%s', URL '%s'\n", chan, verb, url);
-                if (strcmp(verb, "POST") == 0 && strcmp(url, "/robot") == 0) {
-                    request("POSTARG,%d,gto", chan);
-                    waitFor(SSCP_PREFIX "=");
-                    collectUntil('\r', arg, sizeof(arg));
-                    dprint(debug, "gto='%s'\n", arg);
-                    if (process_robot_command(arg[0]) != 0)
-                        dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
-                    request("REPLY,%d,200,OK", chan);
-                    waitFor(SSCP_PREFIX "=OK\r");
-                }
-                else {
-                    dprint(debug, "Unknown command\n");
-                }
-            }
-            break;
-#else
         case 'P':
             collectUntil(',', arg, sizeof(arg));
             chan = atoi(arg);
@@ -112,18 +87,18 @@ int main(void)
             dprint(debug, "%d: URL '%s'\n", chan, url);
             if (strcmp(url, "/robot") == 0) {
                 request("POSTARG,%d,gto", chan);
-                waitFor(SSCP_PREFIX "=");
+                waitFor(SSCP_PREFIX "=S,");
                 collectUntil('\r', arg, sizeof(arg));
                 dprint(debug, "gto='%s'\n", arg);
                 if (process_robot_command(arg[0]) != 0)
                     dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
                 request("REPLY,%d,200,OK", chan);
-                waitFor(SSCP_PREFIX "=OK\r");
+                waitFor(SSCP_PREFIX "=S,0\r");
             }
             else {
                 dprint(debug, "Unknown POST URL\n");
                 request("REPLY,%d,400,unknown", chan);
-                waitFor(SSCP_PREFIX "=OK\r");
+                waitFor(SSCP_PREFIX "=S,0\r");
             }
             break;
         case 'G':
@@ -133,7 +108,7 @@ int main(void)
             dprint(debug, "%d: URL '%s'\n", chan, url);
             if (strcmp(url, "/robot-ping") == 0) {
                 request("REPLY,%d,200,%d", chan, ping_cm(PING_PIN));
-                waitFor(SSCP_PREFIX "=OK\r");
+                waitFor(SSCP_PREFIX "=S,0\r");
             }
             else {
                 dprint(debug, "Unknown POST URL\n");
@@ -141,7 +116,6 @@ int main(void)
                 dprint(debug, "Unknown GET URL\n");
             }
             break;
-#endif
         case 'N':
             skipUntil('\r');
             break;

@@ -13,6 +13,21 @@ typedef struct sscp_listener sscp_listener;
 typedef struct sscp_connection sscp_connection;
 
 enum {
+    SSCP_ERROR_INVALID_REQUEST      = -1,
+    SSCP_ERROR_INVALID_ARGUMENT     = -2,
+    SSCP_ERROR_WRONG_ARGUMENT_COUNT = -3,
+    SSCP_ERROR_NO_FREE_LISTENER     = -4,
+    SSCP_ERROR_NO_FREE_CONNECTION   = -5,
+    SSCP_ERROR_LOOKUP_FAILED        = -6,
+    SSCP_ERROR_CONNECT_FAILED       = -7,
+    SSCP_ERROR_SEND_FAILED          = -8,
+    SSCP_ERROR_INVALID_STATE        = -9,
+    SSCP_ERROR_INVALID_SIZE         = -10,
+    SSCP_ERROR_DISCONNECTED         = -11,
+    SSCP_ERROR_UNIMPLEMENTED        = -12
+};
+
+enum {
     LISTENER_UNUSED = 0,
     LISTENER_HTTP,
     LISTENER_WEBSOCKET,

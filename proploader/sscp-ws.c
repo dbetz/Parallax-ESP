@@ -7,17 +7,17 @@ void ICACHE_FLASH_ATTR ws_do_wslisten(int argc, char *argv[])
     sscp_listener *listener;
 
     if (argc != 3) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
 
     if (!(listener = sscp_get_listener(atoi(argv[1])))) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
 
     if (os_strlen(argv[2]) >= SSCP_PATH_MAX) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_SIZE);
         return;
     }
 
@@ -27,7 +27,7 @@ void ICACHE_FLASH_ATTR ws_do_wslisten(int argc, char *argv[])
     os_strcpy(listener->path, argv[2]);
     listener->type = LISTENER_WEBSOCKET;
     
-    sscp_sendResponse("OK");
+    sscp_sendResponse("S,0");
 }
 
 // WSREAD,chan
@@ -36,22 +36,22 @@ void ICACHE_FLASH_ATTR ws_do_wsread(int argc, char *argv[])
     sscp_connection *connection;
 
     if (argc != 2) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
 
     if (!(connection = sscp_get_connection(atoi(argv[1])))) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
 
     if (!connection->listener || connection->listener->type != LISTENER_WEBSOCKET) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
 
     if (!(connection->flags & CONNECTION_RXFULL)) {
-        sscp_sendResponse("EMPTY");
+        sscp_sendResponse("N,0");
         return;
     }
 
@@ -66,17 +66,17 @@ void ICACHE_FLASH_ATTR ws_do_wswrite(int argc, char *argv[])
     Websock *ws;
 
     if (argc != 3) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
 
     if (!(connection = sscp_get_connection(atoi(argv[1])))) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
 
     if (!connection->listener || connection->listener->type != LISTENER_WEBSOCKET) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
     
@@ -86,7 +86,7 @@ void ICACHE_FLASH_ATTR ws_do_wswrite(int argc, char *argv[])
     httpdSetSendBuffer(ws->conn, sendBuff, sizeof(sendBuff));
     cgiWebsocketSend(ws, argv[2], os_strlen(argv[2]), WEBSOCK_FLAG_NONE);
 
-    sscp_sendResponse("OK");
+    sscp_sendResponse("S,0");
 }
 
 static void ICACHE_FLASH_ATTR websocketRecvCb(Websock *ws, char *data, int len, int flags)

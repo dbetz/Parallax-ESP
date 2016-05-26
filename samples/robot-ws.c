@@ -65,10 +65,10 @@ int main(void)
     init_robot();
 
     request("SET,pause-time,5");
-    waitFor(SSCP_PREFIX "=OK");
+    waitFor(SSCP_PREFIX "=S,0\r");
 
     request("WSLISTEN,0,/ws/robot");
-    waitFor(SSCP_PREFIX "=OK\r");
+    waitFor(SSCP_PREFIX "=S,0\r");
     
     for (;;) {
         char type[16], verb[128], url[128], arg[128];
@@ -111,7 +111,7 @@ int main(void)
                 dprint(debug, "New PING))) distance: %d\n", pingDistance);
                 lastPingDistance = pingDistance;
                 request("WSWRITE,%d,%d", pingChannel, pingDistance);
-                waitFor(SSCP_PREFIX "=");
+                waitFor(SSCP_PREFIX "=S,");
                 collectUntil('\r', buf, sizeof(buf));
                 dprint(debug, "Got: %s\n", buf);
             }

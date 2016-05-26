@@ -16,13 +16,13 @@ void ICACHE_FLASH_ATTR tcp_do_connect(int argc, char *argv[])
     ip_addr_t ipAddr;
 
     if (argc != 3) {
-        sscp_sendResponse("E,0");
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
     
     // allocate a connection
     if (!(c = sscp_allocate_connection(&tcp_listener))) {
-        sscp_sendResponse("E,1");
+        sscp_sendResponse("E,%d", SSCP_ERROR_NO_FREE_CONNECTION);
         return;
     }
     conn = &c->d.tcp.conn;
@@ -49,7 +49,7 @@ void ICACHE_FLASH_ATTR tcp_do_connect(int argc, char *argv[])
             os_printf("TCP: looking up '%s'\n", argv[1]);
             return;
         default:
-            sscp_sendResponse("E,2");
+            sscp_sendResponse("E,%d", SSCP_ERROR_LOOKUP_FAILED);
             return;
         }
     }
@@ -57,7 +57,7 @@ void ICACHE_FLASH_ATTR tcp_do_connect(int argc, char *argv[])
     memcpy(conn->proto.tcp->remote_ip, &ipAddr.addr, 4);
 
     if (espconn_connect(conn) != ESPCONN_OK) {
-        sscp_sendResponse("E,3");
+        sscp_sendResponse("E,%d", SSCP_ERROR_CONNECT_FAILED);
         return;
     }
 
@@ -68,30 +68,27 @@ void ICACHE_FLASH_ATTR tcp_do_connect(int argc, char *argv[])
 void ICACHE_FLASH_ATTR tcp_do_disconnect(int argc, char *argv[])
 {
     sscp_connection *c;
-    struct espconn *conn;
 
     if (argc != 2) {
-        sscp_sendResponse("E,0");
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
     
     if (!(c = sscp_get_connection(atoi(argv[1])))) {
-        sscp_sendResponse("E,1");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
 
     if (!c->listener || c->listener->type != LISTENER_TCP) {
-        sscp_sendResponse("E,2");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
     
-    conn = &c->d.tcp.conn;
-
-    if (c->d.tcp.state != TCP_STATE_CONNECTED && c->d.tcp.state != TCP_STATE_CONNECTING) {
-        sscp_sendResponse("E,3");
-        return;
+    if (c->d.tcp.state == TCP_STATE_CONNECTED && c->d.tcp.state == TCP_STATE_CONNECTING) {
+        struct espconn *conn = &c->d.tcp.conn;
+        espconn_disconnect(conn);
     }
-    espconn_disconnect(conn);
+    
     sscp_free_connection(c);
     
     sscp_sendResponse("S,0");
@@ -103,7 +100,7 @@ static void send_cb(void *data)
     struct espconn *conn = &c->d.tcp.conn;
     if (espconn_send(conn, (uint8 *)c->txBuffer, c->txCount) != ESPCONN_OK) {
         c->flags &= ~CONNECTION_TXFULL;
-        sscp_sendResponse("E,5");
+        sscp_sendResponse("E,%d", SSCP_ERROR_SEND_FAILED);
     }
 }
 
@@ -114,27 +111,27 @@ void ICACHE_FLASH_ATTR tcp_do_send(int argc, char *argv[])
     int length;
 
     if (argc != 3) {
-        sscp_sendResponse("E,0");
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
     
     if (!(c = sscp_get_connection(atoi(argv[1])))) {
-        sscp_sendResponse("E,1");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
 
     if (!c->listener || c->listener->type != LISTENER_TCP) {
-        sscp_sendResponse("E,2");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
     
     if (c->d.tcp.state != TCP_STATE_CONNECTED) {
-        sscp_sendResponse("E,3");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_STATE);
         return;
     }
     
     if ((length = atoi(argv[2])) <= 0 || length > SSCP_TX_BUFFER_MAX) {
-        sscp_sendResponse("E,4");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_SIZE);
         return;
     }
     
@@ -150,17 +147,17 @@ void ICACHE_FLASH_ATTR tcp_do_recv(int argc, char *argv[])
     sscp_connection *c;
 
     if (argc != 2) {
-        sscp_sendResponse("E,0");
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
     
     if (!(c = sscp_get_connection(atoi(argv[1])))) {
-        sscp_sendResponse("E,1");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
 
     if (!c->listener || c->listener->type != LISTENER_TCP) {
-        sscp_sendResponse("E,2");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
 
@@ -210,7 +207,7 @@ static void ICACHE_FLASH_ATTR dns_cb(const char *name, ip_addr_t *ipaddr, void *
 
     if (!ipaddr) {
         os_printf("TCP: no IP address found for '%s'\n", name);
-        sscp_sendResponse("E,4");
+        sscp_sendResponse("E,%d", SSCP_ERROR_LOOKUP_FAILED);
         return;
     }
     
@@ -225,7 +222,7 @@ static void ICACHE_FLASH_ATTR dns_cb(const char *name, ip_addr_t *ipaddr, void *
     
     if (espconn_connect(conn) != ESPCONN_OK) {
         sscp_free_connection(c);
-        sscp_sendResponse("E,5");
+        sscp_sendResponse("E,%d", SSCP_ERROR_CONNECT_FAILED);
     }
     
     // response is sent by tcp_connect_cb or tcp_recon_cb
@@ -251,6 +248,6 @@ static void ICACHE_FLASH_ATTR tcp_recon_cb(void *arg, sint8 errType)
     sscp_connection *c = (sscp_connection *)conn->reverse;
 
     c->d.tcp.state = TCP_STATE_IDLE;
-    sscp_sendResponse("E,6");
+    sscp_sendResponse("E,%d", SSCP_ERROR_DISCONNECTED);
 }
 

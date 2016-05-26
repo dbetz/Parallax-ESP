@@ -8,17 +8,17 @@ void ICACHE_FLASH_ATTR http_do_listen(int argc, char *argv[])
     sscp_listener *listener;
     
     if (argc != 3) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
 
     if (!(listener = sscp_get_listener(atoi(argv[1])))) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
 
     if (os_strlen(argv[2]) >= SSCP_PATH_MAX) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_SIZE);
         return;
     }
 
@@ -28,7 +28,7 @@ void ICACHE_FLASH_ATTR http_do_listen(int argc, char *argv[])
     os_strcpy(listener->path, argv[2]);
     listener->type = LISTENER_HTTP;
     
-    sscp_sendResponse("OK");
+    sscp_sendResponse("S,0");
 }
 
 // ARG,chan
@@ -39,31 +39,31 @@ void ICACHE_FLASH_ATTR http_do_arg(int argc, char *argv[])
     HttpdConnData *connData;
     
     if (argc != 3) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
     
     if (!(connection = sscp_get_connection(atoi(argv[1])))) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
 
     if (!connection->listener || connection->listener->type != LISTENER_HTTP) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
     
     if (!(connData = (HttpdConnData *)connection->d.http.conn) || connData->conn == NULL) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_STATE);
         return;
     }
     
     if (httpdFindArg(connData->getArgs, argv[2], buf, sizeof(buf)) == -1) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("N,0");
         return;
     }
 
-    sscp_sendResponse(buf);
+    sscp_sendResponse("S,%s", buf);
 }
 
 // POSTARG,chan
@@ -74,36 +74,36 @@ void ICACHE_FLASH_ATTR http_do_postarg(int argc, char *argv[])
     HttpdConnData *connData;
     
     if (argc != 3) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
     
     if (!(connection = sscp_get_connection(atoi(argv[1])))) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
 
     if (!connection->listener || connection->listener->type != LISTENER_HTTP) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
     
     if (!(connData = (HttpdConnData *)connection->d.http.conn) || connData->conn == NULL) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_STATE);
         return;
     }
     
     if (!connData->post->buff) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("N,0");
         return;
     }
     
     if (httpdFindArg(connData->post->buff, argv[2], buf, sizeof(buf)) == -1) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("N,0");
         return;
     }
 
-    sscp_sendResponse(buf);
+    sscp_sendResponse("S,%s", buf);
 }
 
 #define MAX_SENDBUFF_LEN 1024
@@ -115,22 +115,22 @@ void ICACHE_FLASH_ATTR http_do_reply(int argc, char *argv[])
     HttpdConnData *connData;
 
     if (argc != 4) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
     
     if (!(connection = sscp_get_connection(atoi(argv[1])))) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
 
     if (!connection->listener || connection->listener->type != LISTENER_HTTP) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
         
     if (!(connData = (HttpdConnData *)connection->d.http.conn) || connData->conn == NULL) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_STATE);
         return;
     }
 
@@ -150,7 +150,7 @@ void ICACHE_FLASH_ATTR http_do_reply(int argc, char *argv[])
     sscp_remove_connection(connection);
     connData->cgi = NULL;
 
-    sscp_sendResponse("OK");
+    sscp_sendResponse("S,0");
 }
 
 int ICACHE_FLASH_ATTR cgiSSCPHandleRequest(HttpdConnData *connData)

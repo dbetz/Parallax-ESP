@@ -227,20 +227,20 @@ static void getIPAddress(void *data)
             (info.ip.addr >> 8) & 0xff, 
 		    (info.ip.addr >>16) & 0xff,
             (info.ip.addr >>24) & 0xff);
-        sscp_sendResponse(buf);
+        sscp_sendResponse("S,%s", buf);
     }
     else
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("N,0");
 }
 
 static void setIPAddress(void *data, char *value)
 {
-    sscp_sendResponse("ERROR");
+    sscp_sendResponse("E,%d", SSCP_ERROR_UNIMPLEMENTED);
 }
 
 static void setBaudrate(void *data, char *value)
 {
-    sscp_sendResponse("OK");
+    sscp_sendResponse("S,0");
     uart_drain_tx_buffer(UART0);
     uart0_baud(atoi(value));
 }
@@ -248,14 +248,14 @@ static void setBaudrate(void *data, char *value)
 static void intGetHandler(void *data)
 {
     int *pValue = (int *)data;
-    sscp_sendResponse("%d", *pValue);
+    sscp_sendResponse("S,%d", *pValue);
 }
 
 static void intSetHandler(void *data, char *value)
 {
     int *pValue = (int *)data;
     *pValue = atoi(value);
-    sscp_sendResponse("OK");
+    sscp_sendResponse("S,0");
 }
 
 static struct {
@@ -274,7 +274,7 @@ static struct {
 // (nothing)
 static void ICACHE_FLASH_ATTR do_nothing(int argc, char *argv[])
 {
-    sscp_sendResponse("OK");
+    sscp_sendResponse("S,0");
 }
 
 // GET,var
@@ -283,7 +283,7 @@ static void ICACHE_FLASH_ATTR do_get(int argc, char *argv[])
     int i;
     
     if (argc != 2) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
     
@@ -294,7 +294,7 @@ static void ICACHE_FLASH_ATTR do_get(int argc, char *argv[])
         }
     }
 
-    sscp_sendResponse("ERROR");
+    sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
 }
 
 // SET,var,value
@@ -303,7 +303,7 @@ static void ICACHE_FLASH_ATTR do_set(int argc, char *argv[])
     int i;
     
     if (argc != 3) {
-        sscp_sendResponse("ERROR");
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
     
@@ -314,7 +314,7 @@ static void ICACHE_FLASH_ATTR do_set(int argc, char *argv[])
         }
     }
 
-    sscp_sendResponse("ERROR");
+    sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
 }
 
 // POLL
@@ -326,8 +326,7 @@ static void ICACHE_FLASH_ATTR do_poll(int argc, char *argv[])
     int i;
 
     if (argc != 1) {
-//        sscp_sendResponse("ERROR");
-        sscp_sendResponse("E:0,invalid arguments");
+        sscp_sendResponse("E:%,invalid arguments", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
 
@@ -341,15 +340,12 @@ static void ICACHE_FLASH_ATTR do_poll(int argc, char *argv[])
                     if (connData) {
                         switch (connData->requestType) {
                         case HTTPD_METHOD_GET:
-//                            sscp_sendResponse("H:%d,GET,%s", connection->index, connData->url);
                             sscp_sendResponse("G:%d,%s", connection->index, connData->url);
                             break;
                         case HTTPD_METHOD_POST:
-//                            sscp_sendResponse("H:%d,POST,%s", connection->index, connData->url);
                             sscp_sendResponse("P:%d,%s", connection->index, connData->url);
                             break;
                         default:
-//                            sscp_sendResponse("E:invalid request type");
                             sscp_sendResponse("E:0,invalid request type");
                             break;
                         }
@@ -374,7 +370,7 @@ static void ICACHE_FLASH_ATTR do_poll(int argc, char *argv[])
             }
         }
     }
-//    sscp_sendResponse("N:nothing");
+    
     sscp_sendResponse("N:0,");
 }
 
@@ -434,7 +430,7 @@ static void ICACHE_FLASH_ATTR sscp_process(char *buf, short len)
     }
 
     os_printf("No handler for '%s'\n", argv[0]);
-    sscp_sendResponse("ERROR");
+    sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_REQUEST);
 }
 
 void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void *data, char *buf, short len), void *data)
