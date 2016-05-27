@@ -5,7 +5,10 @@
 #include "httpd.h"
 #include "cgiwebsocket.h"
 
+#define SSCP_LISTENER_MAX   2
 #define SSCP_PATH_MAX       32
+
+#define SSCP_CONNECTION_MAX 4
 #define SSCP_RX_BUFFER_MAX  1024
 #define SSCP_TX_BUFFER_MAX  1024
 
@@ -76,6 +79,10 @@ struct sscp_connection {
     int txCount;
 };
 
+extern sscp_listener sscp_listeners[];
+extern sscp_connection sscp_connections[];
+extern int sscp_pauseTimeMS;
+
 void sscp_init(void);
 void sscp_enable(int enable);
 int sscp_isEnabled(void);
@@ -91,6 +98,14 @@ sscp_connection *sscp_allocate_connection(sscp_listener *listener);
 void sscp_free_connection(sscp_connection *connection);
 void sscp_remove_connection(sscp_connection *connection);
 void sscp_sendResponse(char *fmt, ...);
+void sscp_sendPayload(char *buf, int cnt);
+
+// from sscp-cmds.c
+void cmds_do_nothing(int argc, char *argv[]);
+void cmds_do_get(int argc, char *argv[]);
+void cmds_do_set(int argc, char *argv[]);
+void cmds_do_poll(int argc, char *argv[]);
+void cmds_do_recv(int argc, char *argv[]);
 
 // from sscp-http.c
 void http_do_listen(int argc, char *argv[]);
@@ -101,13 +116,11 @@ int cgiSSCPHandleRequest(HttpdConnData *connData);
 
 // from sscp-ws.c
 void ws_do_wslisten(int argc, char *argv[]);
-void ws_do_wsread(int argc, char *argv[]);
 void ws_do_wswrite(int argc, char *argv[]);
 
 // from sscp-tcp.c
 void tcp_do_connect(int argc, char *argv[]);
 void tcp_do_disconnect(int argc, char *argv[]);
 void tcp_do_send(int argc, char *argv[]);
-void tcp_do_recv(int argc, char *argv[]);
 
 #endif

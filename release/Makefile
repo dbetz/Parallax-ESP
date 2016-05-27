@@ -9,7 +9,8 @@ SAMPLES=\
 release/robot.c \
 release/robot.html \
 release/robot-ws.c \
-release/robot-ws.html
+release/robot-ws.html \
+release/tcp-test.c
 
 CP=cp
 

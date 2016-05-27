@@ -37,6 +37,7 @@ void set_robot_speed(int left, int right);
 void request(char *fmt, ...);
 int waitFor(char *target);
 void collectUntil(int term, char *buf, int size);
+void collectPayload(char *buf, int bufSize, int count);
 
 int main(void)
 {    
@@ -72,7 +73,7 @@ int main(void)
     
     for (;;) {
         char type[16], verb[128], url[128], arg[128];
-        int chan, pingDistance;
+        int chan, pingDistance, count;
         
         waitcnt(CNT + CLKFREQ/4);
 
@@ -93,7 +94,13 @@ int main(void)
             collectUntil(',', arg, sizeof(arg));
             chan = atoi(arg);
             collectUntil('\r', arg, sizeof(arg));
-            dprint(debug, "%d: PAYLOAD '%s'\n", chan, arg);
+            count = atoi(arg);
+            request("RECV,%d", chan);
+            collectUntil(',', type, sizeof(type));
+            collectUntil('\r', arg, sizeof(arg));
+            count = atoi(arg);
+            collectPayload(arg, sizeof(arg), count);
+            dprint(debug, "%d: PAYLOAD %d\n", chan, count);
             if (process_robot_command(arg[0]) != 0)
                 dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
             break;
@@ -259,3 +266,15 @@ void collectUntil(int term, char *buf, int size)
     }
     buf[i] = '\0';
 }
+
+void collectPayload(char *buf, int bufSize, int count)
+{
+    while (--count >= 0) {
+        int ch = fdserial_rxChar(wifi);
+        if (bufSize > 0) {
+            *buf++ = ch;
+            --bufSize;
+        }
+    }
+}
+

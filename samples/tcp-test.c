@@ -27,12 +27,13 @@ void request(char *fmt, ...);
 void requestPayload(char *buf, int len);
 int waitFor(char *target);
 void collectUntil(int term, char *buf, int size);
+void collectPayload(char *buf, int bufSize, int count);
 void skipUntil(int term);
 
 int main(void)
 {    
-    char buf[128];
-    int chan;
+    char buf[1000];
+    int chan, i;
     
     // Close default same-cog terminal
     simpleterm_close();                         
@@ -80,13 +81,22 @@ Host: www-eng-x.llnl.gov\r\n\
             if (buf[0] == 'S') {
                 int retries = 10;
                 while (--retries >= 0) {
+                    int count;
 
-                    request("TCP-RECV,%d", chan);
+                    request("RECV,%d", chan);
                     waitFor(SSCP_PREFIX "=");
+                    collectUntil(',', result, sizeof(result));
                     collectUntil('\r', buf, sizeof(buf));
-                    dprint(debug, "Recv returned '%s'\n", buf);
+                    count = atoi(buf);
+                    collectPayload(buf, sizeof(buf), count);
+                    if (count >= sizeof(buf))
+                        count = sizeof(buf) - 1;
+                    buf[count] = '\0';
+                    dprint(debug, "Recv returned '%s,%d'\n", result, count);
+                    dprint(debug, "%s", buf);
+                    dprint(debug, "[EOF]\n");
     
-                    if (buf[0] == 'S')
+                    if (result[0] == 'S')
                         break;
 
                     waitcnt(CNT + CLKFREQ/4);
@@ -101,6 +111,8 @@ Host: www-eng-x.llnl.gov\r\n\
     
         waitcnt(CNT + CLKFREQ/4);
     }
+    
+    dprintf(debug, "Done!\n");
     
     return 0;
 }
@@ -158,6 +170,17 @@ void collectUntil(int term, char *buf, int size)
             buf[i++] = ch;
     }
     buf[i] = '\0';
+}
+
+void collectPayload(char *buf, int bufSize, int count)
+{
+    while (--count >= 0) {
+        int ch = fdserial_rxChar(wifi);
+        if (bufSize > 0) {
+            *buf++ = ch;
+            --bufSize;
+        }
+    }
 }
 
 void skipUntil(int term)

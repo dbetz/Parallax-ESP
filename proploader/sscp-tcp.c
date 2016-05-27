@@ -141,35 +141,6 @@ void ICACHE_FLASH_ATTR tcp_do_send(int argc, char *argv[])
     c->flags |= CONNECTION_TXFULL;
 }
 
-// TCP-RECV,chan
-void ICACHE_FLASH_ATTR tcp_do_recv(int argc, char *argv[])
-{
-    sscp_connection *c;
-
-    if (argc != 2) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
-        return;
-    }
-    
-    if (!(c = sscp_get_connection(atoi(argv[1])))) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-        return;
-    }
-
-    if (!c->listener || c->listener->type != LISTENER_TCP) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-        return;
-    }
-
-    if (!(c->flags & CONNECTION_RXFULL)) {
-        sscp_sendResponse("N,0");
-        return;
-    }
-
-    sscp_sendResponse("S,%s", c->rxBuffer);
-    c->flags &= ~CONNECTION_RXFULL;
-}
-
 static void ICACHE_FLASH_ATTR tcp_recv_cb(void *arg, char *data, unsigned short len)
 {
     struct espconn *conn = (struct espconn *)arg;

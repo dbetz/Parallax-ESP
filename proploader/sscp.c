@@ -9,8 +9,6 @@
 #define SSCP_START          0xFE
 #define SSCP_BUFFER_MAX     128
 #define SSCP_MAX_ARGS       8
-#define SSCP_LISTENER_MAX   2
-#define SSCP_CONNECTION_MAX 4
 
 #define SSCP_DEF_ENABLE     0
 
@@ -23,12 +21,12 @@ static int sscp_payload_length;
 static void (*sscp_payload_cb)(void *data);
 static void *sscp_payload_data;
 
-static sscp_listener listeners[SSCP_LISTENER_MAX];
-static sscp_connection connections[SSCP_CONNECTION_MAX];
+sscp_listener sscp_listeners[SSCP_LISTENER_MAX];
+sscp_connection sscp_connections[SSCP_CONNECTION_MAX];
 
 static char needPause[16] = { ':', ',' };
 static int needPauseCnt = 2;
-static int pauseTimeMS = 0;
+int sscp_pauseTimeMS = 0;
 
 #ifdef DUMP
 static void dump(char *tag, uint8_t *buf, int len);
@@ -39,10 +37,10 @@ static void dump(char *tag, uint8_t *buf, int len);
 void ICACHE_FLASH_ATTR sscp_init(void)
 {
     int i;
-    os_memset(&listeners, 0, sizeof(listeners));
-    os_memset(&connections, 0, sizeof(connections));
+    os_memset(&sscp_listeners, 0, sizeof(sscp_listeners));
+    os_memset(&sscp_connections, 0, sizeof(sscp_connections));
     for (i = 0; i < SSCP_CONNECTION_MAX; ++i)
-        connections[i].index = i;
+        sscp_connections[i].index = i;
     sscp_inside = 0;
     sscp_length = 0;
     sscp_payload = NULL;
@@ -69,7 +67,7 @@ void ICACHE_FLASH_ATTR sscp_capturePayload(char *buf, int length, void (*cb)(voi
 
 sscp_listener ICACHE_FLASH_ATTR *sscp_get_listener(int i)
 {
-    return i >= 0 && i < SSCP_LISTENER_MAX ? &listeners[i] : NULL;
+    return i >= 0 && i < SSCP_LISTENER_MAX ? &sscp_listeners[i] : NULL;
 }
 
 sscp_listener ICACHE_FLASH_ATTR *sscp_find_listener(const char *path, int type)
@@ -78,7 +76,7 @@ sscp_listener ICACHE_FLASH_ATTR *sscp_find_listener(const char *path, int type)
     int i;
 
     // find a matching listener
-    for (i = 0, listener = listeners; i < SSCP_LISTENER_MAX; ++i, ++listener) {
+    for (i = 0, listener = sscp_listeners; i < SSCP_LISTENER_MAX; ++i, ++listener) {
 
         // only check channels to which the MCU is listening
         if (listener->type == type) {
@@ -91,7 +89,7 @@ os_printf("listener: matching '%s' with '%s'\n", listener->path, path);
             // check for a wildcard match
             else {
                 int len_m1 = os_strlen(listener->path) - 1;
-                if (listeners->path[len_m1] == '*' && os_strncmp(listeners->path, path, len_m1) == 0)
+                if (listener->path[len_m1] == '*' && os_strncmp(listener->path, path, len_m1) == 0)
                     return listener;
             }
         }
@@ -130,14 +128,14 @@ void ICACHE_FLASH_ATTR sscp_close_listener(sscp_listener *listener)
 
 sscp_connection ICACHE_FLASH_ATTR *sscp_get_connection(int i)
 {
-    return i >= 0 && i < SSCP_CONNECTION_MAX ? &connections[i] : NULL;
+    return i >= 0 && i < SSCP_CONNECTION_MAX ? &sscp_connections[i] : NULL;
 }
 
 sscp_connection ICACHE_FLASH_ATTR *sscp_allocate_connection(sscp_listener *listener)
 {
     sscp_connection *connection;
     int i;
-    for (i = 0, connection = connections; i < SSCP_CONNECTION_MAX; ++i, ++connection) {
+    for (i = 0, connection = sscp_connections; i < SSCP_CONNECTION_MAX; ++i, ++connection) {
         if (!connection->listener) {
             connection->flags = CONNECTION_INIT;
             connection->listener = listener;
@@ -197,7 +195,7 @@ void ICACHE_FLASH_ATTR sscp_sendResponse(char *fmt, ...)
     buf[2 + cnt] = '\r';
     cnt += 3;
 
-    if (pauseTimeMS > 0) {
+    if (sscp_pauseTimeMS > 0) {
         char *p = buf;
         while (--cnt >= 0) {
             int byte = *p++;
@@ -205,9 +203,9 @@ void ICACHE_FLASH_ATTR sscp_sendResponse(char *fmt, ...)
             uart_tx_one_char(UART0, byte);
             for (i = 0; i < needPauseCnt; ++i) {
                 if (byte == needPause[i]) {
-//os_printf("Delaying after '%c' 0x%02x for %d MS\n", byte, byte, pauseTimeMS);
+//os_printf("Delaying after '%c' 0x%02x for %d MS\n", byte, byte, sscp_pauseTimeMS);
                     uart_drain_tx_buffer(UART0);
-                    os_delay_us(pauseTimeMS * 1000);
+                    os_delay_us(sscp_pauseTimeMS * 1000);
                 }
             }
         }
@@ -217,182 +215,29 @@ void ICACHE_FLASH_ATTR sscp_sendResponse(char *fmt, ...)
     }
 }
 
-static void getIPAddress(void *data)
+void ICACHE_FLASH_ATTR sscp_sendPayload(char *buf, int cnt)
 {
-    struct ip_info info;
-	char buf[128];
-    if (wifi_get_ip_info(STATION_IF, &info)) {
-	    os_sprintf(buf, "%d.%d.%d.%d", 
-		    (info.ip.addr >> 0) & 0xff,
-            (info.ip.addr >> 8) & 0xff, 
-		    (info.ip.addr >>16) & 0xff,
-            (info.ip.addr >>24) & 0xff);
-        sscp_sendResponse("S,%s", buf);
-    }
-    else
-        sscp_sendResponse("N,0");
-}
-
-static void setIPAddress(void *data, char *value)
-{
-    sscp_sendResponse("E,%d", SSCP_ERROR_UNIMPLEMENTED);
-}
-
-static void setBaudrate(void *data, char *value)
-{
-    sscp_sendResponse("S,0");
-    uart_drain_tx_buffer(UART0);
-    uart0_baud(atoi(value));
-}
-
-static void intGetHandler(void *data)
-{
-    int *pValue = (int *)data;
-    sscp_sendResponse("S,%d", *pValue);
-}
-
-static void intSetHandler(void *data, char *value)
-{
-    int *pValue = (int *)data;
-    *pValue = atoi(value);
-    sscp_sendResponse("S,0");
-}
-
-static struct {
-    char *name;
-    void (*getHandler)(void *data);
-    void (*setHandler)(void *data, char *value);
-    void *data;
-} vars[] = {
-{   "ip-address",       getIPAddress,   setIPAddress,   NULL                        },
-{   "pause-time",       intGetHandler,  intSetHandler,  &pauseTimeMS                },
-{   "enable-sscp",      intGetHandler,  intSetHandler,  &flashConfig.enable_sscp    },
-{   "baud-rate",        intGetHandler,  setBaudrate,    &uart0_baudRate             },
-{   NULL,               NULL,           NULL,           NULL                        }
-};
-
-// (nothing)
-static void ICACHE_FLASH_ATTR do_nothing(int argc, char *argv[])
-{
-    sscp_sendResponse("S,0");
-}
-
-// GET,var
-static void ICACHE_FLASH_ATTR do_get(int argc, char *argv[])
-{
-    int i;
-    
-    if (argc != 2) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
-        return;
-    }
-    
-    for (i = 0; vars[i].name != NULL; ++i) {
-        if (os_strcmp(argv[1], vars[i].name) == 0) {
-            (*vars[i].getHandler)(vars[i].data);
-            return;
-        }
-    }
-
-    sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-}
-
-// SET,var,value
-static void ICACHE_FLASH_ATTR do_set(int argc, char *argv[])
-{
-    int i;
-    
-    if (argc != 3) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
-        return;
-    }
-    
-    for (i = 0; vars[i].name != NULL; ++i) {
-        if (os_strcmp(argv[1], vars[i].name) == 0) {
-            (*vars[i].setHandler)(vars[i].data, argv[2]);
-            return;
-        }
-    }
-
-    sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-}
-
-// POLL
-static void ICACHE_FLASH_ATTR do_poll(int argc, char *argv[])
-{
-    sscp_connection *connection;
-    HttpdConnData *connData;
-    Websock *ws;
-    int i;
-
-    if (argc != 1) {
-        sscp_sendResponse("E:%,invalid arguments", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
-        return;
-    }
-
-    for (i = 0, connection = connections; i < SSCP_CONNECTION_MAX; ++i, ++connection) {
-        if (connection->listener) {
-            if (connection->flags & CONNECTION_INIT) {
-                connection->flags &= ~CONNECTION_INIT;
-                switch (connection->listener->type) {
-                case LISTENER_HTTP:
-                    connData = (HttpdConnData *)connection->d.http.conn;
-                    if (connData) {
-                        switch (connData->requestType) {
-                        case HTTPD_METHOD_GET:
-                            sscp_sendResponse("G:%d,%s", connection->index, connData->url);
-                            break;
-                        case HTTPD_METHOD_POST:
-                            sscp_sendResponse("P:%d,%s", connection->index, connData->url);
-                            break;
-                        default:
-                            sscp_sendResponse("E:0,invalid request type");
-                            break;
-                        }
-                        return;
-                    }
-                    break;
-                case LISTENER_WEBSOCKET:
-                    ws = (Websock *)connection->d.ws.ws;
-                    if (ws) {
-                        sscp_sendResponse("W:%d,%s", connection->index, ws->conn->url);
-                        return;
-                    }
-                    break;
-                default:
-                    break;
-                }
-            }
-            else if (connection->flags & CONNECTION_RXFULL) {
-                connection->flags &= ~CONNECTION_RXFULL;
-                sscp_sendResponse("D:%d,%s", connection->index, connection->rxBuffer);
-                return;
-            }
-        }
-    }
-    
-    sscp_sendResponse("N:0,");
+    uart_tx_buffer(UART0, buf, cnt);
 }
 
 static struct {
     char *cmd;
     void (*handler)(int argc, char *argv[]);
 } cmds[] = {
-{   "",                 do_nothing          },
-{   "GET",              do_get              },
-{   "SET",              do_set              },
-{   "POLL",             do_poll             },
+{   "",                 cmds_do_nothing     },
+{   "GET",              cmds_do_get         },
+{   "SET",              cmds_do_set         },
+{   "POLL",             cmds_do_poll        },
+{   "RECV",             cmds_do_recv        },
 {   "LISTEN",           http_do_listen      },
 {   "ARG",              http_do_arg         },
 {   "POSTARG",          http_do_postarg     },
 {   "REPLY",            http_do_reply       },
 {   "WSLISTEN",         ws_do_wslisten      },
-{   "WSREAD",           ws_do_wsread        },
 {   "WSWRITE",          ws_do_wswrite       },
 {   "TCP-CONNECT",      tcp_do_connect      },
 {   "TCP-DISCONNECT",   tcp_do_disconnect   },
 {   "TCP-SEND",         tcp_do_send         },
-{   "TCP-RECV",         tcp_do_recv         },
 {   NULL,               NULL                }
 };
 

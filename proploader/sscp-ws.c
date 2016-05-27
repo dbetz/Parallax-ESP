@@ -30,35 +30,6 @@ void ICACHE_FLASH_ATTR ws_do_wslisten(int argc, char *argv[])
     sscp_sendResponse("S,0");
 }
 
-// WSREAD,chan
-void ICACHE_FLASH_ATTR ws_do_wsread(int argc, char *argv[])
-{
-    sscp_connection *connection;
-
-    if (argc != 2) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
-        return;
-    }
-
-    if (!(connection = sscp_get_connection(atoi(argv[1])))) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-        return;
-    }
-
-    if (!connection->listener || connection->listener->type != LISTENER_WEBSOCKET) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-        return;
-    }
-
-    if (!(connection->flags & CONNECTION_RXFULL)) {
-        sscp_sendResponse("N,0");
-        return;
-    }
-
-    sscp_sendResponse(connection->rxBuffer);
-    connection->flags &= ~CONNECTION_RXFULL;
-}
-
 // WSWRITE,chan,payload
 void ICACHE_FLASH_ATTR ws_do_wswrite(int argc, char *argv[])
 {
