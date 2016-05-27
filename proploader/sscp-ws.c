@@ -30,7 +30,7 @@ void ICACHE_FLASH_ATTR ws_do_wslisten(int argc, char *argv[])
     sscp_sendResponse("S,0");
 }
 
-static void send_cb(void *data)
+static void ICACHE_FLASH_ATTR send_cb(void *data)
 {
     sscp_connection *connection = (sscp_connection *)data;
     Websock *ws = (Websock *)connection->d.ws.ws;

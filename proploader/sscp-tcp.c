@@ -94,7 +94,15 @@ void ICACHE_FLASH_ATTR tcp_do_disconnect(int argc, char *argv[])
     sscp_sendResponse("S,0");
 }
 
-static void send_cb(void *data)
+static void ICACHE_FLASH_ATTR tcp_sent_cb(void *arg)
+{
+    struct espconn *conn = (struct espconn *)arg;
+    sscp_connection *c = (sscp_connection *)conn->reverse;
+    c->flags &= ~CONNECTION_TXFULL;
+    sscp_sendResponse("S,0");
+}
+
+static void ICACHE_FLASH_ATTR send_cb(void *data)
 {
     sscp_connection *c = (sscp_connection *)data;
     struct espconn *conn = &c->d.tcp.conn;
@@ -137,14 +145,6 @@ static void ICACHE_FLASH_ATTR tcp_recv_cb(void *arg, char *data, unsigned short 
         c->rxCount = len;
         c->flags |= CONNECTION_RXFULL;
     }
-}
-
-static void ICACHE_FLASH_ATTR tcp_sent_cb(void *arg)
-{
-    struct espconn *conn = (struct espconn *)arg;
-    sscp_connection *c = (sscp_connection *)conn->reverse;
-    c->flags &= ~CONNECTION_TXFULL;
-    sscp_sendResponse("S,0");
 }
 
 static void ICACHE_FLASH_ATTR tcp_discon_cb(void *arg)

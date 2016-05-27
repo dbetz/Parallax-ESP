@@ -108,7 +108,7 @@ void ICACHE_FLASH_ATTR http_do_postarg(int argc, char *argv[])
 
 #define MAX_SENDBUFF_LEN 1024
 
-static void reply_cb(void *data)
+static void ICACHE_FLASH_ATTR reply_cb(void *data)
 {
     sscp_connection *connection = (sscp_connection *)data;
     HttpdConnData *connData = connection->d.http.conn;

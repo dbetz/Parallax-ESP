@@ -84,8 +84,7 @@ Host: www-eng-x.llnl.gov\r\n\
                         count = sizeof(buf) - 1;
                     buf[count] = '\0';
                     dprint(debug, "Recv returned '%s,%d'\n", result, count);
-                    dprint(debug, "%s", buf);
-                    dprint(debug, "[EOF]\n");
+                    dprint(debug, "%s[EOF]\n");
     
                     if (result[0] == 'S')
                         break;
