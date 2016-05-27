@@ -104,33 +104,17 @@ static void send_cb(void *data)
     }
 }
 
-// TCP-SEND,chan,count
-void ICACHE_FLASH_ATTR tcp_do_send(int argc, char *argv[])
+// helper for SEND,chan,count
+void ICACHE_FLASH_ATTR tcp_send_helper(sscp_connection *c, int argc, char *argv[])
 {
-    sscp_connection *c;
     int length;
 
-    if (argc != 3) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
-        return;
-    }
-    
-    if (!(c = sscp_get_connection(atoi(argv[1])))) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-        return;
-    }
-
-    if (!c->listener || c->listener->type != LISTENER_TCP) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-        return;
-    }
-    
     if (c->d.tcp.state != TCP_STATE_CONNECTED) {
         sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_STATE);
         return;
     }
     
-    if ((length = atoi(argv[2])) <= 0 || length > SSCP_TX_BUFFER_MAX) {
+    if ((length = atoi(argv[2])) < 0 || length > SSCP_TX_BUFFER_MAX) {
         sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_SIZE);
         return;
     }

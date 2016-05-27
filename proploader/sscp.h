@@ -27,7 +27,8 @@ enum {
     SSCP_ERROR_INVALID_STATE        = -9,
     SSCP_ERROR_INVALID_SIZE         = -10,
     SSCP_ERROR_DISCONNECTED         = -11,
-    SSCP_ERROR_UNIMPLEMENTED        = -12
+    SSCP_ERROR_UNIMPLEMENTED        = -12,
+    SSCP_ERROR_BUSY                 = -13
 };
 
 enum {
@@ -63,6 +64,7 @@ struct sscp_connection {
     union {
         struct {
             HttpdConnData *conn;
+            int code;
         } http;
         struct {
             Websock *ws;
@@ -105,6 +107,7 @@ void cmds_do_nothing(int argc, char *argv[]);
 void cmds_do_get(int argc, char *argv[]);
 void cmds_do_set(int argc, char *argv[]);
 void cmds_do_poll(int argc, char *argv[]);
+void cmds_do_send(int argc, char *argv[]);
 void cmds_do_recv(int argc, char *argv[]);
 
 // from sscp-http.c
@@ -116,11 +119,11 @@ int cgiSSCPHandleRequest(HttpdConnData *connData);
 
 // from sscp-ws.c
 void ws_do_wslisten(int argc, char *argv[]);
-void ws_do_wswrite(int argc, char *argv[]);
+void ws_send_helper(sscp_connection *connection, int argc, char *argv[]);
 
 // from sscp-tcp.c
 void tcp_do_connect(int argc, char *argv[]);
 void tcp_do_disconnect(int argc, char *argv[]);
-void tcp_do_send(int argc, char *argv[]);
+void tcp_send_helper(sscp_connection *c, int argc, char *argv[]);
 
 #endif

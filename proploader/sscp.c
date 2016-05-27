@@ -228,16 +228,15 @@ static struct {
 {   "GET",              cmds_do_get         },
 {   "SET",              cmds_do_set         },
 {   "POLL",             cmds_do_poll        },
+{   "SEND",             cmds_do_send        },
 {   "RECV",             cmds_do_recv        },
 {   "LISTEN",           http_do_listen      },
 {   "ARG",              http_do_arg         },
 {   "POSTARG",          http_do_postarg     },
 {   "REPLY",            http_do_reply       },
 {   "WSLISTEN",         ws_do_wslisten      },
-{   "WSWRITE",          ws_do_wswrite       },
 {   "TCP-CONNECT",      tcp_do_connect      },
 {   "TCP-DISCONNECT",   tcp_do_disconnect   },
-{   "TCP-SEND",         tcp_do_send         },
 {   NULL,               NULL                }
 };
 

@@ -30,34 +30,32 @@ void ICACHE_FLASH_ATTR ws_do_wslisten(int argc, char *argv[])
     sscp_sendResponse("S,0");
 }
 
-// WSWRITE,chan,payload
-void ICACHE_FLASH_ATTR ws_do_wswrite(int argc, char *argv[])
+static void send_cb(void *data)
 {
-    sscp_connection *connection;
-    Websock *ws;
-
-    if (argc != 3) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
-        return;
-    }
-
-    if (!(connection = sscp_get_connection(atoi(argv[1])))) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-        return;
-    }
-
-    if (!connection->listener || connection->listener->type != LISTENER_WEBSOCKET) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-        return;
-    }
-    
-    ws = (Websock *)connection->d.ws.ws;
+    sscp_connection *connection = (sscp_connection *)data;
+    Websock *ws = (Websock *)connection->d.ws.ws;
 
     char sendBuff[1024];
     httpdSetSendBuffer(ws->conn, sendBuff, sizeof(sendBuff));
-    cgiWebsocketSend(ws, argv[2], os_strlen(argv[2]), WEBSOCK_FLAG_NONE);
+    cgiWebsocketSend(ws, connection->txBuffer, connection->txCount, WEBSOCK_FLAG_NONE);
 
     sscp_sendResponse("S,0");
+}
+
+// helper for SEND,chan,payload
+void ICACHE_FLASH_ATTR ws_send_helper(sscp_connection *connection, int argc, char *argv[])
+{
+    int length;
+
+    if ((length = atoi(argv[2])) < 0 || length > SSCP_TX_BUFFER_MAX) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_SIZE);
+        return;
+    }
+    
+    // response is sent by tcp_sent_cb
+    connection->txCount = length;
+    sscp_capturePayload(connection->txBuffer, length, send_cb, connection);
+    connection->flags |= CONNECTION_TXFULL;
 }
 
 static void ICACHE_FLASH_ATTR websocketRecvCb(Websock *ws, char *data, int len, int flags)

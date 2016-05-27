@@ -108,11 +108,35 @@ void ICACHE_FLASH_ATTR http_do_postarg(int argc, char *argv[])
 
 #define MAX_SENDBUFF_LEN 1024
 
+static void reply_cb(void *data)
+{
+    sscp_connection *connection = (sscp_connection *)data;
+    HttpdConnData *connData = connection->d.http.conn;
+    
+    char sendBuff[MAX_SENDBUFF_LEN];
+    httpdSetSendBuffer(connData, sendBuff, sizeof(sendBuff));
+    
+    char buf[20];
+    os_sprintf(buf, "%d", connection->txCount);
+
+    httpdStartResponse(connData, connection->d.http.code);
+    httpdHeader(connData, "Content-Length", buf);
+    httpdEndHeaders(connData);
+    httpdSend(connData, connection->txBuffer, connection->txCount);
+    httpdFlushSendBuffer(connData);
+    
+    sscp_remove_connection(connection);
+    connData->cgi = NULL;
+
+    sscp_sendResponse("S,0");
+}
+
 // REPLY,chan,code,payload
 void ICACHE_FLASH_ATTR http_do_reply(int argc, char *argv[])
 {
     sscp_connection *connection;
     HttpdConnData *connData;
+    int length;
 
     if (argc != 4) {
         sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
@@ -133,24 +157,18 @@ void ICACHE_FLASH_ATTR http_do_reply(int argc, char *argv[])
         sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_STATE);
         return;
     }
-
-    char sendBuff[MAX_SENDBUFF_LEN];
-    httpdSetSendBuffer(connData, sendBuff, sizeof(sendBuff));
     
-    char buf[20];
-    int len = os_strlen(argv[3]);
-    os_sprintf(buf, "%d", len);
+    connection->d.http.code = atoi(argv[2]);
 
-    httpdStartResponse(connData, atoi(argv[2]));
-    httpdHeader(connData, "Content-Length", buf);
-    httpdEndHeaders(connData);
-    httpdSend(connData, argv[3], len);
-    httpdFlushSendBuffer(connData);
+    if ((length = atoi(argv[3])) < 0 || length > SSCP_TX_BUFFER_MAX) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_SIZE);
+        return;
+    }
     
-    sscp_remove_connection(connection);
-    connData->cgi = NULL;
-
-    sscp_sendResponse("S,0");
+    // response is sent by reply_cb
+    connection->txCount = length;
+    sscp_capturePayload(connection->txBuffer, length, reply_cb, connection);
+    connection->flags |= CONNECTION_TXFULL;
 }
 
 int ICACHE_FLASH_ATTR cgiSSCPHandleRequest(HttpdConnData *connData)

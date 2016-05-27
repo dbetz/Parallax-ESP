@@ -160,6 +160,44 @@ void ICACHE_FLASH_ATTR cmds_do_poll(int argc, char *argv[])
     sscp_sendResponse("N:0,");
 }
 
+// SEND,chan,payload
+void ICACHE_FLASH_ATTR cmds_do_send(int argc, char *argv[])
+{
+    sscp_connection *c;
+
+    if (argc != 3) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
+        return;
+    }
+    
+    if (!(c = sscp_get_connection(atoi(argv[1])))) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+        return;
+    }
+    
+    if (!c->listener) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+        return;
+    }
+    
+    if (c->flags & CONNECTION_TXFULL) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_BUSY);
+        return;
+    }
+    
+    switch (c->listener->type) {
+    case LISTENER_WEBSOCKET:
+        ws_send_helper(c, argc, argv);
+        break;
+    case LISTENER_TCP:
+        tcp_send_helper(c, argc, argv);
+        break;
+    default:
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+        break;
+    }
+}
+
 // RECV,chan
 void ICACHE_FLASH_ATTR cmds_do_recv(int argc, char *argv[])
 {

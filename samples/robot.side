@@ -1,4 +1,5 @@
 robot.c
+sscp-client.c
 >compiler=C
 >memtype=cmm main ram compact
 >optimize=-Os
