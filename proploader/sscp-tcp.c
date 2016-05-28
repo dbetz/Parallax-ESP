@@ -5,49 +5,11 @@ static sscp_listener tcp_listener = {
     .type = LISTENER_TCP
 };
 
+static void dns_cb(const char *name, ip_addr_t *ipaddr, void *arg);
+static void tcp_connect_cb(void *arg);
+static void tcp_discon_cb(void *arg);
+static void tcp_recv_cb(void *arg, char *data, unsigned short len);
 static void tcp_recon_cb(void *arg, sint8 errType);
-
-static void ICACHE_FLASH_ATTR dns_cb(const char *name, ip_addr_t *ipaddr, void *arg)
-{
-    struct espconn *conn = (struct espconn *)arg;
-    sscp_connection *c = (sscp_connection *)conn->reverse;
-
-    if (!ipaddr) {
-        os_printf("TCP: no IP address found for '%s'\n", name);
-        sscp_sendResponse("E,%d", SSCP_ERROR_LOOKUP_FAILED);
-        return;
-    }
-    
-    os_printf("TCP: found IP address %d.%d.%d.%d for '%s'\n",
-                *((uint8 *)&ipaddr->addr),
-                *((uint8 *)&ipaddr->addr + 1),
-                *((uint8 *)&ipaddr->addr + 2),
-                *((uint8 *)&ipaddr->addr + 3),
-                name);
-                
-    os_memcpy(conn->proto.tcp->remote_ip, &ipaddr->addr, 4);
-    
-    if (espconn_connect(conn) != ESPCONN_OK) {
-        sscp_free_connection(c);
-        sscp_sendResponse("E,%d", SSCP_ERROR_CONNECT_FAILED);
-    }
-    
-    // response is sent by tcp_connect_cb or tcp_recon_cb
-    c->d.tcp.state = TCP_STATE_CONNECTING;
-}
-
-static void ICACHE_FLASH_ATTR tcp_connect_cb(void *arg)
-{
-    struct espconn *conn = (struct espconn *)arg;
-    sscp_connection *c = (sscp_connection *)conn->reverse;
-
-    espconn_regist_disconcb(conn, tcp_discon_cb);
-    espconn_regist_recvcb(conn, tcp_recv_cb);
-    espconn_regist_sentcb(conn, tcp_sent_cb);
-
-    c->d.tcp.state = TCP_STATE_CONNECTED;
-    sscp_sendResponse("S,%d", c->index);
-}
 
 void ICACHE_FLASH_ATTR tcp_do_connect(int argc, char *argv[])
 {
@@ -173,6 +135,56 @@ void ICACHE_FLASH_ATTR tcp_send_helper(sscp_connection *c, int argc, char *argv[
     c->flags |= CONNECTION_TXFULL;
 }
 
+static void ICACHE_FLASH_ATTR dns_cb(const char *name, ip_addr_t *ipaddr, void *arg)
+{
+    struct espconn *conn = (struct espconn *)arg;
+    sscp_connection *c = (sscp_connection *)conn->reverse;
+
+    if (!ipaddr) {
+        os_printf("TCP: no IP address found for '%s'\n", name);
+        sscp_sendResponse("E,%d", SSCP_ERROR_LOOKUP_FAILED);
+        return;
+    }
+    
+    os_printf("TCP: found IP address %d.%d.%d.%d for '%s'\n",
+                *((uint8 *)&ipaddr->addr),
+                *((uint8 *)&ipaddr->addr + 1),
+                *((uint8 *)&ipaddr->addr + 2),
+                *((uint8 *)&ipaddr->addr + 3),
+                name);
+                
+    os_memcpy(conn->proto.tcp->remote_ip, &ipaddr->addr, 4);
+    
+    if (espconn_connect(conn) != ESPCONN_OK) {
+        sscp_free_connection(c);
+        sscp_sendResponse("E,%d", SSCP_ERROR_CONNECT_FAILED);
+    }
+    
+    // response is sent by tcp_connect_cb or tcp_recon_cb
+    c->d.tcp.state = TCP_STATE_CONNECTING;
+}
+
+static void ICACHE_FLASH_ATTR tcp_connect_cb(void *arg)
+{
+    struct espconn *conn = (struct espconn *)arg;
+    sscp_connection *c = (sscp_connection *)conn->reverse;
+
+    espconn_regist_disconcb(conn, tcp_discon_cb);
+    espconn_regist_recvcb(conn, tcp_recv_cb);
+    espconn_regist_sentcb(conn, tcp_sent_cb);
+
+    c->d.tcp.state = TCP_STATE_CONNECTED;
+    sscp_sendResponse("S,%d", c->index);
+}
+
+static void ICACHE_FLASH_ATTR tcp_discon_cb(void *arg)
+{
+    struct espconn *conn = (struct espconn *)arg;
+    sscp_connection *c = (sscp_connection *)conn->reverse;
+    os_printf("TCP: %d disconnected\n", c->index);
+    c->d.tcp.state = TCP_STATE_IDLE;
+}
+
 static void ICACHE_FLASH_ATTR tcp_recv_cb(void *arg, char *data, unsigned short len)
 {
     struct espconn *conn = (struct espconn *)arg;
@@ -185,14 +197,6 @@ static void ICACHE_FLASH_ATTR tcp_recv_cb(void *arg, char *data, unsigned short 
         c->rxCount = len;
         c->flags |= CONNECTION_RXFULL;
     }
-}
-
-static void ICACHE_FLASH_ATTR tcp_discon_cb(void *arg)
-{
-    struct espconn *conn = (struct espconn *)arg;
-    sscp_connection *c = (sscp_connection *)conn->reverse;
-    os_printf("TCP: %d disconnected\n", c->index);
-    c->d.tcp.state = TCP_STATE_IDLE;
 }
 
 static void ICACHE_FLASH_ATTR tcp_recon_cb(void *arg, sint8 errType)
