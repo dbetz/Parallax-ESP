@@ -6,8 +6,6 @@
 #define SSCP_PREFIX "\xFE"
 #define SSCP_START  0xFE
 
-extern fdserial *wifi;
-
 void request(char *fmt, ...);
 void requestPayload(char *buf, int len);
 int waitFor(char *target);

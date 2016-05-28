@@ -38,6 +38,7 @@ static void ICACHE_FLASH_ATTR send_cb(void *data)
     char sendBuff[1024];
     httpdSetSendBuffer(ws->conn, sendBuff, sizeof(sendBuff));
     cgiWebsocketSend(ws, connection->txBuffer, connection->txCount, WEBSOCK_FLAG_NONE);
+    connection->flags &= ~CONNECTION_TXFULL;
 
     sscp_sendResponse("S,0");
 }

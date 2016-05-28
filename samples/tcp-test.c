@@ -72,7 +72,7 @@ Host: www-eng-x.llnl.gov\r\n\
             if (buf[0] == 'S') {
                 int retries = 10;
                 while (--retries >= 0) {
-                    int count;
+                    int count, i;
 
                     request("RECV,%d", chan);
                     waitFor(SSCP_PREFIX "=");
@@ -84,7 +84,9 @@ Host: www-eng-x.llnl.gov\r\n\
                         count = sizeof(buf) - 1;
                     buf[count] = '\0';
                     dprint(debug, "Recv returned '%s,%d'\n", result, count);
-                    dprint(debug, "%s[EOF]\n");
+                    for (i = 0; i < count; ++i)
+                        dprint(debug, "%c", buf[i]);
+                    dprint(debug, "[EOF]\n");
     
                     if (result[0] == 'S')
                         break;
@@ -102,7 +104,7 @@ Host: www-eng-x.llnl.gov\r\n\
         waitcnt(CNT + CLKFREQ/4);
     }
     
-    dprintf(debug, "Done!\n");
+    dprint(debug, "Done!\n");
     
     return 0;
 }

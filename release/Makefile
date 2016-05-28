@@ -7,10 +7,15 @@ release/blank.bin
 
 SAMPLES=\
 release/robot.c \
+release/robot.side \
 release/robot.html \
 release/robot-ws.c \
+release/robot-ws.side \
 release/robot-ws.html \
-release/tcp-test.c
+release/tcp-test.c \
+release/tcp-test.side \
+release/ifttt.c \
+release/ifttt.side
 
 CP=cp
 

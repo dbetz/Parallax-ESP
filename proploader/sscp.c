@@ -310,7 +310,7 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
             else if (sscp_length < SSCP_BUFFER_MAX)
                 sscp_buffer[sscp_length++] = *p++;
             else {
-                // sscp command too long
+                os_printf("SSCP: command too long\n");
                 sscp_inside = 0;
                 start = p++;
             }

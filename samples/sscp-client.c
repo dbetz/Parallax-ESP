@@ -2,6 +2,8 @@
 #include "fdserial.h"
 #include "sscp-client.h"
 
+extern fdserial *wifi;
+
 void request(char *fmt, ...)
 {
     char buf[100], *p = buf;
