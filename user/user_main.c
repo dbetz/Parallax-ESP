@@ -182,6 +182,7 @@ HttpdBuiltInUrl builtInUrls[]={
     { "/propeller/version", cgiPropVersion, NULL },
     { "/propeller/baud-rate", cgiPropBaudRate, NULL },
     { "/propeller/set-baud-rate", cgiPropBaudRate, NULL },  // deprecated, use baud-rate instead
+    { "/propeller/setting", cgiPropSetting, NULL },
     { "/propeller/loader-baud-rate", cgiPropLoaderBaudRate, NULL },
     { "/propeller/enable-serial-protocol", cgiPropEnableSerialProtocol, NULL },
     { "/propeller/save-settings", cgiPropSaveSettings, NULL },

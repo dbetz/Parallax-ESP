@@ -15,7 +15,9 @@ release/robot-ws.html \
 release/tcp-test.c \
 release/tcp-test.side \
 release/ifttt.c \
-release/ifttt.side
+release/ifttt.side \
+release/sscp-client.c \
+release/sscp-client.h
 
 CP=cp
 
