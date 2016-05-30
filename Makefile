@@ -7,7 +7,10 @@
 #OUTPUT_TYPE=combined
 OUTPUT_TYPE=ota
 
-MAJOR_VERSION=0.9
+# version is MM-mm-pp
+# MM is the major version number (change when protocol changes)
+# mm is the minor version number
+MAJOR_VERSION=01-00
 VERSION=$(MAJOR_VERSION)_$(shell date "+%Y-%m-%d_%H:%M")
 $(info VERSION $(VERSION))
 

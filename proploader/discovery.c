@@ -93,8 +93,8 @@ os_printf("DISCOVER: Checking %d.%d.%d.%d\n", (int)( *rxNext        & 0xff),
               "\"rx pullup\": \"%s\", "
               "\"mac address\": \"%02x:%02x:%02x:%02x:%02x:%02x\""
             " }\n",
-            flashConfig.hostname,
-            flashConfig.sys_descr,
+            flashConfig.module_name,
+            flashConfig.module_descr,
             flashConfig.reset_pin,
             flashConfig.rx_pullup ? "enabled" : "disabled",
             macAddr[0], macAddr[1], macAddr[2], macAddr[3], macAddr[4], macAddr[5]);

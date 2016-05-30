@@ -9,39 +9,57 @@
     </div>
     <div class="content">
       <form action='#' onsubmit="return false;">
-        <h2>Loader Baud Rate</h2>
-        <select id="loader-baud-rate">
-          <option value="1200">1200</option>
-          <option value="4800">4800</option>
-          <option value="9600">9600</option>
-          <option value="19200">19200</option>
-          <option value="38400">38400</option>
-          <option value="57600">57600</option>
-          <option value="74880">74880</option>
-          <option value="115200">115200</option>
-          <option value="230400">230400</option>
-          <option value="460800">460800</option>
-          <option value="921600">921600</option>
-        </select>
-        <h2>Communications Baud Rate</h2>
-        <select id="baud-rate">
-          <option value="1200">1200</option>
-          <option value="4800">4800</option>
-          <option value="9600">9600</option>
-          <option value="19200">19200</option>
-          <option value="38400">38400</option>
-          <option value="57600">57600</option>
-          <option value="74880">74880</option>
-          <option value="115200">115200</option>
-          <option value="230400">230400</option>
-          <option value="460800">460800</option>
-          <option value="921600">921600</option>
-        </select>
-        <h2>Serial Protocol</h2>
-        <select id="enable-serial-protocol">
-          <option value="0">Disabled</option>
-          <option value="1">Enabled</option>
-        </select>
+        <table>
+          <tr>
+            <td>Module name</td>
+            <td id="module-version"></td>
+          </tr>
+          <tr>
+            <td>Loader Baud Rate</td>
+            <td>
+              <select id="loader-baud-rate">
+                <option value="1200">1200</option>
+                <option value="4800">4800</option>
+                <option value="9600">9600</option>
+                <option value="19200">19200</option>
+                <option value="38400">38400</option>
+                <option value="57600">57600</option>
+                <option value="74880">74880</option>
+                <option value="115200">115200</option>
+                <option value="230400">230400</option>
+                <option value="460800">460800</option>
+                <option value="921600">921600</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Communications Baud Rate</td>
+            <td>
+            <select id="baud-rate">
+                <option value="1200">1200</option>
+                <option value="4800">4800</option>
+                <option value="9600">9600</option>
+                <option value="19200">19200</option>
+                <option value="38400">38400</option>
+                <option value="57600">57600</option>
+                <option value="74880">74880</option>
+                <option value="115200">115200</option>
+                <option value="230400">230400</option>
+                <option value="460800">460800</option>
+                <option value="921600">921600</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Serial Protocol</td>
+            <td>
+              <select id="enable-serial-protocol">
+                <option value="0">Disabled</option>
+                <option value="1">Enabled</option>
+              </select>
+            </td>
+          </tr>
+        </table>
         <h2>Save Settings</h2>
         <p>
           <input type='button' value='Save' onclick='on_save();'>
@@ -57,12 +75,14 @@
 
 <script type='text/javascript'>
 
+var versionCtl;
 var loaderBaudRateCtl;
 var baudRateCtl;
 var enableSerialProtocolCtl;
 
 function init()
 {
+    moduleVersionCtl = document.getElementById('module-version');
     loaderBaudRateCtl = document.getElementById('loader-baud-rate');
     baudRateCtl = document.getElementById('baud-rate');
     enableSerialProtocolCtl = document.getElementById('enable-serial-protocol');
@@ -72,6 +92,7 @@ function init()
 function loadSettings() {
     var loaderBaudRate, baudRate;
 
+    moduleVersionCtl.innerHTML = getModuleName();
     loaderBaudRate = getBaudRate('loader-baud-rate');
     for (var i = 0; i < loaderBaudRateCtl.length; ++i)
         if (loaderBaudRate == loaderBaudRateCtl[i].value) {
@@ -101,20 +122,20 @@ function on_save() {
 function on_saveToFlash() {
     on_save();
     var req = new XMLHttpRequest();
-    req.open('POST', '/propeller/save-settings', false);
+    req.open('POST', '/parallax/save-settings', false);
     req.send();
 }
 
 function on_restore() {
     var req = new XMLHttpRequest();
-    req.open('POST', '/propeller/restore-settings', false);
+    req.open('POST', '/parallax/restore-settings', false);
     req.send();
     loadSettings();
 }
 
 function on_restoreDefaults() {
     var req = new XMLHttpRequest();
-    req.open('POST', '/propeller/restore-default-settings', false);
+    req.open('POST', '/parallax/restore-default-settings', false);
     req.send();
     loadSettings();
 }
@@ -124,9 +145,16 @@ function setMessage(msg) {
     message.innerHTML = msg;
 }
 
+function getModuleName() {
+    var req = new XMLHttpRequest();
+    req.open('GET', '/parallax/setting?name=module-name', false);
+    req.send();
+    return req.responseText;
+}
+
 function getBaudRate(which) {
     var req = new XMLHttpRequest();
-    var url = '/propeller/' + which;
+    var url = '/parallax/setting?name=' + which;
     req.open('GET', url, false);
     req.send();
     return req.responseText;
@@ -134,21 +162,21 @@ function getBaudRate(which) {
 
 function setBaudRate(which, baudRate) {
     var req = new XMLHttpRequest();
-    var url = '/propeller/' + which + '?baud-rate=' + baudRate;
+    var url = '/parallax/setting?name=' + which + '&value=' + baudRate;
     req.open('POST', url, false);
     req.send();
 }
 
 function getEnableSerialProtocol() {
     var req = new XMLHttpRequest();
-    req.open('GET', '/propeller/enable-serial-protocol', false);
+    req.open('GET', '/parallax/setting?name=enable-sscp', false);
     req.send();
     return req.responseText;
 }
 
 function setEnableSerialProtocol(enable) {
     var req = new XMLHttpRequest();
-    var url = '/propeller/enable-serial-protocol?enable=' + enable;
+    var url = '/parallax/setting?name=enable-sscp&value=' + enable;
     req.open('POST', url, false);
     req.send();
 }

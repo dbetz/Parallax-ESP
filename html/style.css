@@ -5,7 +5,7 @@ body {
 
 #title,
 #version {
-    text-align: center;
+  text-align: center;
 }
 
 #main {
@@ -36,3 +36,8 @@ body {
   margin-bottom: -15px;
 }
 
+td {
+  text-align: left;
+  height: 35px;
+  overflow: hidden;
+}

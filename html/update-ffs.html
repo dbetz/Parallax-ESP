@@ -56,7 +56,7 @@ function loadFile(file) {
 
   var req = new XMLHttpRequest();
   setMessage("Loading...");
-  req.open('POST', '/flash/write-file?file=' + file.name, true);
+  req.open('POST', '/parallax/write-file?file=' + file.name, true);
   req.onload = function (e) {
     if (this.readyState == 4) {
         if (this.status == 200)
@@ -79,7 +79,7 @@ function emptyFilesystem() {
 
   var req = new XMLHttpRequest();
   setMessage("Emptying...");
-  req.open('POST', '/flash/format?address=0x100000', true);
+  req.open('POST', '/parallax/format-filesystem', true);
   req.onload = function (e) {
     if (this.readyState == 4) {
         if (this.status == 200)

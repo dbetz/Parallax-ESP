@@ -11,6 +11,19 @@ void ICACHE_FLASH_ATTR cmds_do_nothing(int argc, char *argv[])
     sscp_sendResponse("S,0");
 }
 
+static int getModuleName(void *data, char *value)
+{
+    os_strcpy(value, flashConfig.module_name);
+    return 0;
+}
+
+static int setModuleName(void *data, char *value)
+{
+    os_memcpy(flashConfig.module_name, value, sizeof(flashConfig.module_name));
+    flashConfig.module_name[sizeof(flashConfig.module_name) - 1] = '\0';
+    return 0;
+}
+
 static int getIPAddress(void *data, char *value)
 {
     struct ip_info info;
@@ -34,8 +47,15 @@ static int setIPAddress(void *data, char *value)
 
 static int setBaudrate(void *data, char *value)
 {
+    flashConfig.baud_rate = atoi(value);
     uart_drain_tx_buffer(UART0);
-    uart0_baud(atoi(value));
+    uart0_baud(flashConfig.baud_rate);
+    return 0;
+}
+
+static int setLoaderBaudrate(void *data, char *value)
+{
+    flashConfig.loader_baud_rate = atoi(value);
     return 0;
 }
 
@@ -117,6 +137,20 @@ static int intSetHandler(void *data, char *value)
     return 0;
 }
 
+static int int8GetHandler(void *data, char *value)
+{
+    int8_t *pValue = (int8_t *)data;
+    os_sprintf(value, "%d", *pValue);
+    return 0;
+}
+
+static int int8SetHandler(void *data, char *value)
+{
+    int8_t *pValue = (int8_t *)data;
+    *pValue = atoi(value);
+    return 0;
+}
+
 typedef struct {
     char *name;
     int (*getHandler)(void *data, char *value);
@@ -125,29 +159,31 @@ typedef struct {
 } cmd_def;
 
 static cmd_def vars[] = {
-{   "ip-address",       getIPAddress,   setIPAddress,   NULL                        },
-{   "pause-time",       intGetHandler,  intSetHandler,  &sscp_pauseTimeMS           },
-{   "enable-sscp",      intGetHandler,  intSetHandler,  &flashConfig.enable_sscp    },
-{   "baud-rate",        intGetHandler,  setBaudrate,    &uart0_baudRate             },
-{   "pin-pgm",          getPinHandler,  setPinHandler,  (void *)0                   },
-{   "pin-gpio0",        getPinHandler,  setPinHandler,  (void *)0                   },
-{   "pin-dbg",          getPinHandler,  setPinHandler,  (void *)2                   },
-{   "pin-gpio2",        getPinHandler,  setPinHandler,  (void *)2                   },
-{   "pin-sel",          getPinHandler,  setPinHandler,  (void *)4                   },
-{   "pin-gpio4",        getPinHandler,  setPinHandler,  (void *)4                   },
-{   "pin-asc",          getPinHandler,  setPinHandler,  (void *)5                   },
-{   "pin-gpio5",        getPinHandler,  setPinHandler,  (void *)5                   },
-{   "pin-dtr",          getPinHandler,  setPinHandler,  (void *)12                  },
-{   "pin-gpio12",       getPinHandler,  setPinHandler,  (void *)12                  },
-{   "pin-cts",          getPinHandler,  setPinHandler,  (void *)13                  },
-{   "pin-gpio13",       getPinHandler,  setPinHandler,  (void *)13                  },
-{   "pin-dio9",         getPinHandler,  setPinHandler,  (void *)14                  },
-{   "pin-gpio14",       getPinHandler,  setPinHandler,  (void *)14                  },
-{   "pin-rts",          getPinHandler,  setPinHandler,  (void *)15                  },
-{   "pin-gpio15",       getPinHandler,  setPinHandler,  (void *)15                  },
-{   "pin-rst",          getPinHandler,  setPinHandler,  (void *)PIN_RST             },
-{   "pin-res",          getPinHandler,  setPinHandler,  (void *)PIN_RES             },
-{   NULL,               NULL,           NULL,           NULL                        }
+{   "module-name",      getModuleName,  setModuleName,      NULL                            },
+{   "ip-address",       getIPAddress,   setIPAddress,       NULL                            },
+{   "pause-time",       intGetHandler,  intSetHandler,      &flashConfig.sscp_pause_time_ms },
+{   "enable-sscp",      int8GetHandler, int8SetHandler,     &flashConfig.enable_sscp        },
+{   "baud-rate",        intGetHandler,  setBaudrate,        &flashConfig.baud_rate          },
+{   "loader-baud-rate", intGetHandler,  setLoaderBaudrate,  &flashConfig.loader_baud_rate   },
+{   "pin-pgm",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO0               },
+{   "pin-gpio0",        getPinHandler,  setPinHandler,      (void *)PIN_GPIO0               },
+{   "pin-dbg",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO2               },
+{   "pin-gpio2",        getPinHandler,  setPinHandler,      (void *)PIN_GPIO2               },
+{   "pin-sel",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO4               },
+{   "pin-gpio4",        getPinHandler,  setPinHandler,      (void *)PIN_GPIO4               },
+{   "pin-asc",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO5               },
+{   "pin-gpio5",        getPinHandler,  setPinHandler,      (void *)PIN_GPIO5               },
+{   "pin-dtr",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO12              },
+{   "pin-gpio12",       getPinHandler,  setPinHandler,      (void *)PIN_GPIO12              },
+{   "pin-cts",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO13              },
+{   "pin-gpio13",       getPinHandler,  setPinHandler,      (void *)PIN_GPIO13              },
+{   "pin-dio9",         getPinHandler,  setPinHandler,      (void *)PIN_GPIO14              },
+{   "pin-gpio14",       getPinHandler,  setPinHandler,      (void *)PIN_GPIO14              },
+{   "pin-rts",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO15              },
+{   "pin-gpio15",       getPinHandler,  setPinHandler,      (void *)PIN_GPIO15              },
+{   "pin-rst",          getPinHandler,  setPinHandler,      (void *)PIN_RST                 },
+{   "pin-res",          getPinHandler,  setPinHandler,      (void *)PIN_RES                 },
+{   NULL,               NULL,           NULL,               NULL                            }
 };
 
 // GET,var
@@ -375,4 +411,30 @@ int ICACHE_FLASH_ATTR cgiPropSetting(HttpdConnData *connData)
 
     return HTTPD_CGI_DONE;
 }
+
+int ICACHE_FLASH_ATTR cgiPropSaveSettings(HttpdConnData *connData)
+{
+    httpdStartResponse(connData, configSave() ? 200 : 400);
+    httpdEndHeaders(connData);
+    httpdSend(connData, "", -1);
+    return HTTPD_CGI_DONE;
+}
+
+int ICACHE_FLASH_ATTR cgiPropRestoreSettings(HttpdConnData *connData)
+{
+    httpdStartResponse(connData, configRestore() ? 200 : 400);
+    httpdEndHeaders(connData);
+    httpdSend(connData, "", -1);
+    return HTTPD_CGI_DONE;
+}
+
+int ICACHE_FLASH_ATTR cgiPropRestoreDefaultSettings(HttpdConnData *connData)
+{
+    flashConfig = flashDefault;
+    httpdStartResponse(connData, 200);
+    httpdEndHeaders(connData);
+    httpdSend(connData, "", -1);
+    return HTTPD_CGI_DONE;
+}
+
 

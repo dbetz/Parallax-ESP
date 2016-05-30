@@ -24,10 +24,6 @@ static void *sscp_payload_data;
 sscp_listener sscp_listeners[SSCP_LISTENER_MAX];
 sscp_connection sscp_connections[SSCP_CONNECTION_MAX];
 
-static char needPause[16] = { ':', ',' };
-static int needPauseCnt = 2;
-int sscp_pauseTimeMS = 0;
-
 #ifdef DUMP
 static void dump(char *tag, uint8_t *buf, int len);
 #else
@@ -195,17 +191,17 @@ void ICACHE_FLASH_ATTR sscp_sendResponse(char *fmt, ...)
     buf[2 + cnt] = '\r';
     cnt += 3;
 
-    if (sscp_pauseTimeMS > 0) {
+    if (flashConfig.sscp_pause_time_ms > 0) {
         char *p = buf;
         while (--cnt >= 0) {
             int byte = *p++;
             int i;
             uart_tx_one_char(UART0, byte);
-            for (i = 0; i < needPauseCnt; ++i) {
-                if (byte == needPause[i]) {
+            for (i = 0; i < flashConfig.sscp_need_pause_cnt; ++i) {
+                if (byte == flashConfig.sscp_need_pause[i]) {
 //os_printf("Delaying after '%c' 0x%02x for %d MS\n", byte, byte, sscp_pauseTimeMS);
                     uart_drain_tx_buffer(UART0);
-                    os_delay_us(sscp_pauseTimeMS * 1000);
+                    os_delay_us(flashConfig.sscp_pause_time_ms * 1000);
                 }
             }
         }

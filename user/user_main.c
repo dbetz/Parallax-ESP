@@ -177,20 +177,16 @@ HttpdBuiltInUrl builtInUrls[]={
 	{"/test/test.cgi", cgiTestbed, NULL},
 
 #ifdef PROPLOADER
-    { "/flash/format", cgiRoffsFormat, NULL },
-    { "/flash/write-file", cgiRoffsWriteFile, NULL },
-    { "/propeller/version", cgiPropVersion, NULL },
-    { "/propeller/baud-rate", cgiPropBaudRate, NULL },
-    { "/propeller/set-baud-rate", cgiPropBaudRate, NULL },  // deprecated, use baud-rate instead
-    { "/propeller/setting", cgiPropSetting, NULL },
-    { "/propeller/loader-baud-rate", cgiPropLoaderBaudRate, NULL },
-    { "/propeller/enable-serial-protocol", cgiPropEnableSerialProtocol, NULL },
-    { "/propeller/save-settings", cgiPropSaveSettings, NULL },
-    { "/propeller/restore-settings", cgiPropRestoreSettings, NULL },
-    { "/propeller/restore-default-settings", cgiPropRestoreDefaultSettings, NULL },
-    { "/propeller/load", cgiPropLoad, NULL },
-    { "/propeller/load-file", cgiPropLoadFile, NULL },
-    { "/propeller/reset", cgiPropReset, NULL },
+    { "/parallax/format-filesystem", cgiRoffsFormat, NULL },
+    { "/parallax/write-file", cgiRoffsWriteFile, NULL },
+    { "/parallax/version", cgiPropVersion, NULL },
+    { "/parallax/propeller/load", cgiPropLoad, NULL },
+    { "/parallax/propeller/load-file", cgiPropLoadFile, NULL },
+    { "/parallax/propeller/reset", cgiPropReset, NULL },
+    { "/parallax/setting", cgiPropSetting, NULL },
+    { "/parallax/save-settings", cgiPropSaveSettings, NULL },
+    { "/parallax/restore-settings", cgiPropRestoreSettings, NULL },
+    { "/parallax/restore-default-settings", cgiPropRestoreDefaultSettings, NULL },
     { "/files/*", cgiRoffsHook, NULL }, //Catch-all cgi function for the flash filesystem
 	{ "/ws/*", cgiWebsocket, sscp_websocketConnect},
     { "*", cgiSSCPHandleRequest, NULL }, //Check to see if MCU can handle the request

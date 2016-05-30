@@ -12,34 +12,37 @@
 #define LOADER_BAUD_RATE    115200
 #define BAUD_RATE           115200
 
+// magic number to recognize thet these are our flash settings as opposed to some random stuff
+#define FLASH_MAGIC     0x55aa
+#define FLASH_VERSION   2
+
+// size of the setting sector
+#define FLASH_SECT      4096
+
 #define FIRMWARE_SIZE       0x7b000
-#define CHIP_IN_HOSTNAME
+#define CHIP_IN_MODULE_NAME
 
 FlashConfig flashConfig;
 FlashConfig flashDefault = {
   .seq = 33, .magic = 0, .crc = 0,
-  .version          = 1,
-  .reset_pin        = MCU_RESET_PIN,
-  .conn_led_pin     = LED_CONN_PIN,
-  .loader_baud_rate = LOADER_BAUD_RATE,
-  .baud_rate        = BAUD_RATE,
-  .hostname         = "esp-httpd",
-  .sys_descr 	    = "",
-  .rx_pullup	    = 1,
-  .enable_sscp      = 0
+  .version              = FLASH_VERSION,
+  .reset_pin            = MCU_RESET_PIN,
+  .conn_led_pin         = LED_CONN_PIN,
+  .baud_rate            = BAUD_RATE,
+  .loader_baud_rate     = LOADER_BAUD_RATE,
+  .module_name          = "esp-httpd",
+  .module_descr 	    = "",
+  .rx_pullup	        = 1,
+  .enable_sscp          = 0,
+  .sscp_need_pause      = ":,",
+  .sscp_need_pause_cnt  = 2,
+  .sscp_pause_time_ms   = 0
 };
 
 typedef union {
   FlashConfig fc;
   uint8_t     block[1024];
 } FlashFull;
-
-// magic number to recognize thet these are our flash settings as opposed to some random stuff
-#define FLASH_MAGIC     0x55aa
-#define FLASH_VERSION   1
-
-// size of the setting sector
-#define FLASH_SECT      4096
 
 // address where to flash the settings: if we have >512KB flash then there are 16KB of reserved
 // space at the end of the first flash partition, we use the upper 8KB (2 sectors). If we only
@@ -128,14 +131,12 @@ bool ICACHE_FLASH_ATTR configRestore(void) {
     os_memcpy(&flashConfig, &flashDefault, sizeof(FlashConfig));
     char chipIdStr[6];
     os_sprintf(chipIdStr, "%06x", system_get_chip_id());
-#ifdef CHIP_IN_HOSTNAME
-    char hostname[32];
-    os_strcpy(hostname, "esp-httpd-");
-    os_strcat(hostname, chipIdStr);
-    os_memcpy(&flashConfig.hostname, hostname, os_strlen(hostname) + 1); // include terminating zero
+#ifdef CHIP_IN_MODULE_NAME
+    char module_name[32];
+    os_strcpy(module_name, "esp-httpd-");
+    os_strcat(module_name, chipIdStr);
+    os_memcpy(&flashConfig.module_name, module_name, os_strlen(module_name) + 1); // include terminating zero
 #endif
-//    os_memcpy(&flashConfig.mqtt_clientid, &flashConfig.hostname, os_strlen(flashConfig.hostname));
-//    os_memcpy(&flashConfig.mqtt_status_topic, &flashConfig.hostname, os_strlen(flashConfig.hostname));
     flash_pri = 0;
     return false;
   }

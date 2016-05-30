@@ -10,13 +10,16 @@ typedef struct {
   uint16_t magic, crc;
   uint32_t version;
   int8_t   reset_pin;
+  int32_t  baud_rate;
   int32_t  loader_baud_rate;
   int8_t   conn_led_pin;
-  int32_t  baud_rate;
-  char     hostname[32];
-  char     sys_descr[129];
+  char     module_name[32];
+  char     module_descr[129];
   int8_t   rx_pullup;
   int8_t   enable_sscp;
+  char     sscp_need_pause[16];
+  int8_t   sscp_need_pause_cnt;
+  int32_t  sscp_pause_time_ms;
 } FlashConfig;
 
 extern FlashConfig flashConfig;

@@ -83,7 +83,6 @@ struct sscp_connection {
 
 extern sscp_listener sscp_listeners[];
 extern sscp_connection sscp_connections[];
-extern int sscp_pauseTimeMS;
 
 void sscp_init(void);
 void sscp_enable(int enable);
@@ -109,6 +108,11 @@ void cmds_do_set(int argc, char *argv[]);
 void cmds_do_poll(int argc, char *argv[]);
 void cmds_do_send(int argc, char *argv[]);
 void cmds_do_recv(int argc, char *argv[]);
+int cgiPropSetting(HttpdConnData *connData);
+int cgiPropEnableSerialProtocol(HttpdConnData *connData);
+int cgiPropSaveSettings(HttpdConnData *connData);
+int cgiPropRestoreSettings(HttpdConnData *connData);
+int cgiPropRestoreDefaultSettings(HttpdConnData *connData);
 
 // from sscp-http.c
 void http_do_listen(int argc, char *argv[]);
