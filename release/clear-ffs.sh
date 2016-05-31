@@ -18,6 +18,9 @@ FLASH_INTERFACE=qio
 #use for 4MB flash
 WIFI_SETTINGS=0x3FE000
 
+#flash filesystem base
+FFS_BASE=0x100000
+
 esptool \
 -cp $PORT \
 -cd $BOARD \
@@ -25,5 +28,4 @@ esptool \
 -bz $FLASH_SIZE \
 -bf $FLASH_SPEED \
 -bm $FLASH_INTERFACE \
--ca $WIFI_SETTINGS -cf blank.bin \
--ca 0x7E000 -cf blank.bin -ca 0x7F000 -cf blank.bin
+-ca $FFS_BASE -cf blank.bin

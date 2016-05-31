@@ -79,11 +79,20 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     int ret;
     if ((ret = roffs_mount(FLASH_FILESYSTEM_BASE)) != 0) {
         os_printf("Mounting flash filesystem failed: %d\n", ret);
-        return 0;
+        os_printf("Attempting to format...");
+        if ((ret = roffs_format(FLASH_FILESYSTEM_BASE)) != 0) {
+            os_printf("Error formatting filesystem: %d\n", ret);
+            return -1;
+        }
+        os_printf("Flash filesystem formatted.\n");
+        if ((ret = roffs_mount(FLASH_FILESYSTEM_BASE)) != 0) {
+            os_printf("Mounting newly formatted flash filesystem failed: %d\n", ret);
+            return -1;
+        }
     }
     os_printf("Flash filesystem mounted!\n");
 
-    return 1;
+    return 0;
 }
 
 int ICACHE_FLASH_ATTR cgiPropVersion(HttpdConnData *connData)
