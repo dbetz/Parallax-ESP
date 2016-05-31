@@ -221,6 +221,7 @@ static struct {
     void (*handler)(int argc, char *argv[]);
 } cmds[] = {
 {   "",                 cmds_do_nothing     },
+{   "JOIN",             cmds_do_join        },
 {   "GET",              cmds_do_get         },
 {   "SET",              cmds_do_set         },
 {   "POLL",             cmds_do_poll        },

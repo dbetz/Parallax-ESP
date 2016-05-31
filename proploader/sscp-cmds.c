@@ -11,6 +11,20 @@ void ICACHE_FLASH_ATTR cmds_do_nothing(int argc, char *argv[])
     sscp_sendResponse("S,0");
 }
 
+// JOIN,ssid,passwd
+void ICACHE_FLASH_ATTR cmds_do_join(int argc, char *argv[])
+{
+    if (argc != 3) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
+        return;
+    }
+    
+    if (wifiJoin(argv[1], argv[2]) == 0)
+        sscp_sendResponse("S,0");
+    else
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+}
+
 static int getModuleName(void *data, char *value)
 {
     os_strcpy(value, flashConfig.module_name);

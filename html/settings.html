@@ -12,7 +12,7 @@
         <table>
           <tr>
             <td>Module name:</td>
-            <td id="module-name"></td>
+            <td><input id="module-name" type="text"></td>
           </tr>
           <tr>
             <td>Loader Baud Rate:</td>
@@ -68,7 +68,7 @@
           <input type='button' value='Restore Defaults' onclick='on_restoreDefaults();'>
         </p>
       </form>
-      <h3><p id='message'></p></h3>
+      <p id='message'></p>
     </div>
   </div>
   <div id="logo"></div>
@@ -92,7 +92,7 @@ function init()
 function loadSettings() {
     var loaderBaudRate, baudRate;
 
-    moduleNameCtl.innerHTML = getModuleName();
+    moduleNameCtl.value = getModuleName();
     loaderBaudRate = getBaudRate('loader-baud-rate');
     for (var i = 0; i < loaderBaudRateCtl.length; ++i)
         if (loaderBaudRate == loaderBaudRateCtl[i].value) {
@@ -114,9 +114,12 @@ function loadSettings() {
 }
 
 function on_save() {
+    setMessage("Saving...");
+    setModuleName(moduleNameCtl.value);
     setBaudRate('loader-baud-rate', loaderBaudRateCtl.value);
     setBaudRate('baud-rate', baudRateCtl.value);
     setEnableSerialProtocol(enableSerialProtocolCtl.value);
+    setMessage("Settings saved");
 }
 
 function on_saveToFlash() {
@@ -124,20 +127,25 @@ function on_saveToFlash() {
     var req = new XMLHttpRequest();
     req.open('POST', '/parallax/save-settings', false);
     req.send();
+    setMessage("Settings saved to flash");
 }
 
 function on_restore() {
+    setMessage("Restoring settings...");
     var req = new XMLHttpRequest();
     req.open('POST', '/parallax/restore-settings', false);
     req.send();
     loadSettings();
+    setMessage("Settings restored from flash");
 }
 
 function on_restoreDefaults() {
+    setmessage("Restoring default settings...");
     var req = new XMLHttpRequest();
     req.open('POST', '/parallax/restore-default-settings', false);
     req.send();
     loadSettings();
+    setMessage("Default settings restored");
 }
 
 function setMessage(msg) {
@@ -150,6 +158,13 @@ function getModuleName() {
     req.open('GET', '/parallax/setting?name=module-name', false);
     req.send();
     return req.responseText;
+}
+
+function setModuleName(name) {
+    var req = new XMLHttpRequest();
+    var url = '/parallax/setting?name=module-name&value=' + name;
+    req.open('POST', url, false);
+    req.send();
 }
 
 function getBaudRate(which) {

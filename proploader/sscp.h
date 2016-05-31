@@ -103,6 +103,7 @@ void sscp_sendPayload(char *buf, int cnt);
 
 // from sscp-cmds.c
 void cmds_do_nothing(int argc, char *argv[]);
+void cmds_do_join(int argc, char *argv[]);
 void cmds_do_get(int argc, char *argv[]);
 void cmds_do_set(int argc, char *argv[]);
 void cmds_do_poll(int argc, char *argv[]);
