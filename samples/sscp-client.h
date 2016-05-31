@@ -13,9 +13,4 @@ void collectUntil(int term, char *buf, int size);
 void collectPayload(char *buf, int bufSize, int count);
 void skipUntil(int term);
 
-int cgiPropSetting(HttpdConnData *connData);
-int cgiPropSaveSettings(HttpdConnData *connData);
-int cgiPropRestoreSettings(HttpdConnData *connData);
-int cgiPropRestoreDefaultSettings(HttpdConnData *connData);
-
 #endif
