@@ -246,6 +246,9 @@ static void ICACHE_FLASH_ATTR startLoading(PropellerConnection *connection, cons
     connection->image = image;
     connection->imageSize = imageSize;
     
+    // turn off SSCP during loading
+    sscp_enable(0);
+
     uart0_baud(connection->baudRate);
 
     GPIO_OUTPUT_SET(connection->resetPin, 0);

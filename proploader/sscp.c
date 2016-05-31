@@ -43,9 +43,24 @@ void ICACHE_FLASH_ATTR sscp_init(void)
     flashConfig.enable_sscp = SSCP_DEF_ENABLE;
 }
 
+void ICACHE_FLASH_ATTR sscp_reset(void)
+{
+    int i;
+    for (i = 0; i < SSCP_CONNECTION_MAX; ++i) {
+        // BUG: should disconnect any open connections here!!
+    }
+    sscp_inside = 0;
+    sscp_length = 0;
+    sscp_payload = NULL;
+}
+
 void ICACHE_FLASH_ATTR sscp_enable(int enable)
 {
-    flashConfig.enable_sscp = enable;
+    if (enable != flashConfig.enable_sscp) {
+        if (enable)
+            sscp_reset();
+        flashConfig.enable_sscp = enable;
+    }
 }
 
 int ICACHE_FLASH_ATTR sscp_isEnabled(void)
