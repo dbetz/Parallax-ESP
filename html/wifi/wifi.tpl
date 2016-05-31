@@ -3,6 +3,7 @@
 <script type="text/javascript" src="140medley.min.js"></script>
 <script type="text/javascript">
 
+var ipAddressCtl;
 var xhr=j();
 var currAp="%currSsid%";
 
@@ -67,7 +68,17 @@ function scanAPs() {
 }
 
 
+function getIpAddress() {
+    var req = new XMLHttpRequest();
+    req.open('GET', '/parallax/setting?name=ip-address', false);
+    req.send();
+    return req.responseText;
+}
+
+
 window.onload=function(e) {
+    ipAddressCtl = document.getElementById('ip-address');
+    ipAddressCtl.innerHTML = getIpAddress();
 	scanAPs();
 };
 </script>
@@ -79,6 +90,7 @@ window.onload=function(e) {
     </div>
     <div class="content">
       <p>Current Wi-Fi Mode: %WiFiMode%</p>
+      <p>IP Address: <span id="ip-address"></span></p>
       <p>Note: %WiFiapwarn%</p>
       <form name="wifiform" action="connect.cgi" method="post">
         <p>
