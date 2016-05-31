@@ -5,12 +5,14 @@
 <body>
   <div id="main">
     <div class="header">
-      <h1>File Management</h1>
+      <h1>File Uploads</h1>
     </div>
-
     <div class="content">
+      <p>Here, you can upload files for the ESP8266 micro web server.  For example, if your
+      ESP module's IP address is 192.168.4.1 and your file is mypage.html, use this page to
+      upload the file.  To view the page, just send your web browser to
+      http://192.168.4.1/files/mypage.html.</p>
       <form action='#' onsubmit="return false;">
-        <h2>Select a File to Load</h2>
         <p>
           <input type='file' id='file-input' onchange='on_loadFile();'>
         </p>

@@ -24,6 +24,47 @@ static int setModuleName(void *data, char *value)
     return 0;
 }
 
+static int getWiFiMode(void *data, char *value)
+{
+    switch (wifi_get_opmode()) {
+    case STATION_MODE:
+        os_strcpy(value, "Station");
+        break;
+    case SOFTAP_MODE:
+        os_strcpy(value, "SoftAP");
+        break;
+    case STATIONAP_MODE:
+        os_strcpy(value, "Station+SoftAP");
+        break;
+    default:
+        return -1;
+    }
+    return 0;
+}
+
+static int setWiFiMode(void *data, char *value)
+{
+    int mode;
+    
+    if (os_strcmp(value, "Station") == 0)
+        mode = STATION_MODE;
+    else if (os_strcmp(value, "SoftAP") == 0)
+        mode = SOFTAP_MODE;
+    else if (os_strcmp(value, "Station+SoftAP") == 0)
+        mode = STATIONAP_MODE;
+    else if (isdigit((int)value[0]))
+        mode = atoi(value);
+    else
+        return -1;
+        
+    if (mode != wifi_get_opmode()) {
+        wifi_set_opmode(mode);
+        system_restart();
+    }
+    
+    return 0;
+}
+
 static int getIPAddress(void *data, char *value)
 {
     struct ip_info info;
@@ -160,6 +201,7 @@ typedef struct {
 
 static cmd_def vars[] = {
 {   "module-name",      getModuleName,  setModuleName,      NULL                            },
+{   "wifi-mode",        getWiFiMode,    setWiFiMode,        NULL                            },
 {   "ip-address",       getIPAddress,   setIPAddress,       NULL                            },
 {   "pause-time",       intGetHandler,  intSetHandler,      &flashConfig.sscp_pause_time_ms },
 {   "enable-sscp",      int8GetHandler, int8SetHandler,     &flashConfig.enable_sscp        },

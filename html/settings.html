@@ -11,11 +11,11 @@
       <form action='#' onsubmit="return false;">
         <table>
           <tr>
-            <td>Module name</td>
-            <td id="module-version"></td>
+            <td>Module name:</td>
+            <td id="module-name"></td>
           </tr>
           <tr>
-            <td>Loader Baud Rate</td>
+            <td>Loader Baud Rate:</td>
             <td>
               <select id="loader-baud-rate">
                 <option value="1200">1200</option>
@@ -33,7 +33,7 @@
             </td>
           </tr>
           <tr>
-            <td>Communications Baud Rate</td>
+            <td>Communications Baud Rate:</td>
             <td>
             <select id="baud-rate">
                 <option value="1200">1200</option>
@@ -51,7 +51,7 @@
             </td>
           </tr>
           <tr>
-            <td>Serial Protocol</td>
+            <td>Serial Protocol:</td>
             <td>
               <select id="enable-serial-protocol">
                 <option value="0">Disabled</option>
@@ -82,7 +82,7 @@ var enableSerialProtocolCtl;
 
 function init()
 {
-    moduleVersionCtl = document.getElementById('module-version');
+    moduleNameCtl = document.getElementById('module-name');
     loaderBaudRateCtl = document.getElementById('loader-baud-rate');
     baudRateCtl = document.getElementById('baud-rate');
     enableSerialProtocolCtl = document.getElementById('enable-serial-protocol');
@@ -92,7 +92,7 @@ function init()
 function loadSettings() {
     var loaderBaudRate, baudRate;
 
-    moduleVersionCtl.innerHTML = getModuleName();
+    moduleNameCtl.innerHTML = getModuleName();
     loaderBaudRate = getBaudRate('loader-baud-rate');
     for (var i = 0; i < loaderBaudRateCtl.length; ++i)
         if (loaderBaudRate == loaderBaudRateCtl[i].value) {

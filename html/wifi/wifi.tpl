@@ -1,5 +1,5 @@
 <html><head><title>WiFi connection</title>
-<link rel="stylesheet" type="text/css" href="style.css">
+<link rel="stylesheet" type="text/css" href="../style.css">
 <script type="text/javascript" src="140medley.min.js"></script>
 <script type="text/javascript">
 
@@ -73,22 +73,24 @@ window.onload=function(e) {
 </script>
 </head>
 <body>
-<div id="main">
-<p>
-Current WiFi mode: %WiFiMode%
-</p>
-<p>
-Note: %WiFiapwarn%
-</p>
-<form name="wifiform" action="connect.cgi" method="post">
-<p>
-To connect to a WiFi network, please select one of the detected networks...<br>
-<div id="aps">Scanning...</div>
-<br>
-WiFi password, if applicable: <br />
-<input type="text" name="passwd" val="%WiFiPasswd%"> <br />
-<input type="submit" name="connect" value="Connect!">
-</p>
-</div>
+  <div id="main">
+    <div class="header">
+      <h1>Wi-Fi Networks</h1>
+    </div>
+    <div class="content">
+      <p>Current Wi-Fi Mode: %WiFiMode%</p>
+      <p>Note: %WiFiapwarn%</p>
+      <form name="wifiform" action="connect.cgi" method="post">
+        <p>
+          Select a network from the list, enter password (if needed) in field below and click connect.<br>
+          <div id="aps">Scanning...</div><br>
+          Wi-Fi password(if needed):<br>
+          <input type="text" name="passwd" val="%WiFiPasswd%"><br>
+          <input type="submit" name="connect" value="Connect!">    
+        </p>
+      </form>
+    </div>
+  </div>
+  <div id="logo"></div>
 </body>
 </html>
