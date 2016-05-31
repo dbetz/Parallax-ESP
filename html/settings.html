@@ -51,13 +51,21 @@
             </td>
           </tr>
           <tr>
-            <td>Serial Protocol:</td>
+            <td>Serial Protocol (SSCP):</td>
             <td>
               <select id="enable-serial-protocol">
                 <option value="0">Disabled</option>
                 <option value="1">Enabled</option>
               </select>
             </td>
+          </tr>
+          <tr>
+            <td>SSCP Pause Time in MS:</td>
+            <td><input id="pause-time" type="text"></td>
+          </tr>
+          <tr>
+            <td>SSCP Pause After Characters:</td>
+            <td><input id="pause-chars" type="text"></td>
           </tr>
         </table>
         <h2>Save Settings</h2>
@@ -75,10 +83,13 @@
 
 <script type='text/javascript'>
 
+var moduleNameCtl;
 var versionCtl;
 var loaderBaudRateCtl;
 var baudRateCtl;
 var enableSerialProtocolCtl;
+var pauseTimeCtl;
+var pauseCharsCtl;
 
 function init()
 {
@@ -86,6 +97,8 @@ function init()
     loaderBaudRateCtl = document.getElementById('loader-baud-rate');
     baudRateCtl = document.getElementById('baud-rate');
     enableSerialProtocolCtl = document.getElementById('enable-serial-protocol');
+    pauseTimeCtl = document.getElementById('pause-time');
+    pauseCharsCtl = document.getElementById('pause-chars');
     loadSettings();
 }
 
@@ -111,6 +124,9 @@ function loadSettings() {
         enableSerialProtocolCtl.selectedIndex = 0;
     else
         enableSerialProtocolCtl.selectedIndex = 1;
+
+    pauseTimeCtl.value = getPauseTime();
+    pauseCharsCtl.value = getPauseChars();
 }
 
 function on_save() {
@@ -119,6 +135,8 @@ function on_save() {
     setBaudRate('loader-baud-rate', loaderBaudRateCtl.value);
     setBaudRate('baud-rate', baudRateCtl.value);
     setEnableSerialProtocol(enableSerialProtocolCtl.value);
+    setPauseTime(pauseTimeCtl.value);
+    setPauseChars(pauseCharsCtl.value);
     setMessage("Settings saved");
 }
 
@@ -192,6 +210,34 @@ function getEnableSerialProtocol() {
 function setEnableSerialProtocol(enable) {
     var req = new XMLHttpRequest();
     var url = '/parallax/setting?name=enable-sscp&value=' + enable;
+    req.open('POST', url, false);
+    req.send();
+}
+
+function getPauseTime() {
+    var req = new XMLHttpRequest();
+    req.open('GET', '/parallax/setting?name=pause-time', false);
+    req.send();
+    return req.responseText;
+}
+
+function setPauseTime(time) {
+    var req = new XMLHttpRequest();
+    var url = '/parallax/setting?name=pause-time&value=' + time;
+    req.open('POST', url, false);
+    req.send();
+}
+
+function getPauseChars() {
+    var req = new XMLHttpRequest();
+    req.open('GET', '/parallax/setting?name=pause-chars', false);
+    req.send();
+    return req.responseText;
+}
+
+function setPauseChars(chars) {
+    var req = new XMLHttpRequest();
+    var url = '/parallax/setting?name=pause-chars&value=' + chars;
     req.open('POST', url, false);
     req.send();
 }

@@ -16,7 +16,7 @@ flash as a binary. Also handles the hit counter on the main page.
 #include <esp8266.h>
 #include "cgi.h"
 #include "io.h"
-
+#include "config.h"
 
 //cause I can't be bothered to write an ioGetLed()
 static char currLedState=0;
@@ -73,6 +73,9 @@ int ICACHE_FLASH_ATTR tplCounter(HttpdConnData *connData, char *token, void **ar
 	}
 	else if (os_strcmp(token, "version")==0) {
 		os_strcpy(buff, VERSION);
+	}
+	else if (os_strcmp(token, "module-name")==0) {
+		os_strcpy(buff, flashConfig.module_name);
 	}
 	httpdSend(connData, buff, -1);
 	return HTTPD_CGI_DONE;

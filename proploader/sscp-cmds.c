@@ -114,6 +114,22 @@ static int setLoaderBaudrate(void *data, char *value)
     return 0;
 }
 
+static int getPauseChars(void *data, char *value)
+{
+    strncpy(value, flashConfig.sscp_need_pause, flashConfig.sscp_need_pause_cnt);
+    value[flashConfig.sscp_need_pause_cnt] = '\0';
+    return 0;
+}
+
+static int setPauseChars(void *data, char *value)
+{
+    if (os_strlen(value) >= sizeof(flashConfig.sscp_need_pause))
+        return -1;
+    os_strcpy(flashConfig.sscp_need_pause, value);
+    flashConfig.sscp_need_pause_cnt = os_strlen(value);
+    return 0;
+}
+
 enum {
     PIN_GPIO0 = 0,      // PGM
     PIN_GPIO2 = 2,      // DBG
@@ -218,6 +234,7 @@ static cmd_def vars[] = {
 {   "wifi-mode",        getWiFiMode,    setWiFiMode,        NULL                            },
 {   "ip-address",       getIPAddress,   setIPAddress,       NULL                            },
 {   "pause-time",       intGetHandler,  intSetHandler,      &flashConfig.sscp_pause_time_ms },
+{   "pause-chars",      getPauseChars,  setPauseChars,      NULL                            },
 {   "enable-sscp",      int8GetHandler, int8SetHandler,     &flashConfig.enable_sscp        },
 {   "baud-rate",        intGetHandler,  setBaudrate,        &flashConfig.baud_rate          },
 {   "loader-baud-rate", intGetHandler,  setLoaderBaudrate,  &flashConfig.loader_baud_rate   },
