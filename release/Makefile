@@ -1,3 +1,6 @@
+ZIP=esp-httpd-$(shell date "+%Y-%m-%d-%H%M").zip
+$(info ZIP $(ZIP))
+
 IMAGES=\
 release/boot_v1.5.bin \
 release/httpd.user1.bin \
@@ -25,6 +28,7 @@ CP=cp
 all:
 	$(MAKE) build
 	$(MAKE) zip
+	cp esp-httpd.zip ~/$(ZIP)
 
 zip:	staged-files
 	cd release; zip ../esp-httpd *
