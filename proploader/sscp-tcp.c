@@ -86,12 +86,7 @@ void ICACHE_FLASH_ATTR tcp_do_disconnect(int argc, char *argv[])
         return;
     }
     
-    if (c->d.tcp.state == TCP_STATE_CONNECTED && c->d.tcp.state == TCP_STATE_CONNECTING) {
-        struct espconn *conn = &c->d.tcp.conn;
-        espconn_disconnect(conn);
-    }
-    
-    sscp_free_connection(c);
+    tcp_disconnect(c);
     
     sscp_sendResponse("S,0");
 }
@@ -206,5 +201,13 @@ static void ICACHE_FLASH_ATTR tcp_recon_cb(void *arg, sint8 errType)
 
     c->d.tcp.state = TCP_STATE_IDLE;
     sscp_sendResponse("E,%d", SSCP_ERROR_DISCONNECTED);
+}
+
+void ICACHE_FLASH_ATTR tcp_disconnect(sscp_connection *connection)
+{
+    struct espconn *conn = &connection->d.tcp.conn;
+    if (conn)
+        espconn_disconnect(conn);
+    sscp_free_connection(connection);
 }
 

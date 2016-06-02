@@ -58,10 +58,10 @@ int main(void)
     
     init_robot();
 
-    request("SET,pause-time,5");
+    request("SET:sscp-pause-time,5");
     waitFor(SSCP_PREFIX "=S,0\r");
 
-    request("WSLISTEN,0,/ws/robot");
+    request("WSLISTEN:0,/ws/robot");
     waitFor(SSCP_PREFIX "=S,0\r");
     
     for (;;) {
@@ -72,7 +72,7 @@ int main(void)
 
         request("POLL");
         waitFor(SSCP_PREFIX "=");
-        collectUntil(':', type, sizeof(type));
+        collectUntil(',', type, sizeof(type));
         if (type[0] != 'N')
             dprint(debug, "Got %c\n", type[0]);
         
@@ -88,7 +88,7 @@ int main(void)
             chan = atoi(arg);
             collectUntil('\r', arg, sizeof(arg));
             count = atoi(arg);
-            request("RECV,%d", chan);
+            request("RECV:%d", chan);
             collectUntil(',', type, sizeof(type));
             collectUntil('\r', arg, sizeof(arg));
             count = atoi(arg);
@@ -111,7 +111,7 @@ int main(void)
                 dprint(debug, "New PING))) distance: %d\n", pingDistance);
                 lastPingDistance = pingDistance;
                 sprintf(buf, "%d", pingDistance);
-                request("SEND,%d,%d", pingChannel, strlen(buf));
+                request("SEND:%d,%d", pingChannel, strlen(buf));
                 requestPayload(buf, strlen(buf));
                 waitFor(SSCP_PREFIX "=S,");
                 collectUntil('\r', buf, sizeof(buf));

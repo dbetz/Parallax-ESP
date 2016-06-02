@@ -16,13 +16,36 @@ void request(char *fmt, ...)
     fdserial_txChar(wifi, SSCP_START);
     while (*p != '\0')
         fdserial_txChar(wifi, *p++);
-    fdserial_txChar(wifi, '\n');
+    fdserial_txChar(wifi, '\r');
+}
+
+void nrequest(int token, char *fmt, ...)
+{
+    char buf[100], *p = buf;
+    
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    
+    fdserial_txChar(wifi, SSCP_START);
+    fdserial_txChar(wifi, token);
+    while (*p != '\0')
+        fdserial_txChar(wifi, *p++);
+    fdserial_txChar(wifi, '\r');
 }
 
 void requestPayload(char *buf, int len)
 {
     while (--len >= 0)
         fdserial_txChar(wifi, *buf++);
+}
+
+void reply(int chan, int code, char *payload)
+{
+    int payloadLength = strlen(payload);
+    request("REPLY:%d,%d,%d", chan, code, payloadLength);
+    requestPayload(payload, payloadLength);
 }
 
 int waitFor(char *target)

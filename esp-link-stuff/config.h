@@ -16,7 +16,7 @@ typedef struct {
   char     module_name[32];
   char     module_descr[129];
   int8_t   rx_pullup;
-  int8_t   enable_sscp;
+  int8_t   sscp_enable;
   char     sscp_need_pause[16];
   int8_t   sscp_need_pause_cnt;
   int32_t  sscp_pause_time_ms;

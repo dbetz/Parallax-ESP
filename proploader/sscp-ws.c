@@ -106,3 +106,11 @@ void ICACHE_FLASH_ATTR sscp_websocketConnect(Websock *ws)
     ws->userData = connection;
 }
 
+void ICACHE_FLASH_ATTR ws_disconnect(sscp_connection *connection)
+{
+    Websock *ws = connection->d.ws.ws;
+    if (ws)
+        cgiWebsocketClose(ws, 0);
+    sscp_free_connection(connection);
+}
+

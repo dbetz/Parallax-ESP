@@ -30,7 +30,6 @@ int wheelRight;
 void init_robot(void);
 int process_robot_command(int whichWay);            
 void set_robot_speed(int left, int right);
-void reply(int chan, int code, char *payload);
 
 int main(void)
 {    
@@ -55,21 +54,22 @@ int main(void)
     
     init_robot();
     
-    request("SET,pause-time,5");
+//    request("SET:sscp-pause-time,5");
+    nrequest(SSCP_TKN_SET, "sscp-pause-time,5");
     waitFor(SSCP_PREFIX "=S,0\r");
 
-    request("LISTEN,0,/robot*");
+    request("LISTEN:0,/robot*");
     waitFor(SSCP_PREFIX "=S,0\r");
     
     for (;;) {
-        char type[16], verb[128], url[128], arg[128];
+        char type[16], verb[128], size[128], url[128], arg[128];
         int chan;
 
         waitcnt(CNT + CLKFREQ/4);
 
         request("POLL");
         waitFor(SSCP_PREFIX "=");
-        collectUntil(':', type, sizeof(type));
+        collectUntil(',', type, sizeof(type));
         if (type[0] != 'N')
             dprint(debug, "Got %c\n", type[0]);
         
@@ -77,10 +77,15 @@ int main(void)
         case 'P':
             collectUntil(',', arg, sizeof(arg));
             chan = atoi(arg);
+            collectUntil('\r', size, sizeof(size));
+            dprint(debug, "%d: POST size %d\n", chan, atoi(size));
+            request("PATH:%d", chan);
+            waitFor(SSCP_PREFIX "=");
+            collectUntil(',', type, sizeof(type));
             collectUntil('\r', url, sizeof(url));
-            dprint(debug, "%d: URL '%s'\n", chan, url);
+            dprint(debug, "%d: path '%s'\n", chan, url);
             if (strcmp(url, "/robot") == 0) {
-                request("POSTARG,%d,gto", chan);
+                request("POSTARG:%d,gto", chan);
                 waitFor(SSCP_PREFIX "=S,");
                 collectUntil('\r', arg, sizeof(arg));
                 dprint(debug, "gto='%s'\n", arg);
@@ -98,8 +103,13 @@ int main(void)
         case 'G':
             collectUntil(',', arg, sizeof(arg));
             chan = atoi(arg);
+            collectUntil('\r', size, sizeof(size));
+            dprint(debug, "%d: GET size %d\n", chan, atoi(size));
+            request("PATH:%d", chan);
+            waitFor(SSCP_PREFIX "=");
+            collectUntil(',', type, sizeof(type));
             collectUntil('\r', url, sizeof(url));
-            dprint(debug, "%d: URL '%s'\n", chan, url);
+            dprint(debug, "%d: path '%s'\n", chan, url);
             if (strcmp(url, "/robot-ping") == 0) {
                 sprintf(arg, "%d", ping_cm(PING_PIN));
                 reply(chan, 200, arg);
@@ -107,7 +117,7 @@ int main(void)
             }
             else {
                 dprint(debug, "Unknown POST URL\n");
-                request("REPLY,%d,400,unknown", chan);
+                request("REPLY:%d,400,unknown", chan);
                 waitFor(SSCP_PREFIX "=S,0\r");
             }
             break;
@@ -116,7 +126,7 @@ int main(void)
             break;
         default:
             skipUntil('\r');
-            dprint(debug, "unknown response: 0x%02x\n", type[0]);
+            dprint(debug, "unknown response: '%c' 0x%02x\n", type[0], type[0]);
             break;
         }
     }
@@ -212,11 +222,4 @@ void set_robot_speed(int left, int right)
   wheelLeft = left;
   wheelRight = right;
   drive_speed(wheelLeft, wheelRight);
-}
-
-void reply(int chan, int code, char *payload)
-{
-    int payloadLength = strlen(payload);
-    request("REPLY,%d,%d,%d", chan, code, payloadLength);
-    requestPayload(payload, payloadLength);
 }

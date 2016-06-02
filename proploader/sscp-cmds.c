@@ -130,6 +130,12 @@ static int setPauseChars(void *data, char *value)
     return 0;
 }
 
+static int setSSCPEnable(void *data, char *value)
+{
+    sscp_enable(atoi(value));
+    return 0;
+}
+
 enum {
     PIN_GPIO0 = 0,      // PGM
     PIN_GPIO2 = 2,      // DBG
@@ -233,11 +239,15 @@ static cmd_def vars[] = {
 {   "module-name",      getModuleName,  setModuleName,      NULL                            },
 {   "wifi-mode",        getWiFiMode,    setWiFiMode,        NULL                            },
 {   "ip-address",       getIPAddress,   setIPAddress,       NULL                            },
-{   "pause-time",       intGetHandler,  intSetHandler,      &flashConfig.sscp_pause_time_ms },
-{   "pause-chars",      getPauseChars,  setPauseChars,      NULL                            },
-{   "enable-sscp",      int8GetHandler, int8SetHandler,     &flashConfig.enable_sscp        },
+{   "sscp-start-char",  intGetHandler,  intSetHandler,      &sscp_start                     },
+{   "sscp-pause-time",  intGetHandler,  intSetHandler,      &flashConfig.sscp_pause_time_ms },
+{   "sscp-pause-chars", getPauseChars,  setPauseChars,      NULL                            },
+{   "sscp-enable",      int8GetHandler, setSSCPEnable,      &flashConfig.sscp_enable        },
 {   "baud-rate",        intGetHandler,  setBaudrate,        &flashConfig.baud_rate          },
 {   "loader-baud-rate", intGetHandler,  setLoaderBaudrate,  &flashConfig.loader_baud_rate   },
+{   "reset-pin",        int8GetHandler, int8SetHandler,     &flashConfig.reset_pin          },
+{   "connect-led-pin",  int8GetHandler, int8SetHandler,     &flashConfig.conn_led_pin       },
+{   "rx-pullup",        int8GetHandler, int8SetHandler,     &flashConfig.rx_pullup          },
 {   "pin-pgm",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO0               },
 {   "pin-gpio0",        getPinHandler,  setPinHandler,      (void *)PIN_GPIO0               },
 {   "pin-dbg",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO2               },
@@ -310,12 +320,10 @@ void ICACHE_FLASH_ATTR cmds_do_set(int argc, char *argv[])
 void ICACHE_FLASH_ATTR cmds_do_poll(int argc, char *argv[])
 {
     sscp_connection *connection;
-    HttpdConnData *connData;
-    Websock *ws;
     int i;
 
     if (argc != 1) {
-        sscp_sendResponse("E:%,invalid arguments", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
 
@@ -325,27 +333,31 @@ void ICACHE_FLASH_ATTR cmds_do_poll(int argc, char *argv[])
                 connection->flags &= ~CONNECTION_INIT;
                 switch (connection->listener->type) {
                 case LISTENER_HTTP:
-                    connData = (HttpdConnData *)connection->d.http.conn;
-                    if (connData) {
-                        switch (connData->requestType) {
-                        case HTTPD_METHOD_GET:
-                            sscp_sendResponse("G:%d,%s", connection->index, connData->url);
-                            break;
-                        case HTTPD_METHOD_POST:
-                            sscp_sendResponse("P:%d,%s", connection->index, connData->url);
-                            break;
-                        default:
-                            sscp_sendResponse("E:0,invalid request type");
-                            break;
+                    {
+                        HttpdConnData *connData = (HttpdConnData *)connection->d.http.conn;
+                        if (connData) {
+                            switch (connData->requestType) {
+                            case HTTPD_METHOD_GET:
+                                sscp_sendResponse("G,%d,%d", connection->index, 0);
+                                break;
+                            case HTTPD_METHOD_POST:
+                                sscp_sendResponse("P,%d,%d", connection->index, connData->post->buff ? connData->post->len : 0);
+                                break;
+                            default:
+                                sscp_sendResponse("E,%d,0", SSCP_ERROR_INTERNAL_ERROR);
+                                break;
+                            }
+                            return;
                         }
-                        return;
                     }
                     break;
                 case LISTENER_WEBSOCKET:
-                    ws = (Websock *)connection->d.ws.ws;
-                    if (ws) {
-                        sscp_sendResponse("W:%d,%s", connection->index, ws->conn->url);
-                        return;
+                    {
+                        Websock *ws = (Websock *)connection->d.ws.ws;
+                        if (ws) {
+                            sscp_sendResponse("W,%d,0", connection->index);
+                            return;
+                        }
                     }
                     break;
                 default:
@@ -353,13 +365,60 @@ void ICACHE_FLASH_ATTR cmds_do_poll(int argc, char *argv[])
                 }
             }
             else if (connection->flags & CONNECTION_RXFULL) {
-                sscp_sendResponse("D:%d,%d", connection->index, connection->rxCount);
+                sscp_sendResponse("D,%d,%d", connection->index, connection->rxCount);
                 return;
             }
         }
     }
     
-    sscp_sendResponse("N:0,");
+    sscp_sendResponse("N,0,0");
+}
+
+// PATH,chan
+void ICACHE_FLASH_ATTR cmds_do_path(int argc, char *argv[])
+{
+    sscp_connection *connection;
+
+    if (argc != 2) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
+        return;
+    }
+    
+    if (!(connection = sscp_get_connection(atoi(argv[1])))) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+        return;
+    }
+
+    if (!connection->listener) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+        return;
+    }
+    
+    switch (connection->listener->type) {
+    case LISTENER_HTTP:
+        {
+            HttpdConnData *connData = (HttpdConnData *)connection->d.http.conn;
+            if (!connData || !connData->conn) {
+                sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_STATE);
+                return;
+            }
+            sscp_sendResponse("S,%s", connData->url);
+        }
+        break;
+    case LISTENER_WEBSOCKET:
+        {
+            Websock *ws = (Websock *)connection->d.ws.ws;
+            if (!ws || !ws->conn) {
+                sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_STATE);
+                return;
+            }
+            sscp_sendResponse("S,%s", ws->conn->url);
+        }
+        break;
+    default:
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+        return;
+    }
 }
 
 // SEND,chan,payload
@@ -426,7 +485,8 @@ void ICACHE_FLASH_ATTR cmds_do_recv(int argc, char *argv[])
     }
 
     sscp_sendResponse("S,%d", connection->rxCount);
-    sscp_sendPayload(connection->rxBuffer, connection->rxCount);
+    if (connection->rxCount > 0)
+        sscp_sendPayload(connection->rxBuffer, connection->rxCount);
     connection->flags &= ~CONNECTION_RXFULL;
 }
 

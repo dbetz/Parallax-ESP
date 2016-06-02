@@ -48,7 +48,7 @@ int main(void)
     for (;;) {
         char result[2];
 
-        request("TCP-CONNECT,www-eng-x.llnl.gov,80");
+        request("TCPCONNECT:www-eng-x.llnl.gov,80");
         waitFor(SSCP_PREFIX "=");
         collectUntil(',', result, sizeof(result));
         collectUntil('\r', buf, sizeof(buf));
@@ -63,7 +63,7 @@ GET /documents/a_document.txt HTTP/1.1\r\n\
 Host: www-eng-x.llnl.gov\r\n\
 \r\n"
 
-            request("SEND,%d,%d", chan, strlen(REQ));
+            request("SEND:%d,%d", chan, strlen(REQ));
             requestPayload(REQ, strlen(REQ));
             waitFor(SSCP_PREFIX "=");
             collectUntil('\r', buf, sizeof(buf));
@@ -74,7 +74,7 @@ Host: www-eng-x.llnl.gov\r\n\
                 while (--retries >= 0) {
                     int count, i;
 
-                    request("RECV,%d", chan);
+                    request("RECV:%d", chan);
                     waitFor(SSCP_PREFIX "=");
                     collectUntil(',', result, sizeof(result));
                     collectUntil('\r', buf, sizeof(buf));
@@ -95,7 +95,7 @@ Host: www-eng-x.llnl.gov\r\n\
                 }
             }
     
-            request("TCP-DISCONNECT,%d", chan);
+            request("TCPDISCONNECT:%d", chan);
             waitFor(SSCP_PREFIX "=");
             collectUntil('\r', buf, sizeof(buf));
             dprint(debug, "Disconnect returned '%s'\n", buf);

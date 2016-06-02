@@ -4,9 +4,8 @@
 #include "config.h"
 #include "cgiwifi.h"
 
-//#define DUMP
+#define DUMP
 
-#define SSCP_START          0xFE
 #define SSCP_BUFFER_MAX     128
 #define SSCP_MAX_ARGS       8
 
@@ -16,6 +15,7 @@ static uint8_t sscp_buffer[SSCP_BUFFER_MAX + 1];
 static int sscp_inside;
 static int sscp_length;
 
+int sscp_start = SSCP_TKN_START;
 static char *sscp_payload;
 static int sscp_payload_length;
 static void (*sscp_payload_cb)(void *data);
@@ -37,18 +37,38 @@ void ICACHE_FLASH_ATTR sscp_init(void)
     os_memset(&sscp_connections, 0, sizeof(sscp_connections));
     for (i = 0; i < SSCP_CONNECTION_MAX; ++i)
         sscp_connections[i].index = i;
+    sscp_start = SSCP_TKN_START;
     sscp_inside = 0;
     sscp_length = 0;
     sscp_payload = NULL;
-    flashConfig.enable_sscp = SSCP_DEF_ENABLE;
+    flashConfig.sscp_enable = SSCP_DEF_ENABLE;
 }
 
 void ICACHE_FLASH_ATTR sscp_reset(void)
 {
     int i;
     for (i = 0; i < SSCP_CONNECTION_MAX; ++i) {
-        // BUG: should disconnect any open connections here!!
+        sscp_connection *connection = &sscp_connections[i];
+        if (connection->listener) {
+            switch (connection->listener->type) {
+            case LISTENER_HTTP:
+                http_disconnect(connection);
+                break;
+            case LISTENER_WEBSOCKET:
+                ws_disconnect(connection);
+                break;
+            case LISTENER_TCP:
+                tcp_disconnect(connection);
+                break;
+            default:
+                break;
+            }
+        }
     }
+    for (i = 0; i < SSCP_LISTENER_MAX; ++i) {
+        sscp_listeners[i].type = LISTENER_UNUSED;
+    }
+    sscp_start = SSCP_TKN_START;
     sscp_inside = 0;
     sscp_length = 0;
     sscp_payload = NULL;
@@ -56,16 +76,16 @@ void ICACHE_FLASH_ATTR sscp_reset(void)
 
 void ICACHE_FLASH_ATTR sscp_enable(int enable)
 {
-    if (enable != flashConfig.enable_sscp) {
+    if (enable != flashConfig.sscp_enable) {
         if (enable)
             sscp_reset();
-        flashConfig.enable_sscp = enable;
+        flashConfig.sscp_enable = enable;
     }
 }
 
 int ICACHE_FLASH_ATTR sscp_isEnabled(void)
 {
-    return flashConfig.enable_sscp;
+    return flashConfig.sscp_enable;
 }
 
 void ICACHE_FLASH_ATTR sscp_capturePayload(char *buf, int length, void (*cb)(void *data), void *data)
@@ -114,25 +134,19 @@ void ICACHE_FLASH_ATTR sscp_close_listener(sscp_listener *listener)
 {
     sscp_connection *connection = listener->connections;
     while (connection) {
-        // close the connection!!
+        sscp_connection *next = connection;
         switch (listener->type) {
         case LISTENER_HTTP:
-            {
-                HttpdConnData *connData = connection->d.http.conn;
-                connData->cgi = NULL;
-            }
+            http_disconnect(connection);
             break;
         case LISTENER_WEBSOCKET:
-            {
-                Websock *ws = connection->d.ws.ws;
-                cgiWebsocketClose(ws, 0);
-            }
+            ws_disconnect(connection);
             break;
         default:
+            sscp_free_connection(connection);
             break;
         }
-        connection->listener = NULL;
-        connection = connection->next;
+        connection = next;
     }
     listener->connections = NULL;
 }
@@ -186,7 +200,7 @@ void ICACHE_FLASH_ATTR sscp_sendResponse(char *fmt, ...)
     int cnt;
 
     // insert the header
-    buf[0] = SSCP_START;
+    buf[0] = sscp_start;
     buf[1] = '=';
 
     // insert the formatted response
@@ -231,45 +245,110 @@ void ICACHE_FLASH_ATTR sscp_sendPayload(char *buf, int cnt)
     uart_tx_buffer(UART0, buf, cnt);
 }
 
-static struct {
+typedef struct {
     char *cmd;
+    int token;
     void (*handler)(int argc, char *argv[]);
-} cmds[] = {
-{   "",                 cmds_do_nothing     },
-{   "JOIN",             cmds_do_join        },
-{   "GET",              cmds_do_get         },
-{   "SET",              cmds_do_set         },
-{   "POLL",             cmds_do_poll        },
-{   "SEND",             cmds_do_send        },
-{   "RECV",             cmds_do_recv        },
-{   "LISTEN",           http_do_listen      },
-{   "ARG",              http_do_arg         },
-{   "POSTARG",          http_do_postarg     },
-{   "REPLY",            http_do_reply       },
-{   "WSLISTEN",         ws_do_wslisten      },
-{   "TCP-CONNECT",      tcp_do_connect      },
-{   "TCP-DISCONNECT",   tcp_do_disconnect   },
-{   NULL,               NULL                }
+} cmd_def;
+static cmd_def cmds[] = {
+{   "",                 -1,                     cmds_do_nothing     },
+{   "JOIN",             SSCP_TKN_JOIN,          cmds_do_join        },
+{   "GET",              SSCP_TKN_GET,           cmds_do_get         },
+{   "SET",              SSCP_TKN_SET,           cmds_do_set         },
+{   "POLL",             SSCP_TKN_POLL,          cmds_do_poll        },
+{   "PATH",             SSCP_TKN_PATH,          cmds_do_path        },
+{   "SEND",             SSCP_TKN_SEND,          cmds_do_send        },
+{   "RECV",             SSCP_TKN_RECV,          cmds_do_recv        },
+{   "LISTEN",           SSCP_TKN_LISTEN,        http_do_listen      },
+{   "ARG",              SSCP_TKN_ARG,           http_do_arg         },
+{   "POSTARG",          SSCP_TKN_POSTARG,       http_do_postarg     },
+{   "BODY",             SSCP_TKN_BODY,          http_do_body        },
+{   "REPLY",            SSCP_TKN_REPLY,         http_do_reply       },
+{   "WSLISTEN",         SSCP_TKN_WSLISTEN,      ws_do_wslisten      },
+{   "TCPCONNECT",       SSCP_TKN_TCPCONNECT,    tcp_do_connect      },
+{   "TCPDISCONNECT",    SSCP_TKN_TCPDISCONNECT, tcp_do_disconnect   },
+{   NULL,               0,                      NULL                }
 };
 
+/*
+    case SSCP_TKN_INT8:
+    case SSCP_TKN_UINT8:
+    case SSCP_TKN_INT16:
+    case SSCP_TKN_UINT16:
+    case SSCP_TKN_INT32:
+    case SSCP_TKN_UINT32:
+*/
 static void ICACHE_FLASH_ATTR sscp_process(char *buf, short len)
 {
-    char *argv[SSCP_MAX_ARGS + 1];
+    char *argv[SSCP_MAX_ARGS + 1], tknbuf[2];
+    cmd_def *def = NULL;
+    int argc, tkn, i;
     char *p, *next;
-    int argc, i;
     
     dump("sscp", (uint8_t *)buf, len);
     
     p = buf;
     argc = 0;
-    while ((next = os_strchr(p, ',')) != NULL) {
+    tkn = *(uint8_t *)p;
+    
+    if (tkn >= SSCP_MIN_TOKEN) {
+    
+        for (i = 0; cmds[i].cmd; ++i) {
+            if (tkn == cmds[i].token) {
+                def = &cmds[i];
+                break;
+            }
+        }
+        
+        if (!def) {
+            os_printf("No handler for 0x%02x\n", tkn);
+            sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_REQUEST);
+            return;
+        }
+        
+        tknbuf[0] = tkn; // this may be needed to choose between terse and verbose responses
+        tknbuf[1] = '\0';
+        argv[argc++] = tknbuf;
+        ++p;
+    }
+    
+    else {
+    
+        if (!(next = os_strchr(p, ':')))
+            next = &p[os_strlen(p)];
+        else
+            *next++ = '\0';
+                    
+        argv[argc++] = p;
+        p = next;
+        
+        for (i = 0; cmds[i].cmd; ++i) {
+            if (strcmp(argv[0], cmds[i].cmd) == 0) {
+                def = &cmds[i];
+                break;
+            }
+        }
+        
+        if (!def) {
+            os_printf("No handler for '%s'\n", argv[0]);
+            sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_REQUEST);
+            return;
+        }
+    }
+    
+    if (*p) {
+    
+        while ((next = os_strchr(p, ',')) != NULL) {
+            if (argc < SSCP_MAX_ARGS)
+                argv[argc++] = p;
+            *next++ = '\0';
+            p = next;
+        }
+    
         if (argc < SSCP_MAX_ARGS)
             argv[argc++] = p;
-        *next++ = '\0';
-        p = next;
     }
-    if (argc < SSCP_MAX_ARGS)
-        argv[argc++] = p;
+        
     argv[argc] = NULL;
         
 #ifdef DUMP
@@ -277,16 +356,8 @@ static void ICACHE_FLASH_ATTR sscp_process(char *buf, short len)
         os_printf("argv[%d] = '%s'\n", i, argv[i]);
 #endif
 
-    for (i = 0; cmds[i].cmd; ++i) {
-        if (strcmp(argv[0], cmds[i].cmd) == 0) {
-            os_printf("Calling '%s' handler\n", argv[0]);
-            (*cmds[i].handler)(argc, argv);
-            return;
-        }
-    }
-
-    os_printf("No handler for '%s'\n", argv[0]);
-    sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_REQUEST);
+    os_printf("Calling '%s' handler\n", def->cmd);
+    (*def->handler)(argc, argv);
 }
 
 void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void *data, char *buf, short len), void *data)
@@ -294,7 +365,7 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
     uint8_t *p = (uint8_t *)buf;
     uint8_t *start = p;
     
-    if (!flashConfig.enable_sscp) {
+    if (!flashConfig.sscp_enable) {
         (*outOfBand)(data, (char *)buf, len);
         return;
     }
@@ -311,14 +382,12 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
             ++start;
         }
         else if (sscp_inside) {
-            if (*p == '\n') {
+            if (*p == '\r') {
                 sscp_buffer[sscp_length] = '\0';
                 sscp_process((char *)sscp_buffer, sscp_length);
                 sscp_inside = 0;
                 start = ++p;
             }
-            else if (*p == '\r')
-                ++p;
             else if (sscp_length < SSCP_BUFFER_MAX)
                 sscp_buffer[sscp_length++] = *p++;
             else {
@@ -328,7 +397,7 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
             }
         }
         else {
-            if (*p == SSCP_START) {
+            if (*p == sscp_start) {
                 if (p > start && outOfBand) {
                     dump("outOfBand", start, p - start);
                     (*outOfBand)(data, (char *)start, p - start);

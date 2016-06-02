@@ -106,6 +106,40 @@ void ICACHE_FLASH_ATTR http_do_postarg(int argc, char *argv[])
     sscp_sendResponse("S,%s", buf);
 }
 
+// BODY,chan
+void ICACHE_FLASH_ATTR http_do_body(int argc, char *argv[])
+{
+    sscp_connection *connection;
+    HttpdConnData *connData;
+    int count;
+
+    if (argc != 2) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
+        return;
+    }
+    
+    if (!(connection = sscp_get_connection(atoi(argv[1])))) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+        return;
+    }
+
+    if (!connection->listener || connection->listener->type != LISTENER_HTTP) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+        return;
+    }
+    
+    if (!(connData = (HttpdConnData *)connection->d.http.conn) || connData->conn == NULL) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_STATE);
+        return;
+    }
+    
+    count = connData->post->buff ? connData->post->len : 0;
+    
+    sscp_sendResponse("S,%d", count);
+    if (count > 0)
+        sscp_sendPayload(connData->post->buff, count);
+}
+
 #define MAX_SENDBUFF_LEN 1024
 
 static void ICACHE_FLASH_ATTR reply_cb(void *data)
@@ -197,4 +231,12 @@ os_printf("sscp: no connections available for %s request\n", connData->url);
 os_printf("sscp: handling %s request\n", connData->url);
         
     return HTTPD_CGI_MORE;
+}
+
+void ICACHE_FLASH_ATTR http_disconnect(sscp_connection *connection)
+{
+    HttpdConnData *connData = connection->d.http.conn;
+    if (connData)
+        connData->cgi = NULL;
+    sscp_free_connection(connection);
 }

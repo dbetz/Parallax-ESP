@@ -48,7 +48,7 @@ int main(void)
     debug = wifi;
 #endif
     
-    request("TCP-CONNECT,maker.ifttt.com,80");
+    request("TCPCONNECT:maker.ifttt.com,80");
     waitFor(SSCP_PREFIX "=");
     collectUntil(',', result, sizeof(result));
     collectUntil('\r', buf, sizeof(buf));
@@ -65,7 +65,7 @@ Connection: keep-alive\r\n\
 Accept: */*\r\n\
 \r\n"
 
-        request("SEND,%d,%d", chan, strlen(REQ));
+        request("SEND:%d,%d", chan, strlen(REQ));
         requestPayload(REQ, strlen(REQ));
         waitFor(SSCP_PREFIX "=");
         collectUntil('\r', buf, sizeof(buf));
@@ -76,7 +76,7 @@ Accept: */*\r\n\
             while (--retries >= 0) {
                 int count, i;
 
-                request("RECV,%d", chan);
+                request("RECV:%d", chan);
                 waitFor(SSCP_PREFIX "=");
                 collectUntil(',', result, sizeof(result));
                 collectUntil('\r', buf, sizeof(buf));
@@ -97,7 +97,7 @@ Accept: */*\r\n\
             }
         }
 
-        request("TCP-DISCONNECT,%d", chan);
+        request("TCPDISCONNECT:%d", chan);
         waitFor(SSCP_PREFIX "=");
         collectUntil('\r', buf, sizeof(buf));
         dprint(debug, "Disconnect returned '%s'\n", buf);
