@@ -14,13 +14,17 @@
 
 enum {
     SSCP_TKN_START              = 0xFE,
+    
+    // these tokens are not yet implemented
     SSCP_TKN_INT8               = 0xFD,
     SSCP_TKN_UINT8              = 0xFC,
     SSCP_TKN_INT16              = 0xFB,
     SSCP_TKN_UINT16             = 0xFA,
     SSCP_TKN_INT32              = 0xF9,
     SSCP_TKN_UINT32             = 0xF8,
+    
     // gap for more tokens
+    
     SSCP_TKN_JOIN               = 0xEF,
     SSCP_TKN_GET                = 0xEE,
     SSCP_TKN_SET                = 0xED,

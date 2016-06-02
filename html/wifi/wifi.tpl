@@ -1,4 +1,4 @@
-<html><head><title>WiFi connection</title>
+<html><head><title>Parallax Wi-Fi Module Configuration - Wi-Fi Connection</title>
 <link rel="stylesheet" type="text/css" href="../style.css">
 <script type="text/javascript" src="140medley.min.js"></script>
 <script type="text/javascript">

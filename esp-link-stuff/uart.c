@@ -22,6 +22,9 @@
 #include "uart.h"
 #include "sscp.h"
 
+#define DEF_STOP_BITS   ONE_STOP_BIT
+//#define DEF_STOP_BITS   TWO_STOP_BIT
+
 #ifdef UART_DBG
 #define DBG_UART(format, ...) os_printf(format, ## __VA_ARGS__)
 #else
@@ -299,8 +302,10 @@ uart_init(UartBaudRate uart0_br, UartBaudRate uart1_br)
 {
   // rom use 74880 baut_rate, here reinitialize
   UartDev.baud_rate = uart0_br;
+  UartDev.stop_bits = DEF_STOP_BITS;
   uart_config(UART0);
   UartDev.baud_rate = uart1_br;
+  UartDev.stop_bits = ONE_STOP_BIT;
   uart_config(UART1);
   for (int i=0; i<4; i++) uart_tx_one_char(UART1, '\n');
   for (int i=0; i<4; i++) uart_tx_one_char(UART0, '\n');

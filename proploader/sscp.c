@@ -4,7 +4,7 @@
 #include "config.h"
 #include "cgiwifi.h"
 
-#define DUMP
+//#define DUMP
 
 #define SSCP_BUFFER_MAX     128
 #define SSCP_MAX_ARGS       8
