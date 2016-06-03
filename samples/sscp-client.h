@@ -37,7 +37,7 @@ void request(char *fmt, ...);
 void nrequest(int token, char *fmt, ...);
 void requestPayload(char *buf, int len);
 void reply(int chan, int code, char *payload);
-int waitFor(char *target);
+int waitFor(char *fmt, ...);
 void collectUntil(int term, char *buf, int size);
 void collectPayload(char *buf, int bufSize, int count);
 void skipUntil(int term);

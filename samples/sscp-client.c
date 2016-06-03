@@ -48,29 +48,128 @@ void reply(int chan, int code, char *payload)
     requestPayload(payload, payloadLength);
 }
 
-int waitFor(char *target)
+typedef struct {
+    int savedChar;
+} State;
+
+static int nextchar(State *state)
 {
-    int len = strlen(target);
-    char buf[16];
-    int ch, i;
+    int ch;
+    if ((ch = state->savedChar) != EOF)
+        state->savedChar = EOF;
+    else
+        ch = fdserial_rxChar(wifi);
+    return ch;
+}
+
+static void ungetchar(State *state, int ch)
+{
+    state->savedChar = ch;
+}
+
+int waitFor(char *fmt, ...)
+{
+    State state = { .savedChar = EOF };
+    int ch, rch, len, i;
+    char *p = fmt;
+    char buf[100];
+    int ret = -1;
     
+    len = 0;
+    while (*p != '\0' && *p != '^') {
+        ++len;
+        ++p;
+    }
+        
     if (len > sizeof(buf))
         return -1;
         
     for (i = 0; i < len; ++i) {
-        if ((ch = fdserial_rxChar(wifi)) == EOF)
+        if ((rch = nextchar(&state)) == EOF)
             return -1;
-        buf[i] = ch;
+        buf[i] = rch;
     }
         
-    while (strncmp(target, buf, len) != 0) {
+    while (strncmp(fmt, buf, len) != 0) {
         memcpy(buf, &buf[1], len - 1);
-        if ((ch = fdserial_rxChar(wifi)) == EOF)
+        if ((rch = nextchar(&state)) == EOF)
             return -1;
-        buf[len - 1] = ch;
+        buf[len - 1] = rch;
     }
     
-    return 0;
+    va_list ap;
+    va_start(ap, fmt);
+    
+    while ((ch = *p++) != '\0') {
+    
+        rch = nextchar(&state);
+        
+        if (ch == '^') {
+            switch (*p++) {
+            case 'c':
+                if (rch == EOF)
+                    goto done;
+                *va_arg(ap, char *) = rch;
+                break;
+            case 'i':
+                {
+                    int value = 0;
+                    int sign = 1;
+                    if (rch == EOF)
+                        goto done;
+                    if (rch == '-') {
+                        if ((rch = nextchar(&state)) == EOF)
+                            goto done;
+                        sign = -1;
+                    }
+                    if (!isdigit(rch))
+                        goto done;
+                    do {
+                        value = value * 10 + rch - '0';
+                    } while ((rch = nextchar(&state)) != EOF && isdigit(rch));
+                    *va_arg(ap, int *) = value * sign;
+                    ungetchar(&state, rch);
+                }
+                break;
+            case 's':
+                {
+                    int term = *p;
+                    char *buf = va_arg(ap, char *);
+                    int len = va_arg(ap, int);
+                    while (rch != EOF && rch != term) {
+                        if (len > 1) {
+                            *buf++ = rch;
+                            --len;
+                        }
+                        rch = nextchar(&state);
+                    }
+                    *buf = '\0';
+                    ungetchar(&state, rch);
+                }
+                break;
+            case '^':
+                if (rch != '^')
+                    goto done;
+                break;
+            case '\0':
+                // fall through
+            default:
+                goto done;
+            }
+        }
+        
+        else {
+            if (rch != ch)
+                goto done;
+       }
+    }
+
+    ret = 0;
+        
+done:
+    va_end(ap);
+    
+    return ret;
 }
 
 void collectUntil(int term, char *buf, int size)

@@ -27,7 +27,7 @@ fdserial *debug;
 int main(void)
 {    
     char result[2], buf[1000];
-    int chan, i;
+    int chan;
     
     // Close default same-cog terminal
     simpleterm_close();                         

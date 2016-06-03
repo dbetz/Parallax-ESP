@@ -65,7 +65,7 @@ int main(void)
     waitFor(SSCP_PREFIX "=S,0\r");
     
     for (;;) {
-        char type[16], verb[128], url[128], arg[128];
+        char type[16], url[128], arg[128];
         int chan, pingDistance, count;
         
         waitcnt(CNT + CLKFREQ/4);
