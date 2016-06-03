@@ -6,9 +6,6 @@
 // Receive callback function signature
 typedef void (*UartRecv_cb)(char *buf, short len);
 
-// current baud rate
-extern int uart0_baudRate;
-
 // Initialize UARTs to the provided baud rates (115200 recommended). This also makes the os_printf
 // calls use uart1 for output (for debugging purposes)
 void uart_init(UartBaudRate uart0_br, UartBaudRate uart1_br);
@@ -26,6 +23,6 @@ void uart_add_recv_cb(UartRecv_cb cb);
 // Turn UART interrupts off and poll for nchars or until timeout hits
 uint16_t uart0_rx_poll(char *buff, uint16_t nchars, uint32_t timeout_us);
 
-void uart0_baud(int rate);
+void uart0_config(int baudRate, int stopBits);
 
 #endif /* __UART_H__ */

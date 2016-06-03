@@ -23,7 +23,7 @@
 #include "sscp.h"
 
 #define DEF_STOP_BITS   ONE_STOP_BIT
-//#define DEF_STOP_BITS   TWO_STOP_BIT
+//#define DEF_STOP_BITS   TWO_STOP_BITS
 
 #ifdef UART_DBG
 #define DBG_UART(format, ...) os_printf(format, ## __VA_ARGS__)
@@ -31,7 +31,8 @@
 #define DBG_UART(format, ...) do { } while(0)
 #endif
 
-int uart0_baudRate = -1;
+static int uart0_baudRate = -1;
+static int uart0_stopBits = -1;
 
 LOCAL uint8_t uart_recvTaskNum;
 
@@ -275,11 +276,19 @@ done:
 }
 
 void ICACHE_FLASH_ATTR
-uart0_baud(int rate) {
-  if (rate != uart0_baudRate) {
-    os_printf("UART %d baud\n", rate);
-    uart_div_modify(UART0, UART_CLK_FREQ / rate);
-    uart0_baudRate = rate;
+uart0_config(int baudRate, int stopBits) {
+  static char *stopBitNames[4] = { "(error)", "1", "1.5", "2" };
+  if (baudRate != uart0_baudRate || stopBits != uart0_stopBits) {
+    os_printf("UART: %d baud, %s stop bit%s\n", baudRate, stopBitNames[stopBits & 3], stopBits == 1 ? "" : "s");
+    if (baudRate != uart0_baudRate) {
+        uart_div_modify(UART0, UART_CLK_FREQ / baudRate);
+        uart0_baudRate = baudRate;
+    }
+    if (stopBits != uart0_stopBits) {
+        WRITE_PERI_REG(UART_CONF0(0),
+            CALC_UARTMODE(UartDev.data_bits, UartDev.parity, stopBits));
+        uart0_stopBits = stopBits;
+    }
    }
 }
 

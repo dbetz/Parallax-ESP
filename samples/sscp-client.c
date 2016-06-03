@@ -48,20 +48,6 @@ void reply(int chan, int code, char *payload)
     requestPayload(payload, payloadLength);
 }
 
-/*
-        waitFor(SSCP_PREFIX "=");
-        collectUntil(',', type, sizeof(type));
-        if (type[0] != 'N')
-            dprint(debug, "Got %c\n", type[0]);
-        
-        switch (type[0]) {
-        case 'P':
-            collectUntil(',', arg, sizeof(arg));
-            chan = atoi(arg);
-            collectUntil('\r', size, sizeof(size));
-    SSCP_PREFIX "=%c,%d,%d\r"
-*/
-
 int waitFor(char *target)
 {
     int len = strlen(target);

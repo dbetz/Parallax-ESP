@@ -104,7 +104,15 @@ static int setBaudrate(void *data, char *value)
 {
     flashConfig.baud_rate = atoi(value);
     uart_drain_tx_buffer(UART0);
-    uart0_baud(flashConfig.baud_rate);
+    uart0_config(flashConfig.baud_rate, flashConfig.stop_bits);
+    return 0;
+}
+
+static int setStopBits(void *data, char *value)
+{
+    flashConfig.stop_bits = atoi(value);
+    uart_drain_tx_buffer(UART0);
+    uart0_config(flashConfig.baud_rate, flashConfig.stop_bits);
     return 0;
 }
 
@@ -243,8 +251,9 @@ static cmd_def vars[] = {
 {   "sscp-pause-time",  intGetHandler,  intSetHandler,      &flashConfig.sscp_pause_time_ms },
 {   "sscp-pause-chars", getPauseChars,  setPauseChars,      NULL                            },
 {   "sscp-enable",      int8GetHandler, setSSCPEnable,      &flashConfig.sscp_enable        },
-{   "baud-rate",        intGetHandler,  setBaudrate,        &flashConfig.baud_rate          },
 {   "loader-baud-rate", intGetHandler,  setLoaderBaudrate,  &flashConfig.loader_baud_rate   },
+{   "baud-rate",        intGetHandler,  setBaudrate,        &flashConfig.baud_rate          },
+{   "stop-bits",        int8GetHandler, setStopBits,        &flashConfig.stop_bits          },
 {   "reset-pin",        int8GetHandler, int8SetHandler,     &flashConfig.reset_pin          },
 {   "connect-led-pin",  int8GetHandler, int8SetHandler,     &flashConfig.conn_led_pin       },
 {   "rx-pullup",        int8GetHandler, int8SetHandler,     &flashConfig.rx_pullup          },

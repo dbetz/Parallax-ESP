@@ -6,6 +6,7 @@
 #include "config.h"
 #include "espfs.h"
 #include "crc16.h"
+#include "uart.h"
 
 #define MCU_RESET_PIN       12
 #define LED_CONN_PIN        5
@@ -14,7 +15,7 @@
 
 // magic number to recognize thet these are our flash settings as opposed to some random stuff
 #define FLASH_MAGIC     0x55aa
-#define FLASH_VERSION   2
+#define FLASH_VERSION   3
 
 // size of the setting sector
 #define FLASH_SECT      4096
@@ -28,8 +29,9 @@ FlashConfig flashDefault = {
   .version              = FLASH_VERSION,
   .reset_pin            = MCU_RESET_PIN,
   .conn_led_pin         = LED_CONN_PIN,
-  .baud_rate            = BAUD_RATE,
   .loader_baud_rate     = LOADER_BAUD_RATE,
+  .baud_rate            = BAUD_RATE,
+  .stop_bits            = ONE_STOP_BIT,
   .module_name          = "esp-httpd",
   .module_descr 	    = "",
   .rx_pullup	        = 1,

@@ -249,7 +249,7 @@ static void ICACHE_FLASH_ATTR startLoading(PropellerConnection *connection, cons
     // turn off SSCP during loading
     sscp_enable(0);
 
-    uart0_baud(connection->baudRate);
+    uart0_config(connection->baudRate, ONE_STOP_BIT);
 
     GPIO_OUTPUT_SET(connection->resetPin, 0);
     armTimer(connection, RESET_DELAY_1);
@@ -259,7 +259,7 @@ static void ICACHE_FLASH_ATTR startLoading(PropellerConnection *connection, cons
 static void ICACHE_FLASH_ATTR finishLoading(PropellerConnection *connection)
 {
     if (connection->finalBaudRate != connection->baudRate);
-        uart0_baud(connection->finalBaudRate);
+        uart0_config(connection->finalBaudRate, flashConfig.stop_bits);
     programmingCB = NULL;
     myConnection.state = stIdle;
 }
@@ -472,12 +472,3 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
     DBG(" -> %s\n", stateName(connection->state));
 #endif
 }
-
-#ifdef USE_AT
-void ICACHE_FLASH_ATTR
-uart0_baud(int rate) {
-  os_printf("UART %d baud\n", rate);
-  uart_div_modify(UART0, UART_CLK_FREQ / rate);
-}
-#endif
-

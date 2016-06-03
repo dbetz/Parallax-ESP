@@ -147,8 +147,8 @@ typedef enum {
 
 typedef enum {
     ONE_STOP_BIT             = 0x1,
-    ONE_HALF_STOP_BIT        = 0x2,
-    TWO_STOP_BIT             = 0x3
+    ONE_AND_A_HALF_STOP_BITS = 0x2,
+    TWO_STOP_BITS            = 0x3
 } UartStopBitsNum;
 
 typedef enum {

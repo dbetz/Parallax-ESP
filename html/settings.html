@@ -51,6 +51,16 @@
             </td>
           </tr>
           <tr>
+            <td>Communications Stop Bits:</td>
+            <td>
+              <select id="stop-bits">
+                <option value="1">1 Stop Bit</option>
+                <option value="2">1.5 Stop Bits</option>
+                <option value="3">2 Stop Bits</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
             <td>Serial Protocol (SSCP):</td>
             <td>
               <select id="enable-serial-protocol">
@@ -96,6 +106,7 @@ var moduleNameCtl;
 var versionCtl;
 var loaderBaudRateCtl;
 var baudRateCtl;
+var stopBitsCtl;
 var enableSerialProtocolCtl;
 var startCharCtl;
 var pauseTimeCtl;
@@ -106,6 +117,7 @@ function init()
     moduleNameCtl = document.getElementById('module-name');
     loaderBaudRateCtl = document.getElementById('loader-baud-rate');
     baudRateCtl = document.getElementById('baud-rate');
+    stopBitsCtl = document.getElementById('stop-bits');
     enableSerialProtocolCtl = document.getElementById('enable-serial-protocol');
     startCharCtl = document.getElementById('start-char');
     pauseTimeCtl = document.getElementById('pause-time');
@@ -130,6 +142,7 @@ function loadSettings() {
             baudRateCtl.selectedIndex = i;
             break;
         }
+    stopBitsCtl.selectedIndex = getStopBits() - 1;
 
     if (getEnableSerialProtocol() == "0")
         enableSerialProtocolCtl.selectedIndex = 0;
@@ -149,6 +162,7 @@ function on_save() {
     setModuleName(moduleNameCtl.value);
     setBaudRate('loader-baud-rate', loaderBaudRateCtl.value);
     setBaudRate('baud-rate', baudRateCtl.value);
+    setStopBits(stopBitsCtl.value);
     setEnableSerialProtocol(enableSerialProtocolCtl.value);
     setStartChar(startCharCtl.value);
     setPauseTime(pauseTimeCtl.value);
@@ -212,6 +226,20 @@ function getBaudRate(which) {
 function setBaudRate(which, baudRate) {
     var req = new XMLHttpRequest();
     var url = '/parallax/setting?name=' + which + '&value=' + baudRate;
+    req.open('POST', url, false);
+    req.send();
+}
+
+function getStopBits() {
+    var req = new XMLHttpRequest();
+    req.open('GET', '/parallax/setting?name=stop-bits', false);
+    req.send();
+    return req.responseText;
+}
+
+function setStopBits(value) {
+    var req = new XMLHttpRequest();
+    var url = '/parallax/setting?name=stop-bits&value=' + value;
     req.open('POST', url, false);
     req.send();
 }
