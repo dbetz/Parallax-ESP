@@ -24,7 +24,7 @@ fdserial *debug;
 int main(void)
 {    
     char buf[1000];
-    int chan;
+    int chan, type;
     
     // Close default same-cog terminal
     simpleterm_close();                         
@@ -46,16 +46,12 @@ int main(void)
 #endif
     
     for (;;) {
-        char result[2];
 
         request("TCPCONNECT:www-eng-x.llnl.gov,80");
-        waitFor(SSCP_PREFIX "=");
-        collectUntil(',', result, sizeof(result));
-        collectUntil('\r', buf, sizeof(buf));
-        chan = atoi(buf);
-        dprint(debug, "Connect returned '%s,%d'\n", result, chan);
+        waitFor(SSCP_PREFIX "=^c,^i\r", &type, &chan);
+        dprint(debug, "Connect returned '%c,%d'\n", type, chan);
     
-        if (result[0] == 'S') {
+        if (type == 'S') {
             dprint(debug, "Connected on channel %d\n", chan);
 
 #define REQ "\
@@ -65,8 +61,7 @@ Host: www-eng-x.llnl.gov\r\n\
 
             request("SEND:%d,%d", chan, strlen(REQ));
             requestPayload(REQ, strlen(REQ));
-            waitFor(SSCP_PREFIX "=");
-            collectUntil('\r', buf, sizeof(buf));
+            waitFor(SSCP_PREFIX "=^s\r", buf, sizeof(buf));
             dprint(debug, "Send returned '%s'\n", buf);
 
             if (buf[0] == 'S') {
@@ -75,20 +70,17 @@ Host: www-eng-x.llnl.gov\r\n\
                     int count, i;
 
                     request("RECV:%d", chan);
-                    waitFor(SSCP_PREFIX "=");
-                    collectUntil(',', result, sizeof(result));
-                    collectUntil('\r', buf, sizeof(buf));
-                    count = atoi(buf);
+                    waitFor(SSCP_PREFIX "=^c,^i\r", &type, &count);
                     collectPayload(buf, sizeof(buf), count);
+                    dprint(debug, "Recv returned '%c,%d'\n", type, count);
                     if (count >= sizeof(buf))
                         count = sizeof(buf) - 1;
                     buf[count] = '\0';
-                    dprint(debug, "Recv returned '%s,%d'\n", result, count);
                     for (i = 0; i < count; ++i)
                         dprint(debug, "%c", buf[i]);
                     dprint(debug, "[EOF]\n");
     
-                    if (result[0] == 'S')
+                    if (type == 'S')
                         break;
 
                     waitcnt(CNT + CLKFREQ/4);
@@ -96,8 +88,7 @@ Host: www-eng-x.llnl.gov\r\n\
             }
     
             request("TCPDISCONNECT:%d", chan);
-            waitFor(SSCP_PREFIX "=");
-            collectUntil('\r', buf, sizeof(buf));
+            waitFor(SSCP_PREFIX "=^s\r", buf, sizeof(buf));
             dprint(debug, "Disconnect returned '%s'\n", buf);
         }
     

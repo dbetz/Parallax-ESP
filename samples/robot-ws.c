@@ -65,42 +65,35 @@ int main(void)
     waitFor(SSCP_PREFIX "=S,0\r");
     
     for (;;) {
-        char type[16], url[128], arg[128];
-        int chan, pingDistance, count;
+        char url[128], arg[128];
+        int type, chan, size, pingDistance;
         
         waitcnt(CNT + CLKFREQ/4);
 
         request("POLL");
-        waitFor(SSCP_PREFIX "=");
-        collectUntil(',', type, sizeof(type));
-        if (type[0] != 'N')
-            dprint(debug, "Got %c\n", type[0]);
+        waitFor(SSCP_PREFIX "=^c,^i,^i\r", &type, &chan, &size);
+        if (type != 'N')
+            dprint(debug, "Got %c: chan %d, size %d\n", type, chan, size);
         
-        switch (type[0]) {
+        switch (type) {
         case 'W':
-            collectUntil(',', arg, sizeof(arg));
-            pingChannel = atoi(arg);
-            collectUntil('\r', url, sizeof(url));
-            dprint(debug, "%d: URL '%s'\n", pingChannel, url);
+            request("PATH:%d", chan);
+            waitFor(SSCP_PREFIX "=S,^s\r", url, sizeof(url));
+            dprint(debug, "%d: path '%s'\n", chan, url);
+            pingChannel = chan;
             break;
         case 'D':
-            collectUntil(',', arg, sizeof(arg));
-            chan = atoi(arg);
-            collectUntil('\r', arg, sizeof(arg));
-            count = atoi(arg);
-            request("RECV:%d", chan);
-            collectUntil(',', type, sizeof(type));
-            collectUntil('\r', arg, sizeof(arg));
-            count = atoi(arg);
-            collectPayload(arg, sizeof(arg), count);
-            dprint(debug, "%d: PAYLOAD %d\n", chan, count);
+            request("RECV:%d", pingChannel);
+            waitFor(SSCP_PREFIX "=S,^i\r", &size);
+            collectPayload(arg, sizeof(arg), size);
+            dprint(debug, "%d: PAYLOAD %d\n", pingChannel, size);
             if (process_robot_command(arg[0]) != 0)
                 dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
             break;
         case 'N':
             break;
         default:
-            dprint(debug, "unknown response: 0x%02x\n", type[0]);
+            dprint(debug, "unknown response: 0x%02x\n", type);
             break;
         }
 
@@ -113,9 +106,7 @@ int main(void)
                 sprintf(buf, "%d", pingDistance);
                 request("SEND:%d,%d", pingChannel, strlen(buf));
                 requestPayload(buf, strlen(buf));
-                waitFor(SSCP_PREFIX "=S,");
-                collectUntil('\r', buf, sizeof(buf));
-                dprint(debug, "Got: %s\n", buf);
+                waitFor(SSCP_PREFIX "=S,0\r");
             }
         }
     }
