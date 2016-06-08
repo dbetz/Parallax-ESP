@@ -81,9 +81,10 @@ static int setWiFiMode(void *data, char *value)
 
 static int getIPAddress(void *data, char *value)
 {
+    int interface = (int)data;
     struct ip_info info;
     
-    if (!wifi_get_ip_info(STATION_IF, &info))
+    if (!wifi_get_ip_info(interface, &info))
         return -1;
         
     os_sprintf(value, "%d.%d.%d.%d", 
@@ -96,6 +97,25 @@ static int getIPAddress(void *data, char *value)
 }
 
 static int setIPAddress(void *data, char *value)
+{
+    return -1;
+}
+
+static int getMACAddress(void *data, char *value)
+{
+    int interface = (int)data;
+    uint8 addr[6];
+    
+    if (!wifi_get_macaddr(interface, addr))
+        return -1;
+        
+    os_sprintf(value, "%02x:%02x:%02x:%02x:%02x:%02x", 
+        addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+        
+    return 0;
+}
+
+static int setMACAddress(void *data, char *value)
 {
     return -1;
 }
@@ -113,6 +133,22 @@ static int setStopBits(void *data, char *value)
     flashConfig.stop_bits = atoi(value);
     uart_drain_tx_buffer(UART0);
     uart0_config(flashConfig.baud_rate, flashConfig.stop_bits);
+    return 0;
+}
+
+static int setDbgBaudrate(void *data, char *value)
+{
+    flashConfig.dbg_baud_rate = atoi(value);
+    uart_drain_tx_buffer(UART1);
+    uart1_config(flashConfig.dbg_baud_rate, flashConfig.dbg_stop_bits);
+    return 0;
+}
+
+static int setDbgStopBits(void *data, char *value)
+{
+    flashConfig.dbg_stop_bits = atoi(value);
+    uart_drain_tx_buffer(UART1);
+    uart1_config(flashConfig.dbg_baud_rate, flashConfig.dbg_stop_bits);
     return 0;
 }
 
@@ -246,7 +282,10 @@ typedef struct {
 static cmd_def vars[] = {
 {   "module-name",      getModuleName,  setModuleName,      NULL                            },
 {   "wifi-mode",        getWiFiMode,    setWiFiMode,        NULL                            },
-{   "ip-address",       getIPAddress,   setIPAddress,       NULL                            },
+{   "station-ipaddr",   getIPAddress,   setIPAddress,       (void *)STATION_IF              },
+{   "station-macaddr",  getMACAddress,  setMACAddress,      (void *)STATION_IF              },
+{   "softap-ipaddr",    getIPAddress,   setIPAddress,       (void *)SOFTAP_IF               },
+{   "softap-macaddr",   getMACAddress,  setMACAddress,      (void *)SOFTAP_IF               },
 {   "sscp-start-char",  intGetHandler,  intSetHandler,      &sscp_start                     },
 {   "sscp-pause-time",  intGetHandler,  intSetHandler,      &flashConfig.sscp_pause_time_ms },
 {   "sscp-pause-chars", getPauseChars,  setPauseChars,      NULL                            },
@@ -254,6 +293,8 @@ static cmd_def vars[] = {
 {   "loader-baud-rate", intGetHandler,  setLoaderBaudrate,  &flashConfig.loader_baud_rate   },
 {   "baud-rate",        intGetHandler,  setBaudrate,        &flashConfig.baud_rate          },
 {   "stop-bits",        int8GetHandler, setStopBits,        &flashConfig.stop_bits          },
+{   "dbg-baud-rate",    intGetHandler,  setDbgBaudrate,     &flashConfig.dbg_baud_rate      },
+{   "dbg-stop-bits",    int8GetHandler, setDbgStopBits,     &flashConfig.dbg_stop_bits      },
 {   "reset-pin",        int8GetHandler, int8SetHandler,     &flashConfig.reset_pin          },
 {   "connect-led-pin",  int8GetHandler, int8SetHandler,     &flashConfig.conn_led_pin       },
 {   "rx-pullup",        int8GetHandler, int8SetHandler,     &flashConfig.rx_pullup          },
@@ -547,10 +588,59 @@ int ICACHE_FLASH_ATTR cgiPropSetting(HttpdConnData *connData)
         os_strcpy(value, "");
     }
 
+    int length = strlen(value);
+    char buf[32];
+    os_sprintf(buf, "%d", length);
     httpdStartResponse(connData, 200);
+    httpdHeader(connData, "Content-Type", "text/plain");
+    httpdHeader(connData, "Content-Length", buf);
     httpdEndHeaders(connData);
     httpdSend(connData, value, -1);
 
+    return HTTPD_CGI_DONE;
+}
+
+int ICACHE_FLASH_ATTR cgiPropModuleInfo(HttpdConnData *connData)
+{
+    struct ip_info sta_info;
+    struct ip_info softap_info;
+    uint8 sta_addr[6];
+    uint8 softap_addr[6];
+    char buf[1024];
+
+    if (!wifi_get_ip_info(STATION_IF, &sta_info))
+        os_memset(&sta_info, 0, sizeof(sta_info));
+    if (!wifi_get_macaddr(STATION_IF, sta_addr))
+        os_memset(&sta_addr, 0, sizeof(sta_addr));
+
+    if (!wifi_get_ip_info(SOFTAP_IF, &softap_info))
+        os_memset(&softap_info, 0, sizeof(softap_info));
+    if (!wifi_get_macaddr(SOFTAP_IF, softap_addr))
+        os_memset(&softap_addr, 0, sizeof(softap_addr));
+
+    os_sprintf(buf, "\
+{\n\
+  \"name\": \"%s\",\n\
+  \"sta-ipaddr\": \"%d.%d.%d.%d\",\n\
+  \"sta-macaddr\": \"%02x:%02x:%02x:%02x:%02x:%02x\",\n\
+  \"softap-ipaddr\": \"%d.%d.%d.%d\",\n\
+  \"softap-macaddr\": \"%02x:%02x:%02x:%02x:%02x:%02x\"\n\
+}\n",
+        flashConfig.module_name,
+        (sta_info.ip.addr >> 0) & 0xff,
+        (sta_info.ip.addr >> 8) & 0xff, 
+        (sta_info.ip.addr >>16) & 0xff,
+        (sta_info.ip.addr >>24) & 0xff,
+        sta_addr[0], sta_addr[1], sta_addr[2], sta_addr[3], sta_addr[4], sta_addr[5],
+        (softap_info.ip.addr >> 0) & 0xff,
+        (softap_info.ip.addr >> 8) & 0xff, 
+        (softap_info.ip.addr >>16) & 0xff,
+        (softap_info.ip.addr >>24) & 0xff,
+        softap_addr[0], softap_addr[1], softap_addr[2], softap_addr[3], softap_addr[4], softap_addr[5]);
+        
+    httpdStartResponse(connData, 200);
+    httpdEndHeaders(connData);
+    httpdSend(connData, buf, -1);
     return HTTPD_CGI_DONE;
 }
 
@@ -572,7 +662,7 @@ int ICACHE_FLASH_ATTR cgiPropRestoreSettings(HttpdConnData *connData)
 
 int ICACHE_FLASH_ATTR cgiPropRestoreDefaultSettings(HttpdConnData *connData)
 {
-    flashConfig = flashDefault;
+    httpdStartResponse(connData, configRestoreDefaults() ? 200 : 400);
     httpdStartResponse(connData, 200);
     httpdEndHeaders(connData);
     httpdSend(connData, "", -1);

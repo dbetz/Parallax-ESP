@@ -36,7 +36,7 @@ body {
   margin-bottom: -15px;
 }
 
-td {
+#settings td {
   text-align: left;
   height: 35px;
   overflow: hidden;

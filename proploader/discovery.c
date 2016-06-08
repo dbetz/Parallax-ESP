@@ -2,7 +2,7 @@
 #include "config.h"
 #include "discovery.h"
 
-#define DISCOVER_PORT       2000
+#define DISCOVER_PORT   32420
 
 static struct espconn discoverConn;
 static esp_udp discoverUdp;

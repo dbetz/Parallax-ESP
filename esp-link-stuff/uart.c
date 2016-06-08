@@ -33,6 +33,8 @@
 
 static int uart0_baudRate = -1;
 static int uart0_stopBits = -1;
+static int uart1_baudRate = -1;
+static int uart1_stopBits = -1;
 
 LOCAL uint8_t uart_recvTaskNum;
 
@@ -288,6 +290,23 @@ uart0_config(int baudRate, int stopBits) {
         WRITE_PERI_REG(UART_CONF0(0),
             CALC_UARTMODE(UartDev.data_bits, UartDev.parity, stopBits));
         uart0_stopBits = stopBits;
+    }
+   }
+}
+
+void ICACHE_FLASH_ATTR
+uart1_config(int baudRate, int stopBits) {
+  static char *stopBitNames[4] = { "(error)", "1", "1.5", "2" };
+  if (baudRate != uart1_baudRate || stopBits != uart1_stopBits) {
+    os_printf("UART: %d baud, %s stop bit%s\n", baudRate, stopBitNames[stopBits & 3], stopBits == 1 ? "" : "s");
+    if (baudRate != uart1_baudRate) {
+        uart_div_modify(UART1, UART_CLK_FREQ / baudRate);
+        uart1_baudRate = baudRate;
+    }
+    if (stopBits != uart1_stopBits) {
+        WRITE_PERI_REG(UART_CONF0(1),
+            CALC_UARTMODE(UartDev.data_bits, UartDev.parity, stopBits));
+        uart1_stopBits = stopBits;
     }
    }
 }

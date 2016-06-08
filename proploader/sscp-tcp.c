@@ -2,7 +2,8 @@
 #include "sscp.h"
 
 static sscp_listener tcp_listener = {
-    .type = LISTENER_TCP
+    .type = LISTENER_TCP,
+    .connections = NULL
 };
 
 static void dns_cb(const char *name, ip_addr_t *ipaddr, void *arg);

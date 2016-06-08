@@ -1,0 +1,200 @@
+' {$STAMP BS2}
+' {$PBASIC 2.5}
+
+opIdx VAR Nib
+
+status VAR Byte
+op VAR Byte
+chan VAR Byte
+string VAR Byte(12)
+path VAR string
+dist VAR Word
+btn VAR Byte
+speedLeft VAR Word
+speedRight VAR Word
+chars VAR Byte
+flags VAR Nib
+
+GOSUB Setup
+
+DO
+  GOSUB Poll_for_Op
+  IF op = "P" THEN
+    GOSUB Process_gto_Post
+    DEBUG "btn = ", btn, CR
+    SELECT btn
+      CASE "F"
+        speedLeft = speedLeft + 20
+        speedRight = speedRight + 20
+      CASE "B"
+        speedLeft = speedLeft - 20
+        speedRight = speedRight - 20
+      CASE "L"
+        speedLeft = speedLeft - 20
+        speedRight = speedRight + 20
+      CASE "R"
+        speedLeft = speedLeft + 20
+        speedRight = speedRight - 20
+      CASE "S"
+        speedLeft = 0
+        speedRight = 0
+    ENDSELECT
+
+    ' Keep it postive!
+    speedLeft = speedLeft + 1000
+    speedLeft = speedLeft MIN 900 MAX 1100
+    speedLeft = speedLeft - 1000
+
+    speedRight = speedRight + 1000
+    speedRight = speedRight MIN 900 MAX 1100
+    speedRight = speedRight - 1000
+
+  ELSEIF op = "G" THEN
+    GOSUB Reply_to_ping_GET
+  ENDIF
+  PAUSE 500
+  PULSOUT 15, 750 + speedLeft
+  PULSOUT 13, 750 - speedRight
+
+LOOP
+
+Ping:
+  PULSOUT 9, 1
+  PULSIN 9, 1, dist
+  dist = dist / 26
+  RETURN
+
+Setup:
+  RetPt0:
+  opIdx = 0
+
+  HIGH 2
+  PAUSE 10
+  LOW 2
+  PAUSE 10
+  HIGH 2
+  PAUSE 1
+
+  status = "N"
+
+  DO
+    DEBUG $FE, "SET,sscp-pause-time,0", CR
+    SEROUT 2, 188, [$FE, "SET:sscp-pause-time,5", CR]
+    'Success reply: þ=S,0
+    'SERIN 4, 188, 250, Timeout, [STR path\12\CR]
+    'DEBUG "str = ", STR path, CR
+
+    'Working code
+    SERIN 4, 188, 250, Timeout, [WAIT($FE, "="), status, SKIP 1, op]
+    DEBUG "status = ", status, ", op = ", op, CR
+
+    'Do we want any of these to work?
+    'SERIN 4, 188, 250, Timeout, [WAIT($FE, "="), status, SKIP(1), op, WAIT(CR)]
+    'SERIN 4, 188, 250, Timeout, [WAIT($FE, "="), status, WAIT(","), op, WAIT(CR)]
+    'DEBUG "status = ", status, ", op = ", op, CR
+    PAUSE 20
+  LOOP UNTIL status = "S"
+  'POST /wifi/setmode.cgi?mode=mode
+
+  status = "N"
+
+  DO
+    DEBUG $FE, $FE, "SET:wifi-mode,3", CR
+    SEROUT 2, 188, [$FE, "SET:wifi-mode,3", CR]
+    SERIN 4, 188, 250, Timeout, [WAIT($FE, "="), status, SKIP 1, op]
+    DEBUG "status = ", status, ", op = ", op, CR
+    PAUSE 20
+  LOOP UNTIL status = "S"
+
+  status = "N"
+
+  DO
+    DEBUG $FE, "LISTEN,0,/robot*", CR
+    SEROUT 2, 188, [$FE, "LISTEN:0,/robot*", CR]
+    SERIN 4, 188, 250, Timeout, [WAIT($FE, "="), status, SKIP 1, op]
+    DEBUG "status = ", status, ", op = ", op, CR
+    'SERIN 4, 188, 250, Timeout, [STR path\12\CR]
+    'DEBUG "str = ", STR path, CR
+    PAUSE 20
+  LOOP UNTIL status = "S"
+
+  RETURN
+
+Poll_for_Op:
+  'op = "N"
+  RetPt1:
+  opIdx = 1
+  DEBUG $FE, "POLL", CR
+  'þPOLL
+  'str = þ=P,1,5
+  'IF flags = 1 THEN
+  '  SEROUT 2, 188, [$FE, "POLL", CR]
+  '  SERIN 4, 188, 250, Timeout, [STR path\12\CR]
+  '  DEBUG "WARNING flags = 1", CR
+  '  DEBUG "str = ", STR path, CR
+  '  flags = 0
+  'ELSE
+    SEROUT 2, 188, [$FE, "POLL", CR]
+    SERIN 4, 188, 250, Timeout, [WAIT($FE, "="), op,
+                                 SKIP(1), chan,
+                                 SKIP(1), chars]
+    DEBUG "op = ", op, ", chan = ", chan, ", chars = ", chars, CR
+    flags = 1
+  'ENDIF
+
+
+  IF op = "G" OR op = "P" THEN
+    SEROUT 2, 188, [$FE, "PATH:", chan, CR]
+    'SERIN 4, 188, 250, Timeout, [STR path\12\CR]
+    'DEBUG "str = ", STR path, CR
+    SERIN 4, 188, 250, Timeout, [WAIT($FE, "="), status,
+                                 SKIP(1), STR path\12\CR]
+    DEBUG "success = ", status, ", path = ", STR path, CR
+  ENDIF
+
+  'SERIN 4, 188, 250, Timeout, [WAIT($FE, "="), op,
+  '                             SKIP(1), chan,
+  '                             SKIP(1), chars]
+  '
+
+  'SERIN 4, 188, 250, Timeout, [WAIT($FE, "="), success,
+  '                             SKIP(1), chan,
+  '                             SKIP(1), STR path\12\CR]
+  'debug "op = ", op, ", chan = ", chan, ", path = ", STR string, CR
+  RETURN
+
+Process_gto_POST:
+  RetPt2:
+  opIdx = 2
+  IF(path(1) = "r" AND path(7) <> "p") THEN
+    SEROUT 2, 188, [$FE, "POSTARG:", chan, ",gto", CR]
+    SERIN 4, 188, 250, Timeout, [WAIT($FE, "="), STR path\12\CR]
+    IF(path(2) <> 0) THEN btn = path(2) ELSE btn = 0
+    'debug "gto string1: ", STR string, CR
+    SEROUT 2, 188, [$FE, "REPLY:", chan, ",200,", "2", CR, "OK"]
+    'SEROUT 2, 188, ["OK"]
+    SERIN 4, 188, 250, Timeout, [WAIT($FE, "="), STR path\12\CR]
+    'debug "gto string3: ", STR string, CR
+  ENDIF
+  RETURN
+
+Reply_to_ping_GET:
+  RetPt3:
+  opIdx = 3
+  IF(path(1) = "r" AND path(7) = "p") THEN
+    GOSUB Ping
+    SEROUT 2, 188, [$FE,"REPLY:", chan, ",200,", "3", CR]
+    SEROUT 2, 188, [DEC3 dist]
+    SERIN 4, 188, 250, Timeout, [STR path\12\CR]
+    'debug "Ping reply string A: ", STR string, CR
+  ENDIF
+  RETURN
+
+Timeout:
+  DEBUG "Timeout occurred during operation ", DEC opIdx, CR
+
+  'IF opIdx = 2 THEN flags = 1
+
+
+  ON opIdx GOTO RetPt0, RetPt1, RetPt2, RetPt3
+

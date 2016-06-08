@@ -9,11 +9,13 @@ typedef struct {
   uint32_t seq; // flash write sequence number
   uint16_t magic, crc;
   uint32_t version;
-  int8_t   reset_pin;
   int32_t  loader_baud_rate;
   int32_t  baud_rate;
+  int32_t  dbg_baud_rate;
   int8_t   stop_bits;
+  int8_t   dbg_stop_bits;
   int8_t   conn_led_pin;
+  int8_t   reset_pin;
   char     module_name[32];
   char     module_descr[129];
   int8_t   rx_pullup;
@@ -28,6 +30,7 @@ extern FlashConfig flashDefault;
 
 bool configSave(void);
 bool configRestore(void);
+bool configRestoreDefaults(void);
 void configWipe(void);
 const size_t getFlashSize();
 

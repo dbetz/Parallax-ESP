@@ -25,12 +25,6 @@
       
       function gt(ik)
       {
-        var req = new XMLHttpRequest();
-        var url = "/robot";
-        var params = "gto="+ik;
-        req.open("POST", url, true);
-        req.setRequestHeader("Content-type","application/x-www-form-urlencoded");
-        req.send(params);
         ws.send(ik);
       }
       

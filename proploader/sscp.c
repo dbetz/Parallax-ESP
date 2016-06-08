@@ -47,27 +47,10 @@ void ICACHE_FLASH_ATTR sscp_init(void)
 void ICACHE_FLASH_ATTR sscp_reset(void)
 {
     int i;
-    for (i = 0; i < SSCP_CONNECTION_MAX; ++i) {
-        sscp_connection *connection = &sscp_connections[i];
-        if (connection->listener) {
-            switch (connection->listener->type) {
-            case LISTENER_HTTP:
-                http_disconnect(connection);
-                break;
-            case LISTENER_WEBSOCKET:
-                ws_disconnect(connection);
-                break;
-            case LISTENER_TCP:
-                tcp_disconnect(connection);
-                break;
-            default:
-                break;
-            }
-        }
-    }
-    for (i = 0; i < SSCP_LISTENER_MAX; ++i) {
-        sscp_listeners[i].type = LISTENER_UNUSED;
-    }
+    
+    for (i = 0; i < SSCP_LISTENER_MAX; ++i)
+        sscp_close_listener(&sscp_listeners[i]);
+        
     sscp_start = SSCP_TKN_START;
     sscp_inside = 0;
     sscp_length = 0;
@@ -134,13 +117,16 @@ void ICACHE_FLASH_ATTR sscp_close_listener(sscp_listener *listener)
 {
     sscp_connection *connection = listener->connections;
     while (connection) {
-        sscp_connection *next = connection;
+        sscp_connection *next = connection->next;
         switch (listener->type) {
         case LISTENER_HTTP:
             http_disconnect(connection);
             break;
         case LISTENER_WEBSOCKET:
             ws_disconnect(connection);
+            break;
+        case LISTENER_TCP:
+            tcp_disconnect(connection);
             break;
         default:
             sscp_free_connection(connection);

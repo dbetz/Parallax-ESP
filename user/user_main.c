@@ -183,6 +183,7 @@ HttpdBuiltInUrl builtInUrls[]={
     { "/parallax/propeller/load", cgiPropLoad, NULL },
     { "/parallax/propeller/load-file", cgiPropLoadFile, NULL },
     { "/parallax/propeller/reset", cgiPropReset, NULL },
+    { "/parallax/module-info", cgiPropModuleInfo, NULL },
     { "/parallax/setting", cgiPropSetting, NULL },
     { "/parallax/save-settings", cgiPropSaveSettings, NULL },
     { "/parallax/restore-settings", cgiPropRestoreSettings, NULL },

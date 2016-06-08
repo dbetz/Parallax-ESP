@@ -77,6 +77,40 @@ int ICACHE_FLASH_ATTR tplCounter(HttpdConnData *connData, char *token, void **ar
 	else if (os_strcmp(token, "module-name")==0) {
 		os_strcpy(buff, flashConfig.module_name);
 	}
+	else if (os_strcmp(token, "sta-ipaddr") == 0) {
+        struct ip_info info;
+        if (!wifi_get_ip_info(STATION_IF, &info))
+            os_memset(&info, 0, sizeof(info));
+        os_sprintf(buff, "%d.%d.%d.%d",
+            (info.ip.addr >> 0) & 0xff,
+            (info.ip.addr >> 8) & 0xff, 
+            (info.ip.addr >>16) & 0xff,
+            (info.ip.addr >>24) & 0xff);
+	}
+	else if (os_strcmp(token, "softap-ipaddr") == 0) {
+        struct ip_info info;
+        if (!wifi_get_ip_info(SOFTAP_IF, &info))
+            os_memset(&info, 0, sizeof(info));
+        os_sprintf(buff, "%d.%d.%d.%d",
+            (info.ip.addr >> 0) & 0xff,
+            (info.ip.addr >> 8) & 0xff, 
+            (info.ip.addr >>16) & 0xff,
+            (info.ip.addr >>24) & 0xff);
+	}
+	else if (os_strcmp(token, "sta-macaddr") == 0) {
+        uint8 addr[6];
+        if (!wifi_get_macaddr(STATION_IF, addr))
+            os_memset(&addr, 0, sizeof(addr));
+        os_sprintf(buff, "%02x:%02x:%02x:%02x:%02x:%02x", 
+            addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+	}
+	else if (os_strcmp(token, "softap-macaddr") == 0) {
+        uint8 addr[6];
+        if (!wifi_get_macaddr(SOFTAP_IF, addr))
+            os_memset(&addr, 0, sizeof(addr));
+        os_sprintf(buff, "%02x:%02x:%02x:%02x:%02x:%02x", 
+            addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+	}
 	httpdSend(connData, buff, -1);
 	return HTTPD_CGI_DONE;
 }

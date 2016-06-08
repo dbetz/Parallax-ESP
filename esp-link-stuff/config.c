@@ -15,7 +15,7 @@
 
 // magic number to recognize thet these are our flash settings as opposed to some random stuff
 #define FLASH_MAGIC     0x55aa
-#define FLASH_VERSION   3
+#define FLASH_VERSION   4
 
 // size of the setting sector
 #define FLASH_SECT      4096
@@ -32,7 +32,8 @@ FlashConfig flashDefault = {
   .loader_baud_rate     = LOADER_BAUD_RATE,
   .baud_rate            = BAUD_RATE,
   .stop_bits            = ONE_STOP_BIT,
-  .module_name          = "esp-httpd",
+  .dbg_baud_rate        = BAUD_RATE,
+  .dbg_stop_bits        = ONE_STOP_BIT,
   .module_descr 	    = "",
   .rx_pullup	        = 1,
   .sscp_enable          = 0,
@@ -130,6 +131,17 @@ bool ICACHE_FLASH_ATTR configRestore(void) {
   flash_pri = selectPrimary(&ff0, &ff1);
   // if neither is OK, we revert to defaults
   if (flash_pri < 0) {
+    if (!configRestoreDefaults())
+      return false;
+    flash_pri = 0;
+    return false;
+  }
+  // copy good one into global var and return
+  os_memcpy(&flashConfig, flash_pri == 0 ? &ff0.fc : &ff1.fc, sizeof(FlashConfig));
+  return true;
+}
+
+bool ICACHE_FLASH_ATTR configRestoreDefaults(void) {
     os_memcpy(&flashConfig, &flashDefault, sizeof(FlashConfig));
     char chipIdStr[6];
     os_sprintf(chipIdStr, "%06x", system_get_chip_id());
@@ -139,12 +151,7 @@ bool ICACHE_FLASH_ATTR configRestore(void) {
     os_strcat(module_name, chipIdStr);
     os_memcpy(&flashConfig.module_name, module_name, os_strlen(module_name) + 1); // include terminating zero
 #endif
-    flash_pri = 0;
-    return false;
-  }
-  // copy good one into global var and return
-  os_memcpy(&flashConfig, flash_pri == 0 ? &ff0.fc : &ff1.fc, sizeof(FlashConfig));
-  return true;
+    return true;
 }
 
 static int ICACHE_FLASH_ATTR selectPrimary(FlashFull *ff0, FlashFull *ff1) {

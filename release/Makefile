@@ -1,4 +1,4 @@
-ZIP=esp-httpd-$(shell date "+%Y-%m-%d-%H%M").zip
+ZIP=parallax-esp-$(shell date "+%Y-%m-%d-%H%M").zip
 $(info ZIP $(ZIP))
 
 IMAGES=\
@@ -12,6 +12,7 @@ SAMPLES=\
 release/robot.c \
 release/robot.side \
 release/robot.html \
+release/robot.pbas \
 release/robot-ws.c \
 release/robot-ws.side \
 release/robot-ws.html \

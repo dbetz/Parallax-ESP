@@ -9,7 +9,7 @@
     </div>
     <div class="content">
       <form action='#' onsubmit="return false;">
-        <table>
+        <table id="settings">
           <tr>
             <td>Module name:</td>
             <td><input id="module-name" type="text"></td>
@@ -54,6 +54,34 @@
             <td>Communications Stop Bits:</td>
             <td>
               <select id="stop-bits">
+                <option value="1">1 Stop Bit</option>
+                <option value="2">1.5 Stop Bits</option>
+                <option value="3">2 Stop Bits</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Debug Baud Rate:</td>
+            <td>
+            <select id="dbg-baud-rate">
+                <option value="1200">1200</option>
+                <option value="4800">4800</option>
+                <option value="9600">9600</option>
+                <option value="19200">19200</option>
+                <option value="38400">38400</option>
+                <option value="57600">57600</option>
+                <option value="74880">74880</option>
+                <option value="115200">115200</option>
+                <option value="230400">230400</option>
+                <option value="460800">460800</option>
+                <option value="921600">921600</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Debug Stop Bits:</td>
+            <td>
+              <select id="dbg-stop-bits">
                 <option value="1">1 Stop Bit</option>
                 <option value="2">1.5 Stop Bits</option>
                 <option value="3">2 Stop Bits</option>
@@ -107,6 +135,8 @@ var versionCtl;
 var loaderBaudRateCtl;
 var baudRateCtl;
 var stopBitsCtl;
+var dbgBaudRateCtl;
+var dbgStopBitsCtl;
 var enableSerialProtocolCtl;
 var startCharCtl;
 var pauseTimeCtl;
@@ -118,6 +148,8 @@ function init()
     loaderBaudRateCtl = document.getElementById('loader-baud-rate');
     baudRateCtl = document.getElementById('baud-rate');
     stopBitsCtl = document.getElementById('stop-bits');
+    dbgBaudRateCtl = document.getElementById('dbg-baud-rate');
+    dbgStopBitsCtl = document.getElementById('dbg-stop-bits');
     enableSerialProtocolCtl = document.getElementById('enable-serial-protocol');
     startCharCtl = document.getElementById('start-char');
     pauseTimeCtl = document.getElementById('pause-time');
@@ -126,7 +158,7 @@ function init()
 }
 
 function loadSettings() {
-    var loaderBaudRate, baudRate;
+    var loaderBaudRate, baudRate, dbgBaudRate;
 
     moduleNameCtl.value = getModuleName();
     loaderBaudRate = getBaudRate('loader-baud-rate');
@@ -143,6 +175,14 @@ function loadSettings() {
             break;
         }
     stopBitsCtl.selectedIndex = getStopBits() - 1;
+
+    dbgBaudRate = getBaudRate('dbg-baud-rate');
+    for (var i = 0; i < dbgBaudRateCtl.length; ++i)
+        if (dbgBaudRate == dbgBaudRateCtl[i].value) {
+            dbgBaudRateCtl.selectedIndex = i;
+            break;
+        }
+    dbgStopBitsCtl.selectedIndex = getDbgStopBits() - 1;
 
     if (getEnableSerialProtocol() == "0")
         enableSerialProtocolCtl.selectedIndex = 0;
@@ -163,6 +203,8 @@ function on_save() {
     setBaudRate('loader-baud-rate', loaderBaudRateCtl.value);
     setBaudRate('baud-rate', baudRateCtl.value);
     setStopBits(stopBitsCtl.value);
+    setBaudRate('dbg-baud-rate', dbgBaudRateCtl.value);
+    setDbgStopBits(dbgStopBitsCtl.value);
     setEnableSerialProtocol(enableSerialProtocolCtl.value);
     setStartChar(startCharCtl.value);
     setPauseTime(pauseTimeCtl.value);
@@ -188,7 +230,7 @@ function on_restore() {
 }
 
 function on_restoreDefaults() {
-    setmessage("Restoring default settings...");
+    setMessage("Restoring default settings...");
     var req = new XMLHttpRequest();
     req.open('POST', '/parallax/restore-default-settings', false);
     req.send();
@@ -240,6 +282,20 @@ function getStopBits() {
 function setStopBits(value) {
     var req = new XMLHttpRequest();
     var url = '/parallax/setting?name=stop-bits&value=' + value;
+    req.open('POST', url, false);
+    req.send();
+}
+
+function getDbgStopBits() {
+    var req = new XMLHttpRequest();
+    req.open('GET', '/parallax/setting?name=dbg-stop-bits', false);
+    req.send();
+    return req.responseText;
+}
+
+function setDbgStopBits(value) {
+    var req = new XMLHttpRequest();
+    var url = '/parallax/setting?name=dbg-stop-bits&value=' + value;
     req.open('POST', url, false);
     req.send();
 }

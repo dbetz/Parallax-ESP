@@ -145,6 +145,7 @@ void cmds_do_send(int argc, char *argv[]);
 void cmds_do_recv(int argc, char *argv[]);
 int cgiPropSetting(HttpdConnData *connData);
 int cgiPropEnableSerialProtocol(HttpdConnData *connData);
+int cgiPropModuleInfo(HttpdConnData *connData);
 int cgiPropSaveSettings(HttpdConnData *connData);
 int cgiPropRestoreSettings(HttpdConnData *connData);
 int cgiPropRestoreDefaultSettings(HttpdConnData *connData);
