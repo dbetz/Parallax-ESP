@@ -25,6 +25,12 @@ void ICACHE_FLASH_ATTR cmds_do_join(int argc, char *argv[])
         sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
 }
 
+static int getVersion(void *data, char *value)
+{
+    os_strcpy(value, VERSION);
+    return 0;
+}
+
 static int getModuleName(void *data, char *value)
 {
     os_strcpy(value, flashConfig.module_name);
@@ -76,6 +82,24 @@ static int setWiFiMode(void *data, char *value)
         system_restart();
     }
     
+    return 0;
+}
+
+static int getWiFiSSID(void *data, char *value)
+{
+	struct station_config config;
+	wifi_station_get_config(&config);
+	strcpy(value, (char *)config.ssid);
+	return 0;
+}
+
+static int getWiFiAPWarning(void *data, char *value)
+{
+    int mode = wifi_get_opmode();
+    if (mode == SOFTAP_MODE)
+        os_strcpy(value, "<b>Can't scan in this mode.</b> Click <a href=\"setmode.cgi?mode=3\">here</a> to go to STA+AP mode.");
+    else
+        strcpy(value, "Click <a href=\"setmode.cgi?mode=2\">here</a> to go to standalone AP mode.");
     return 0;
 }
 
@@ -280,43 +304,46 @@ typedef struct {
 } cmd_def;
 
 static cmd_def vars[] = {
-{   "module-name",      getModuleName,  setModuleName,      NULL                            },
-{   "wifi-mode",        getWiFiMode,    setWiFiMode,        NULL                            },
-{   "station-ipaddr",   getIPAddress,   setIPAddress,       (void *)STATION_IF              },
-{   "station-macaddr",  getMACAddress,  setMACAddress,      (void *)STATION_IF              },
-{   "softap-ipaddr",    getIPAddress,   setIPAddress,       (void *)SOFTAP_IF               },
-{   "softap-macaddr",   getMACAddress,  setMACAddress,      (void *)SOFTAP_IF               },
-{   "sscp-start-char",  intGetHandler,  intSetHandler,      &sscp_start                     },
-{   "sscp-pause-time",  intGetHandler,  intSetHandler,      &flashConfig.sscp_pause_time_ms },
-{   "sscp-pause-chars", getPauseChars,  setPauseChars,      NULL                            },
-{   "sscp-enable",      int8GetHandler, setSSCPEnable,      &flashConfig.sscp_enable        },
-{   "loader-baud-rate", intGetHandler,  setLoaderBaudrate,  &flashConfig.loader_baud_rate   },
-{   "baud-rate",        intGetHandler,  setBaudrate,        &flashConfig.baud_rate          },
-{   "stop-bits",        int8GetHandler, setStopBits,        &flashConfig.stop_bits          },
-{   "dbg-baud-rate",    intGetHandler,  setDbgBaudrate,     &flashConfig.dbg_baud_rate      },
-{   "dbg-stop-bits",    int8GetHandler, setDbgStopBits,     &flashConfig.dbg_stop_bits      },
-{   "reset-pin",        int8GetHandler, int8SetHandler,     &flashConfig.reset_pin          },
-{   "connect-led-pin",  int8GetHandler, int8SetHandler,     &flashConfig.conn_led_pin       },
-{   "rx-pullup",        int8GetHandler, int8SetHandler,     &flashConfig.rx_pullup          },
-{   "pin-pgm",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO0               },
-{   "pin-gpio0",        getPinHandler,  setPinHandler,      (void *)PIN_GPIO0               },
-{   "pin-dbg",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO2               },
-{   "pin-gpio2",        getPinHandler,  setPinHandler,      (void *)PIN_GPIO2               },
-{   "pin-sel",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO4               },
-{   "pin-gpio4",        getPinHandler,  setPinHandler,      (void *)PIN_GPIO4               },
-{   "pin-asc",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO5               },
-{   "pin-gpio5",        getPinHandler,  setPinHandler,      (void *)PIN_GPIO5               },
-{   "pin-dtr",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO12              },
-{   "pin-gpio12",       getPinHandler,  setPinHandler,      (void *)PIN_GPIO12              },
-{   "pin-cts",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO13              },
-{   "pin-gpio13",       getPinHandler,  setPinHandler,      (void *)PIN_GPIO13              },
-{   "pin-dio9",         getPinHandler,  setPinHandler,      (void *)PIN_GPIO14              },
-{   "pin-gpio14",       getPinHandler,  setPinHandler,      (void *)PIN_GPIO14              },
-{   "pin-rts",          getPinHandler,  setPinHandler,      (void *)PIN_GPIO15              },
-{   "pin-gpio15",       getPinHandler,  setPinHandler,      (void *)PIN_GPIO15              },
-{   "pin-rst",          getPinHandler,  setPinHandler,      (void *)PIN_RST                 },
-{   "pin-res",          getPinHandler,  setPinHandler,      (void *)PIN_RES                 },
-{   NULL,               NULL,           NULL,               NULL                            }
+{   "version",          getVersion,         NULL,               NULL                            },
+{   "module-name",      getModuleName,      setModuleName,      NULL                            },
+{   "wifi-mode",        getWiFiMode,        setWiFiMode,        NULL                            },
+{   "wifi-ssid",        getWiFiSSID,        NULL,               NULL                            },
+{   "wifi-ap-warning",  getWiFiAPWarning,   NULL,               NULL                            },
+{   "station-ipaddr",   getIPAddress,       setIPAddress,       (void *)STATION_IF              },
+{   "station-macaddr",  getMACAddress,      setMACAddress,      (void *)STATION_IF              },
+{   "softap-ipaddr",    getIPAddress,       setIPAddress,       (void *)SOFTAP_IF               },
+{   "softap-macaddr",   getMACAddress,      setMACAddress,      (void *)SOFTAP_IF               },
+{   "sscp-start-char",  intGetHandler,      intSetHandler,      &sscp_start                     },
+{   "sscp-pause-time",  intGetHandler,      intSetHandler,      &flashConfig.sscp_pause_time_ms },
+{   "sscp-pause-chars", getPauseChars,      setPauseChars,      NULL                            },
+{   "sscp-enable",      int8GetHandler,     setSSCPEnable,      &flashConfig.sscp_enable        },
+{   "loader-baud-rate", intGetHandler,      setLoaderBaudrate,  &flashConfig.loader_baud_rate   },
+{   "baud-rate",        intGetHandler,      setBaudrate,        &flashConfig.baud_rate          },
+{   "stop-bits",        int8GetHandler,     setStopBits,        &flashConfig.stop_bits          },
+{   "dbg-baud-rate",    intGetHandler,      setDbgBaudrate,     &flashConfig.dbg_baud_rate      },
+{   "dbg-stop-bits",    int8GetHandler,     setDbgStopBits,     &flashConfig.dbg_stop_bits      },
+{   "reset-pin",        int8GetHandler,     int8SetHandler,     &flashConfig.reset_pin          },
+{   "connect-led-pin",  int8GetHandler,     int8SetHandler,     &flashConfig.conn_led_pin       },
+{   "rx-pullup",        int8GetHandler,     int8SetHandler,     &flashConfig.rx_pullup          },
+{   "pin-pgm",          getPinHandler,      setPinHandler,      (void *)PIN_GPIO0               },
+{   "pin-gpio0",        getPinHandler,      setPinHandler,      (void *)PIN_GPIO0               },
+{   "pin-dbg",          getPinHandler,      setPinHandler,      (void *)PIN_GPIO2               },
+{   "pin-gpio2",        getPinHandler,      setPinHandler,      (void *)PIN_GPIO2               },
+{   "pin-sel",          getPinHandler,      setPinHandler,      (void *)PIN_GPIO4               },
+{   "pin-gpio4",        getPinHandler,      setPinHandler,      (void *)PIN_GPIO4               },
+{   "pin-asc",          getPinHandler,      setPinHandler,      (void *)PIN_GPIO5               },
+{   "pin-gpio5",        getPinHandler,      setPinHandler,      (void *)PIN_GPIO5               },
+{   "pin-dtr",          getPinHandler,      setPinHandler,      (void *)PIN_GPIO12              },
+{   "pin-gpio12",       getPinHandler,      setPinHandler,      (void *)PIN_GPIO12              },
+{   "pin-cts",          getPinHandler,      setPinHandler,      (void *)PIN_GPIO13              },
+{   "pin-gpio13",       getPinHandler,      setPinHandler,      (void *)PIN_GPIO13              },
+{   "pin-dio9",         getPinHandler,      setPinHandler,      (void *)PIN_GPIO14              },
+{   "pin-gpio14",       getPinHandler,      setPinHandler,      (void *)PIN_GPIO14              },
+{   "pin-rts",          getPinHandler,      setPinHandler,      (void *)PIN_GPIO15              },
+{   "pin-gpio15",       getPinHandler,      setPinHandler,      (void *)PIN_GPIO15              },
+{   "pin-rst",          getPinHandler,      setPinHandler,      (void *)PIN_RST                 },
+{   "pin-res",          getPinHandler,      setPinHandler,      (void *)PIN_RES                 },
+{   NULL,               NULL,               NULL,               NULL                            }
 };
 
 // GET,var
@@ -332,10 +359,15 @@ void ICACHE_FLASH_ATTR cmds_do_get(int argc, char *argv[])
     
     for (i = 0; vars[i].name != NULL; ++i) {
         if (os_strcmp(argv[1], vars[i].name) == 0) {
-            if ((*vars[i].getHandler)(vars[i].data, value) == 0)
-                sscp_sendResponse("S,%s", value);
+            int (*handler)(void *, char *) = vars[i].getHandler;
+            if (handler) {
+                if ((*handler)(vars[i].data, value) == 0)
+                    sscp_sendResponse("S,%s", value);
+                else
+                    sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+            }
             else
-                sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+                sscp_sendResponse("E,%d", SSCP_ERROR_UNIMPLEMENTED);
             return;
         }
     }
@@ -355,10 +387,15 @@ void ICACHE_FLASH_ATTR cmds_do_set(int argc, char *argv[])
     
     for (i = 0; vars[i].name != NULL; ++i) {
         if (os_strcmp(argv[1], vars[i].name) == 0) {
-            if ((*vars[i].setHandler)(vars[i].data, argv[2]) == 0)
-                sscp_sendResponse("S,0");
+            int (*handler)(void *, char *) = vars[i].setHandler;
+            if (handler) {
+                if ((*handler)(vars[i].data, argv[2]) == 0)
+                    sscp_sendResponse("S,0");
+                else
+                    sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+            }
             else
-                sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+                sscp_sendResponse("E,%d", SSCP_ERROR_UNIMPLEMENTED);
             return;
         }
     }
@@ -669,4 +706,29 @@ int ICACHE_FLASH_ATTR cgiPropRestoreDefaultSettings(HttpdConnData *connData)
     return HTTPD_CGI_DONE;
 }
 
+int ICACHE_FLASH_ATTR tplSettings(HttpdConnData *connData, char *token, void **arg)
+{
+	char value[128];
+	int i;
+	
+	if (token == NULL) return HTTPD_CGI_DONE;
 
+    for (i = 0; vars[i].name != NULL; ++i) {
+        if (os_strcmp(token, vars[i].name) == 0) {
+            int (*handler)(void *, char *) = vars[i].getHandler;
+            if (handler) {
+                if ((*handler)(vars[i].data, value) != 0)
+                    os_strcpy(value, "(error)");
+            }
+            else
+                os_strcpy(value, "(unimplemented)");
+            break;
+        }
+    }
+    
+    if (!vars[i].name)
+        os_strcpy(value, "(unknown)");
+
+	httpdSend(connData, value, -1);
+	return HTTPD_CGI_DONE;
+}

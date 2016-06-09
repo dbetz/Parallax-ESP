@@ -1,11 +1,11 @@
 <html><head><title>Parallax Wi-Fi Module Configuration - Wi-Fi Connection</title>
-<link rel="stylesheet" type="text/css" href="../style.css">
+<link rel="stylesheet" type="text/css" href="style.css">
 <script type="text/javascript" src="140medley.min.js"></script>
 <script type="text/javascript">
 
 var ipAddressCtl;
 var xhr=j();
-var currAp="%currSsid%";
+var currAp="%wifi-ssid%";
 
 function createInputForAp(ap) {
 	if (ap.essid=="" && ap.rssi==0) return;
@@ -70,7 +70,7 @@ function scanAPs() {
 
 function getIpAddress() {
     var req = new XMLHttpRequest();
-    req.open('GET', '/parallax/setting?name=ip-address', false);
+    req.open('GET', '/parallax/setting?name=station-ipaddr', false);
     req.send();
     return req.responseText;
 }
@@ -89,15 +89,39 @@ window.onload=function(e) {
       <h1>Wi-Fi Networks</h1>
     </div>
     <div class="content">
-      <p>Current Wi-Fi Mode: %WiFiMode%</p>
-      <p>IP Address: <span id="ip-address"></span></p>
-      <p>Note: %WiFiapwarn%</p>
+      <table>
+        <tr>
+          <td>Module name:</td>
+          <td>%module-name%</td>
+        </tr>
+        <tr>
+          <td>Wi-Fi Mode:</td>
+          <td>%wifi-mode%</td>
+        </tr>
+        <tr>
+          <td>Station IP Address:</td>
+          <td>%station-ipaddr%</td>
+        </tr>
+        <tr>
+          <td>Station MAC Address:</td>
+          <td>%station-macaddr%</td>
+        </tr>
+        <tr>
+          <td>SoftAP IP Address:</td>
+          <td>%softap-ipaddr%</td>
+        </tr>
+        <tr>
+          <td>SoftAP MAC Address:</td>
+          <td>%softap-macaddr%</td>
+        </tr>
+      </table>
+      <p>Note: %wifi-ap-warning%</p>
       <form name="wifiform" action="connect.cgi" method="post">
         <p>
           Select a network from the list, enter password (if needed) in field below and click connect.<br>
           <div id="aps">Scanning...</div><br>
           Wi-Fi password(if needed):<br>
-          <input type="text" name="passwd" val="%WiFiPasswd%"><br>
+          <input type="text" name="passwd"><br>
           <input type="submit" name="connect" value="Connect!">    
         </p>
       </form>
