@@ -3,7 +3,7 @@
 */
 #include "simpletools.h"
 #include "fdserial.h"
-#include "sscp-client.h"
+#include "cmd.h"
 
 // uncomment this if the wifi module is on pins other than 31/30
 //#define SEPARATE_WIFI_PINS
@@ -69,7 +69,7 @@ Host: www-eng-x.llnl.gov\r\n\
                 while (--retries >= 0) {
                     int count, i;
 
-                    request("RECV:%d", chan);
+                    request("RECV:%d,%d", chan, sizeof(buf));
                     waitFor(SSCP_PREFIX "=^c,^i\r", &type, &count);
                     collectPayload(buf, sizeof(buf), count);
                     dprint(debug, "Recv returned '%c,%d'\n", type, count);

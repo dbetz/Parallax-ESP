@@ -3,7 +3,7 @@
 */
 #include "simpletools.h"
 #include "fdserial.h"
-#include "sscp-client.h"
+#include "cmd.h"
 
 //#define IfTTT_KEY   "YOUR_API_KEY"
 #define IfTTT_KEY   "csY3T4PPMydBKXuaDVi72j"
@@ -72,7 +72,7 @@ Accept: */*\r\n\
             while (--retries >= 0) {
                 int count, i;
 
-                request("RECV:%d", chan);
+                request("RECV:%d,%d", chan, sizeof(buf));
                 waitFor(SSCP_PREFIX "=^c,^i\r", &type, &count);
                 collectPayload(buf, sizeof(buf), count);
                 if (count >= sizeof(buf))

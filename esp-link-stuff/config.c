@@ -147,7 +147,7 @@ bool ICACHE_FLASH_ATTR configRestoreDefaults(void) {
     os_sprintf(chipIdStr, "%06x", system_get_chip_id());
 #ifdef CHIP_IN_MODULE_NAME
     char module_name[32];
-    os_strcpy(module_name, "esp-httpd-");
+    os_strcpy(module_name, "wx-");
     os_strcat(module_name, chipIdStr);
     os_memcpy(&flashConfig.module_name, module_name, os_strlen(module_name) + 1); // include terminating zero
 #endif

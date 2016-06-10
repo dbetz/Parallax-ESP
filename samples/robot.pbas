@@ -78,8 +78,8 @@ Setup:
   status = "N"
 
   DO
-    DEBUG $FE, "SET,sscp-pause-time,0", CR
-    SEROUT 2, 188, [$FE, "SET:sscp-pause-time,5", CR]
+    DEBUG $FE, "SET,cmd-pause-time,0", CR
+    SEROUT 2, 188, [$FE, "SET:cmd-pause-time,5", CR]
     'Success reply: þ=S,0
     'SERIN 4, 188, 250, Timeout, [STR path\12\CR]
     'DEBUG "str = ", STR path, CR

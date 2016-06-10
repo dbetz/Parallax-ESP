@@ -21,7 +21,7 @@ void ICACHE_FLASH_ATTR httpdSendResponse(HttpdConnData *connData, int code, char
     httpdEndHeaders(connData);
     httpdSend(connData, message, len);
     httpdFlushSendBuffer(connData);
-    connData->cgi = NULL;
+    httpdCgiIsDone(connData);
 }
 
 static ETSTimer resetButtonTimer;
@@ -93,14 +93,6 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     os_printf("Flash filesystem mounted!\n");
 
     return 0;
-}
-
-int ICACHE_FLASH_ATTR cgiPropVersion(HttpdConnData *connData)
-{
-    httpdStartResponse(connData, 200);
-    httpdEndHeaders(connData);
-    httpdSend(connData, VERSION, -1);
-    return HTTPD_CGI_DONE;
 }
 
 int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)

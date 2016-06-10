@@ -6,8 +6,8 @@ all:	robot.elf robot-ws.elf tcp-test.elf ifttt.elf
 
 CFLAGS=-mcmm -Os -Wall -m32bit-doubles -I $(HOME)/simple/include -L $(HOME)/simple/lib
 
-%.elf:	%.c sscp-client.o
-	propeller-elf-gcc $(CFLAGS) -o $@ $< sscp-client.o -lsimple-cmm -lm
+%.elf:	%.c cmd.o
+	propeller-elf-gcc $(CFLAGS) -o $@ $< cmd.o -lsimple-cmm -lm
 
 %.o:	%.c
 	propeller-elf-gcc -c $(CFLAGS) -o $@ $<

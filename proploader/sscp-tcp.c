@@ -113,22 +113,23 @@ static void ICACHE_FLASH_ATTR send_cb(void *data)
 // helper for SEND,chan,count
 void ICACHE_FLASH_ATTR tcp_send_helper(sscp_connection *c, int argc, char *argv[])
 {
-    int length;
-
     if (c->d.tcp.state != TCP_STATE_CONNECTED) {
         sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_STATE);
         return;
     }
     
-    if ((length = atoi(argv[2])) < 0 || length > SSCP_TX_BUFFER_MAX) {
+    if ((c->txCount = atoi(argv[2])) < 0 || c->txCount > SSCP_TX_BUFFER_MAX) {
         sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_SIZE);
         return;
     }
     
-    // response is sent by tcp_sent_cb
-    c->txCount = length;
-    sscp_capturePayload(c->txBuffer, length, send_cb, c);
-    c->flags |= CONNECTION_TXFULL;
+    if (c->txCount == 0)
+        sscp_sendResponse("S,0");
+    else {
+        // response is sent by tcp_sent_cb
+        sscp_capturePayload(c->txBuffer, c->txCount, send_cb, c);
+        c->flags |= CONNECTION_TXFULL;
+    }
 }
 
 static void ICACHE_FLASH_ATTR dns_cb(const char *name, ip_addr_t *ipaddr, void *arg)
@@ -191,6 +192,7 @@ static void ICACHE_FLASH_ATTR tcp_recv_cb(void *arg, char *data, unsigned short 
             len = SSCP_RX_BUFFER_MAX;
         os_memcpy(c->rxBuffer, data, len);
         c->rxCount = len;
+        c->rxIndex = 0;
         c->flags |= CONNECTION_RXFULL;
     }
 }

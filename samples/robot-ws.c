@@ -5,7 +5,7 @@
 #include "simpletools.h"
 #include "abdrive.h"
 #include "ping.h"
-#include "sscp-client.h"
+#include "cmd.h"
 
 // uncomment this if the wifi module is on pins other than 31/30
 //#define SEPARATE_WIFI_PINS
@@ -58,7 +58,7 @@ int main(void)
     
     init_robot();
 
-    request("SET:sscp-pause-time,5");
+    request("SET:cmd-pause-time,5");
     waitFor(SSCP_PREFIX "=S,0\r");
 
     request("WSLISTEN:0,/ws/robot");
@@ -66,7 +66,7 @@ int main(void)
     
     for (;;) {
         char url[128], arg[128];
-        int type, chan, size, pingDistance;
+        int type, chan, size, count, pingDistance;
         
         waitcnt(CNT + CLKFREQ/4);
 
@@ -83,10 +83,12 @@ int main(void)
             pingChannel = chan;
             break;
         case 'D':
-            request("RECV:%d", pingChannel);
-            waitFor(SSCP_PREFIX "=S,^i\r", &size);
-            collectPayload(arg, sizeof(arg), size);
-            dprint(debug, "%d: PAYLOAD %d\n", pingChannel, size);
+            if ((count = size) > sizeof(arg))
+                count = sizeof(arg);
+            request("RECV:%d,%d", pingChannel, count);
+            waitFor(SSCP_PREFIX "=S,^i\r", &count);
+            collectPayload(arg, sizeof(arg), count);
+            dprint(debug, "%d: PAYLOAD %d\n", pingChannel, count);
             if (process_robot_command(arg[0]) != 0)
                 dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
             break;

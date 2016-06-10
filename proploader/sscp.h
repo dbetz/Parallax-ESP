@@ -109,6 +109,7 @@ struct sscp_connection {
     } d;
     char rxBuffer[SSCP_RX_BUFFER_MAX];
     int rxCount;
+    int rxIndex;
     char txBuffer[SSCP_TX_BUFFER_MAX];
     int txCount;
 };
@@ -137,15 +138,17 @@ void sscp_sendPayload(char *buf, int cnt);
 // from sscp-cmds.c
 void cmds_do_nothing(int argc, char *argv[]);
 void cmds_do_join(int argc, char *argv[]);
-void cmds_do_get(int argc, char *argv[]);
-void cmds_do_set(int argc, char *argv[]);
 void cmds_do_poll(int argc, char *argv[]);
 void cmds_do_path(int argc, char *argv[]);
 void cmds_do_send(int argc, char *argv[]);
 void cmds_do_recv(int argc, char *argv[]);
-int cgiPropSetting(HttpdConnData *connData);
 int cgiPropEnableSerialProtocol(HttpdConnData *connData);
 int cgiPropModuleInfo(HttpdConnData *connData);
+
+// from sscp-settings.c
+void cmds_do_get(int argc, char *argv[]);
+void cmds_do_set(int argc, char *argv[]);
+int cgiPropSetting(HttpdConnData *connData);
 int cgiPropSaveSettings(HttpdConnData *connData);
 int cgiPropRestoreSettings(HttpdConnData *connData);
 int cgiPropRestoreDefaultSettings(HttpdConnData *connData);

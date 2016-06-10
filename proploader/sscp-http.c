@@ -160,19 +160,18 @@ static void ICACHE_FLASH_ATTR reply_cb(void *data)
     httpdFlushSendBuffer(connData);
     
     sscp_remove_connection(connection);
-    connData->cgi = NULL;
+    httpdCgiIsDone(connData);
 
     sscp_sendResponse("S,0");
 }
 
-// REPLY,chan,code,payload
+// REPLY,chan,code[,payload-size]
 void ICACHE_FLASH_ATTR http_do_reply(int argc, char *argv[])
 {
     sscp_connection *connection;
     HttpdConnData *connData;
-    int length;
 
-    if (argc != 4) {
+    if (argc < 3 || argc > 4) {
         sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
@@ -193,16 +192,21 @@ void ICACHE_FLASH_ATTR http_do_reply(int argc, char *argv[])
     }
     
     connection->d.http.code = atoi(argv[2]);
+    
+    connection->txCount = (argc > 3 ? atoi(argv[3]) : 0);
 
-    if ((length = atoi(argv[3])) < 0 || length > SSCP_TX_BUFFER_MAX) {
+    if (connection->txCount < 0 || connection->txCount > SSCP_TX_BUFFER_MAX) {
         sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_SIZE);
         return;
     }
     
     // response is sent by reply_cb
-    connection->txCount = length;
-    sscp_capturePayload(connection->txBuffer, length, reply_cb, connection);
-    connection->flags |= CONNECTION_TXFULL;
+    if (connection->txCount == 0)
+        reply_cb(connection);
+    else {
+        sscp_capturePayload(connection->txBuffer, connection->txCount, reply_cb, connection);
+        connection->flags |= CONNECTION_TXFULL;
+    }
 }
 
 int ICACHE_FLASH_ATTR cgiSSCPHandleRequest(HttpdConnData *connData)
@@ -237,6 +241,6 @@ void ICACHE_FLASH_ATTR http_disconnect(sscp_connection *connection)
 {
     HttpdConnData *connData = connection->d.http.conn;
     if (connData)
-        connData->cgi = NULL;
+        httpdCgiIsDone(connData);
     sscp_free_connection(connection);
 }

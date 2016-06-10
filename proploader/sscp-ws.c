@@ -43,20 +43,21 @@ static void ICACHE_FLASH_ATTR send_cb(void *data)
     sscp_sendResponse("S,0");
 }
 
-// helper for SEND,chan,payload
+// helper for SEND,chan,count
 void ICACHE_FLASH_ATTR ws_send_helper(sscp_connection *connection, int argc, char *argv[])
 {
-    int length;
-
-    if ((length = atoi(argv[2])) < 0 || length > SSCP_TX_BUFFER_MAX) {
+    if ((connection->txCount = atoi(argv[2])) < 0 || connection->txCount > SSCP_TX_BUFFER_MAX) {
         sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_SIZE);
         return;
     }
     
-    // response is sent by tcp_sent_cb
-    connection->txCount = length;
-    sscp_capturePayload(connection->txBuffer, length, send_cb, connection);
-    connection->flags |= CONNECTION_TXFULL;
+    if (connection->txCount == 0)
+        sscp_sendResponse("S,0");
+    else {
+        // response is sent by tcp_sent_cb
+        sscp_capturePayload(connection->txBuffer, connection->txCount, send_cb, connection);
+        connection->flags |= CONNECTION_TXFULL;
+    }
 }
 
 static void ICACHE_FLASH_ATTR websocketRecvCb(Websock *ws, char *data, int len, int flags)
@@ -67,6 +68,7 @@ static void ICACHE_FLASH_ATTR websocketRecvCb(Websock *ws, char *data, int len, 
             len = SSCP_RX_BUFFER_MAX;
         os_memcpy(connection->rxBuffer, data, len);
         connection->rxCount = len;
+        connection->rxIndex = 0;
         connection->flags |= CONNECTION_RXFULL;
     }
 }

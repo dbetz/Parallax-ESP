@@ -4,7 +4,7 @@
 #include "simpletools.h"
 #include "abdrive.h"
 #include "ping.h"
-#include "sscp-client.h"
+#include "cmd.h"
 
 // uncomment this if the wifi module is on pins other than 31/30
 //#define SEPARATE_WIFI_PINS
@@ -54,8 +54,8 @@ int main(void)
     
     init_robot();
     
-//    request("SET:sscp-pause-time,5");
-    nrequest(SSCP_TKN_SET, "sscp-pause-time,5");
+//    request("SET:cmd-pause-time,5");
+    nrequest(SSCP_TKN_SET, "cmd-pause-time,5");
     waitFor(SSCP_PREFIX "=S,0\r");
 
     request("LISTEN:0,/robot*");
@@ -88,7 +88,7 @@ int main(void)
             }
             else {
                 dprint(debug, "Unknown POST URL\n");
-                reply(chan, 400, "unknown");
+                reply(chan, 404, "unknown");
                 waitFor(SSCP_PREFIX "=S,0\r");
             }
             break;
@@ -103,7 +103,7 @@ int main(void)
             }
             else {
                 dprint(debug, "Unknown GET URL\n");
-                request("REPLY:%d,400,unknown", chan);
+                reply(chan, 404, "unknown");
                 waitFor(SSCP_PREFIX "=S,0\r");
             }
             break;

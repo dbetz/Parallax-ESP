@@ -1,6 +1,6 @@
 #include "simpletools.h"
 #include "fdserial.h"
-#include "sscp-client.h"
+#include "cmd.h"
 
 extern fdserial *wifi;
 

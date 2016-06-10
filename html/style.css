@@ -3,8 +3,7 @@ body {
   font-family: Calibri,Arial,Helvetica,Tahoma,Segoe,"Segoe UI",Verdana,sans-serif;
 }
 
-#title,
-#version {
+.title {
   text-align: center;
 }
 

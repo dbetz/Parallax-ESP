@@ -4,8 +4,9 @@
 </head>
 <body>
 <div id="main">
-<h1 id="title"><a href="https://www.parallax.com">Parallax</a> Wi-Fi Module Configuration</h1>
-<h2 id="version">Version: %version%</h2>
+<h1 class="title"><a href="https://www.parallax.com">Parallax</a> Wi-Fi Module Configuration</h1>
+<h2 class="title">Module Name: %module-name%</h2>
+<h2 class="title">Version: %version%</h2>
 <p>
 <ul>
 <li><a href="/wifi">Wi-Fi Networks</a></li>

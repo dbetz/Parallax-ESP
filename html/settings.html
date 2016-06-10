@@ -89,7 +89,7 @@
             </td>
           </tr>
           <tr>
-            <td>Serial Protocol (SSCP):</td>
+            <td>Serial Commands:</td>
             <td>
               <select id="enable-serial-protocol">
                 <option value="0">Disabled</option>
@@ -98,7 +98,7 @@
             </td>
           </tr>
           <tr>
-            <td>SSCP Start Character:</td>
+            <td>Command Start Character:</td>
             <td>
               <select id="start-char">
                 <option value="254">0xFE</option>
@@ -107,11 +107,11 @@
             </td>
           </tr>
           <tr>
-            <td>SSCP Pause Time in MS:</td>
+            <td>Command Pause Time in MS:</td>
             <td><input id="pause-time" type="text"></td>
           </tr>
           <tr>
-            <td>SSCP Pause After Characters:</td>
+            <td>Command Pause After Characters:</td>
             <td><input id="pause-chars" type="text"></td>
           </tr>
         </table>
@@ -215,7 +215,7 @@ function on_save() {
 function on_saveToFlash() {
     on_save();
     var req = new XMLHttpRequest();
-    req.open('POST', '/parallax/save-settings', false);
+    req.open('POST', '/wx/save-settings', false);
     req.send();
     setMessage("Settings saved to flash");
 }
@@ -223,7 +223,7 @@ function on_saveToFlash() {
 function on_restore() {
     setMessage("Restoring settings...");
     var req = new XMLHttpRequest();
-    req.open('POST', '/parallax/restore-settings', false);
+    req.open('POST', '/wx/restore-settings', false);
     req.send();
     loadSettings();
     setMessage("Settings restored from flash");
@@ -232,7 +232,7 @@ function on_restore() {
 function on_restoreDefaults() {
     setMessage("Restoring default settings...");
     var req = new XMLHttpRequest();
-    req.open('POST', '/parallax/restore-default-settings', false);
+    req.open('POST', '/wx/restore-default-settings', false);
     req.send();
     loadSettings();
     setMessage("Default settings restored");
@@ -245,21 +245,21 @@ function setMessage(msg) {
 
 function getModuleName() {
     var req = new XMLHttpRequest();
-    req.open('GET', '/parallax/setting?name=module-name', false);
+    req.open('GET', '/wx/setting?name=module-name', false);
     req.send();
     return req.responseText;
 }
 
 function setModuleName(name) {
     var req = new XMLHttpRequest();
-    var url = '/parallax/setting?name=module-name&value=' + name;
+    var url = '/wx/setting?name=module-name&value=' + name;
     req.open('POST', url, false);
     req.send();
 }
 
 function getBaudRate(which) {
     var req = new XMLHttpRequest();
-    var url = '/parallax/setting?name=' + which;
+    var url = '/wx/setting?name=' + which;
     req.open('GET', url, false);
     req.send();
     return req.responseText;
@@ -267,91 +267,91 @@ function getBaudRate(which) {
 
 function setBaudRate(which, baudRate) {
     var req = new XMLHttpRequest();
-    var url = '/parallax/setting?name=' + which + '&value=' + baudRate;
+    var url = '/wx/setting?name=' + which + '&value=' + baudRate;
     req.open('POST', url, false);
     req.send();
 }
 
 function getStopBits() {
     var req = new XMLHttpRequest();
-    req.open('GET', '/parallax/setting?name=stop-bits', false);
+    req.open('GET', '/wx/setting?name=stop-bits', false);
     req.send();
     return req.responseText;
 }
 
 function setStopBits(value) {
     var req = new XMLHttpRequest();
-    var url = '/parallax/setting?name=stop-bits&value=' + value;
+    var url = '/wx/setting?name=stop-bits&value=' + value;
     req.open('POST', url, false);
     req.send();
 }
 
 function getDbgStopBits() {
     var req = new XMLHttpRequest();
-    req.open('GET', '/parallax/setting?name=dbg-stop-bits', false);
+    req.open('GET', '/wx/setting?name=dbg-stop-bits', false);
     req.send();
     return req.responseText;
 }
 
 function setDbgStopBits(value) {
     var req = new XMLHttpRequest();
-    var url = '/parallax/setting?name=dbg-stop-bits&value=' + value;
+    var url = '/wx/setting?name=dbg-stop-bits&value=' + value;
     req.open('POST', url, false);
     req.send();
 }
 
 function getEnableSerialProtocol() {
     var req = new XMLHttpRequest();
-    req.open('GET', '/parallax/setting?name=sscp-enable', false);
+    req.open('GET', '/wx/setting?name=cmd-enable', false);
     req.send();
     return req.responseText;
 }
 
 function setEnableSerialProtocol(enable) {
     var req = new XMLHttpRequest();
-    var url = '/parallax/setting?name=sscp-enable&value=' + enable;
+    var url = '/wx/setting?name=cmd-enable&value=' + enable;
     req.open('POST', url, false);
     req.send();
 }
 
 function getStartChar() {
     var req = new XMLHttpRequest();
-    req.open('GET', '/parallax/setting?name=sscp-start-char', false);
+    req.open('GET', '/wx/setting?name=cmd-start-char', false);
     req.send();
     return req.responseText;
 }
 
 function setStartChar(ch) {
     var req = new XMLHttpRequest();
-    var url = '/parallax/setting?name=sscp-start-char&value=' + ch;
+    var url = '/wx/setting?name=cmd-start-char&value=' + ch;
     req.open('POST', url, false);
     req.send();
 }
 
 function getPauseTime() {
     var req = new XMLHttpRequest();
-    req.open('GET', '/parallax/setting?name=sscp-pause-time', false);
+    req.open('GET', '/wx/setting?name=cmd-pause-time', false);
     req.send();
     return req.responseText;
 }
 
 function setPauseTime(time) {
     var req = new XMLHttpRequest();
-    var url = '/parallax/setting?name=sscp-pause-time&value=' + time;
+    var url = '/wx/setting?name=cmd-pause-time&value=' + time;
     req.open('POST', url, false);
     req.send();
 }
 
 function getPauseChars() {
     var req = new XMLHttpRequest();
-    req.open('GET', '/parallax/setting?name=sscp-pause-chars', false);
+    req.open('GET', '/wx/setting?name=cmd-pause-chars', false);
     req.send();
     return req.responseText;
 }
 
 function setPauseChars(chars) {
     var req = new XMLHttpRequest();
-    var url = '/parallax/setting?name=sscp-pause-chars&value=' + chars;
+    var url = '/wx/setting?name=cmd-pause-chars&value=' + chars;
     req.open('POST', url, false);
     req.send();
 }

@@ -146,13 +146,25 @@ HttpdBuiltInUrl builtInUrls[]={
 	{"*", cgiRedirectApClientToHostname, "esp8266.nonet"},
 	{"/", cgiRedirect, "/index.tpl"},
 	{"/index.tpl", cgiEspFsTemplate, tplSettings},
-	{"/led.tpl", cgiEspFsTemplate, tplLed},
-	{"/led.cgi", cgiLed, NULL},
 #ifdef INCLUDE_FLASH_FNS
 	{"/flash/next", cgiGetFirmwareNext, &uploadParams},
 	{"/flash/upload", cgiUploadFirmware, &uploadParams},
 #endif
 	{"/flash/reboot", cgiRebootFirmware, NULL},
+
+	{"/led", cgiRedirect, "/led.tpl"},
+	{"/led/", cgiRedirect, "/led.tpl"},
+	{"/led.tpl", cgiEspFsTemplate, tplLed},
+	{"/led.cgi", cgiLed, NULL},
+	
+	{"/test", cgiRedirect, "/test/index.html"},
+	{"/test/", cgiRedirect, "/test/index.html"},
+	{"/test/test.cgi", cgiTestbed, NULL},
+
+	{"/websocket", cgiRedirect, "/websocket/index.html"},
+	{"/websocket/", cgiRedirect, "/websocket/index.html"},
+	{"/websocket/ws.cgi", cgiWebsocket, myWebsocketConnect},
+	{"/websocket/echo.cgi", cgiWebsocket, myEchoWebsocketConnect},
 
 	//Routines to make the /wifi URL and everything beneath it work.
 
@@ -167,27 +179,17 @@ HttpdBuiltInUrl builtInUrls[]={
 	{"/wifi/connstatus.cgi", cgiWiFiConnStatus, NULL},
 	{"/wifi/setmode.cgi", cgiWiFiSetMode, NULL},
 
-	{"/websocket", cgiRedirect, "/websocket/index.html"},
-	{"/websocket/", cgiRedirect, "/websocket/index.html"},
-	{"/websocket/ws.cgi", cgiWebsocket, myWebsocketConnect},
-	{"/websocket/echo.cgi", cgiWebsocket, myEchoWebsocketConnect},
-
-	{"/test", cgiRedirect, "/test/index.html"},
-	{"/test/", cgiRedirect, "/test/index.html"},
-	{"/test/test.cgi", cgiTestbed, NULL},
-
 #ifdef PROPLOADER
-    { "/parallax/format-filesystem", cgiRoffsFormat, NULL },
-    { "/parallax/write-file", cgiRoffsWriteFile, NULL },
-    { "/parallax/version", cgiPropVersion, NULL },
-    { "/parallax/propeller/load", cgiPropLoad, NULL },
-    { "/parallax/propeller/load-file", cgiPropLoadFile, NULL },
-    { "/parallax/propeller/reset", cgiPropReset, NULL },
-    { "/parallax/module-info", cgiPropModuleInfo, NULL },
-    { "/parallax/setting", cgiPropSetting, NULL },
-    { "/parallax/save-settings", cgiPropSaveSettings, NULL },
-    { "/parallax/restore-settings", cgiPropRestoreSettings, NULL },
-    { "/parallax/restore-default-settings", cgiPropRestoreDefaultSettings, NULL },
+    { "/userfs/format", cgiRoffsFormat, NULL },
+    { "/userfs/write", cgiRoffsWriteFile, NULL },
+    { "/propeller/load", cgiPropLoad, NULL },
+    { "/propeller/load-file", cgiPropLoadFile, NULL },
+    { "/propeller/reset", cgiPropReset, NULL },
+    { "/wx/module-info", cgiPropModuleInfo, NULL },
+    { "/wx/setting", cgiPropSetting, NULL },
+    { "/wx/save-settings", cgiPropSaveSettings, NULL },
+    { "/wx/restore-settings", cgiPropRestoreSettings, NULL },
+    { "/wx/restore-default-settings", cgiPropRestoreDefaultSettings, NULL },
     { "/files/*", cgiRoffsHook, NULL }, //Catch-all cgi function for the flash filesystem
 	{ "/ws/*", cgiWebsocket, sscp_websocketConnect},
     { "*", cgiSSCPHandleRequest, NULL }, //Check to see if MCU can handle the request

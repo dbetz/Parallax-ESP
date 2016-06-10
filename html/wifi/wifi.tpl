@@ -45,7 +45,6 @@ function getSelectedEssid() {
 	return currAp;
 }
 
-
 function scanAPs() {
 	xhr.open("GET", "wifiscan.cgi");
 	xhr.onreadystatechange=function() {
@@ -67,20 +66,10 @@ function scanAPs() {
 	xhr.send();
 }
 
-
-function getIpAddress() {
-    var req = new XMLHttpRequest();
-    req.open('GET', '/parallax/setting?name=station-ipaddr', false);
-    req.send();
-    return req.responseText;
-}
-
-
 window.onload=function(e) {
-    ipAddressCtl = document.getElementById('ip-address');
-    ipAddressCtl.innerHTML = getIpAddress();
-	scanAPs();
+    scanAPs();
 };
+
 </script>
 </head>
 <body>
