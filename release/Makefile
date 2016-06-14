@@ -5,23 +5,26 @@ IMAGES=\
 release/boot_v1.5.bin \
 release/httpd.user1.bin \
 release/httpd.user2.bin \
-release/httpd.ota \
+release/Parallax-ESP-v010.ota \
 release/blank.bin
 
 SAMPLES=\
-release/robot.c \
-release/robot.side \
-release/robot.html \
-release/robot.pbas \
-release/robot-ws.c \
-release/robot-ws.side \
-release/robot-ws.html \
-release/tcp-test.c \
-release/tcp-test.side \
-release/ifttt.c \
-release/ifttt.side \
-release/sscp-client.c \
-release/sscp-client.h
+release/samples/Makefile \
+release/samples/blink.c \
+release/samples/blink.side \
+release/samples/robot.c \
+release/samples/robot.side \
+release/samples/robot.html \
+release/samples/robot.pbas \
+release/samples/robot-ws.c \
+release/samples/robot-ws.side \
+release/samples/robot-ws.html \
+release/samples/tcp-test.c \
+release/samples/tcp-test.side \
+release/samples/ifttt.c \
+release/samples/ifttt.side \
+release/samples/cmd.c \
+release/samples/cmd.h
 
 CP=cp
 
@@ -32,13 +35,13 @@ all:
 	cp esp-httpd.zip ~/$(ZIP)
 
 zip:	staged-files
-	cd release; zip ../esp-httpd *
+	cd release; zip -r ../esp-httpd *
 
 build:
 	$(MAKE) -C .. STA_SSID= STA_PASS= clean
 	$(MAKE) -C .. STA_SSID= STA_PASS=
 
-staged-files:	release $(IMAGES) $(SAMPLES)
+staged-files:	release release/samples $(IMAGES) $(SAMPLES)
 	$(CP) flash.sh clear.sh clear-ffs.sh release
 
 release/boot_v1.5.bin:	../../esp_iot_sdk_v1.5.2/bin/boot_v1.5.bin patch
@@ -47,7 +50,10 @@ release/boot_v1.5.bin:	../../esp_iot_sdk_v1.5.2/bin/boot_v1.5.bin patch
 release/%:	../build/%
 	$(CP) $< $@
 
-release/%:	../samples/%
+release/Parallax-ESP-v010.ota:	../build/httpd.ota
+	$(CP) $< $@
+
+release/samples/%:	../samples/%
 	$(CP) $< $@
 
 release/blank.bin:	../../esp_iot_sdk_v1.5.2/bin/blank.bin
@@ -55,6 +61,9 @@ release/blank.bin:	../../esp_iot_sdk_v1.5.2/bin/blank.bin
 
 release:
 	mkdir -p release
+
+release/samples:
+	mkdir -p release/samples
 
 patch:	patch.c
 	cc -o $@ $<

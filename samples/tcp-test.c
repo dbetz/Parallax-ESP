@@ -16,35 +16,13 @@
 #define WIFI_TX     30
 #endif
 
-#define DEBUG
-
-fdserial *wifi;
-fdserial *debug;
-
 int main(void)
 {    
     char buf[1000];
     int chan, type;
     
-    // Close default same-cog terminal
-    simpleterm_close();                         
+    cmd_init(WIFI_RX, WIFI_TX, 31, 30);
 
-    // Set to open collector instead of driven
-    wifi = fdserial_open(WIFI_RX, WIFI_TX, 0b0100, 115200);
-
-    // Generate a BREAK to enter SSCP command mode
-    pause(10);
-    low(WIFI_TX);
-    pause(1);
-    input(WIFI_TX);
-    pause(1);
-
-#ifdef SEPARATE_WIFI_PINS
-    debug = fdserial_open(31, 30, 0, 115200);
-#else
-    debug = wifi;
-#endif
-    
     for (;;) {
 
         request("CONNECT:www-eng-x.llnl.gov,80");

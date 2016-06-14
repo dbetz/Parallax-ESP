@@ -22,9 +22,6 @@
 
 #define DEBUG
 
-fdserial *wifi;
-fdserial *debug;
-
 int wheelLeft;
 int wheelRight;
 
@@ -38,24 +35,7 @@ int main(void)
     int lastPingDistance = -1;
     int chan;
     
-    // Close default same-cog terminal
-    simpleterm_close();                         
-
-    // Set to open collector instead of driven
-    wifi = fdserial_open(WIFI_RX, WIFI_TX, 0b0100, 115200);
-
-    // Generate a BREAK to enter SSCP command mode
-    pause(10);
-    low(WIFI_TX);
-    pause(1);
-    input(WIFI_TX);
-    pause(1);
-
-#ifdef SEPARATE_WIFI_PINS
-    debug = fdserial_open(31, 30, 0, 115200);
-#else
-    debug = wifi;
-#endif
+    cmd_init(WIFI_RX, WIFI_TX, 31, 30);
     
     init_robot();
 

@@ -30,6 +30,10 @@ enum {
     SSCP_MIN_TOKEN              = 0x80
 };
 
+extern fdserial *wifi;
+extern fdserial *debug;
+
+void cmd_init(int wifi_rx, int wifi_tx, int debug_rx, int debug_tx);
 void request(char *fmt, ...);
 void nrequest(int token, char *fmt, ...);
 void requestPayload(char *buf, int len);

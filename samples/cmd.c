@@ -2,8 +2,29 @@
 #include "fdserial.h"
 #include "cmd.h"
 
-extern fdserial *wifi;
-extern fdserial *debug;
+fdserial *wifi;
+fdserial *debug;
+
+void cmd_init(int wifi_rx, int wifi_tx, int debug_rx, int debug_tx)
+{
+    // Close default same-cog terminal
+    simpleterm_close();                         
+
+    // Set to open collector instead of driven
+    wifi = fdserial_open(wifi_rx, wifi_tx, 0b0100, 115200);
+
+    // Generate a BREAK to enter SSCP command mode
+    pause(10);
+    low(wifi_tx);
+    pause(1);
+    input(wifi_tx);
+    pause(1);
+
+    if (debug_tx != -1 && wifi_tx != debug_tx)
+        debug = fdserial_open(debug_rx, debug_tx, 0, 115200);
+    else
+        debug = wifi;
+}
 
 void request(char *fmt, ...)
 {

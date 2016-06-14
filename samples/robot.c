@@ -21,13 +21,8 @@
 
 #define DEBUG
 
-fdserial *wifi;
-fdserial *debug;
-
 int wheelLeft;
 int wheelRight;
-
-int blink = 0;
 
 void init_robot(void);
 int process_robot_command(int whichWay);            
@@ -39,25 +34,8 @@ int main(void)
 {    
     int listenChan;
     
-    // Close default same-cog terminal
-    simpleterm_close();                         
+    cmd_init(WIFI_RX, WIFI_TX, 31, 30);
 
-    // Set to open collector instead of driven
-    wifi = fdserial_open(WIFI_RX, WIFI_TX, 0b0100, 115200);
-
-    // Generate a BREAK to enter SSCP command mode
-    pause(10);
-    low(WIFI_TX);
-    pause(1);
-    input(WIFI_TX);
-    pause(1);
-
-#ifdef SEPARATE_WIFI_PINS
-    debug = fdserial_open(31, 30, 0, 115200);
-#else
-    debug = wifi;
-#endif
-    
     init_robot();
     
 //    request("SET:cmd-pause-time,5");
@@ -103,9 +81,6 @@ int main(void)
             if (strcmp(url, "/robot-ping") == 0) {
                 sprintf(arg, "%d", ping_cm(PING_PIN));
                 reply(chan, 200, arg);
-                request("SET:pin-gpio15,%d", blink);
-                waitFor(SSCP_PREFIX "=S,0\r");
-                blink = !blink;
             }
             else if (strcmp(url, "/robot-test") == 0) {
                 reply(chan, 200, LONG_REPLY);
