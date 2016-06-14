@@ -27,6 +27,8 @@ fdserial *debug;
 int wheelLeft;
 int wheelRight;
 
+int blink = 0;
+
 void init_robot(void);
 int process_robot_command(int whichWay);            
 void set_robot_speed(int left, int right);
@@ -101,6 +103,9 @@ int main(void)
             if (strcmp(url, "/robot-ping") == 0) {
                 sprintf(arg, "%d", ping_cm(PING_PIN));
                 reply(chan, 200, arg);
+                request("SET:pin-gpio15,%d", blink);
+                waitFor(SSCP_PREFIX "=S,0\r");
+                blink = !blink;
             }
             else if (strcmp(url, "/robot-test") == 0) {
                 reply(chan, 200, LONG_REPLY);

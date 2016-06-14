@@ -4,6 +4,7 @@
 #include "config.h"
 #include "cgiprop.h"
 #include "cgiwifi.h"
+#include "gpio-helpers.h"
 
 static int getVersion(void *data, char *value)
 {
@@ -210,6 +211,7 @@ static int getPinHandler(void *data, char *value)
     case PIN_GPIO13:
     case PIN_GPIO14:
     case PIN_GPIO15:
+        makeGpio(pin);
         GPIO_DIS_OUTPUT(pin);
         ivalue = GPIO_INPUT_GET(pin);
         break;
@@ -236,6 +238,8 @@ static int setPinHandler(void *data, char *value)
     case PIN_GPIO13:
     case PIN_GPIO14:
     case PIN_GPIO15:
+        makeGpio(pin);
+        os_printf("Setting pin %d to %d\n", pin, atoi(value));
         GPIO_OUTPUT_SET(pin, atoi(value));
         break;
     case PIN_RST:
