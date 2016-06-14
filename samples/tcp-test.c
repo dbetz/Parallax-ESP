@@ -47,7 +47,7 @@ int main(void)
     
     for (;;) {
 
-        request("TCPCONNECT:www-eng-x.llnl.gov,80");
+        request("CONNECT:www-eng-x.llnl.gov,80");
         waitFor(SSCP_PREFIX "=^c,^i\r", &type, &chan);
         dprint(debug, "Connect returned '%c,%d'\n", type, chan);
     

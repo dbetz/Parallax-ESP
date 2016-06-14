@@ -48,7 +48,7 @@ int main(void)
     debug = wifi;
 #endif
     
-    request("TCPCONNECT:maker.ifttt.com,80");
+    request("CONNECT:maker.ifttt.com,80");
     waitFor(SSCP_PREFIX "=^c,^i\r", &type, &chan);
     dprint(debug, "Connect returned '%c,%d'\n", type, chan);
 

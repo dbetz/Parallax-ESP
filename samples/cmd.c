@@ -3,6 +3,7 @@
 #include "cmd.h"
 
 extern fdserial *wifi;
+extern fdserial *debug;
 
 void request(char *fmt, ...)
 {
@@ -41,11 +42,58 @@ void requestPayload(char *buf, int len)
         fdserial_txChar(wifi, *buf++);
 }
 
-void reply(int chan, int code, char *payload)
+#define CHUNK_SIZE  8
+
+static int reply1(int chan, int code, char *payload)
 {
-    int payloadLength = strlen(payload);
-    request("REPLY:%d,%d,%d", chan, code, payloadLength);
-    requestPayload(payload, payloadLength);
+    int payloadLength = (payload ? strlen(payload) : 0);
+    char result;
+    int count;
+    
+    if (payloadLength == 0) {
+dprint(debug, "REPLY %d, %d\n", chan, code);
+        request("REPLY:%d,%d", chan, code);
+    }
+        
+    else {
+        int remaining = payloadLength;
+        while (remaining > 0) {
+            if ((count = remaining) > CHUNK_SIZE)
+                count = CHUNK_SIZE;
+            if (remaining == payloadLength) {
+dprint(debug, "REPLY %d, %d, %d, %d\n", chan, code, payloadLength, count);
+                request("REPLY:%d,%d,%d,%d", chan, code, payloadLength, count);
+                requestPayload(payload, count);
+            }
+            else {
+dprint(debug, "SEND %d, %d\n", chan, count);
+                request("SEND:%d,%d", chan, count);
+                requestPayload(payload, count);
+            }
+            payload += count;
+            remaining -= count;
+            if (remaining > 0) {
+                waitFor(SSCP_PREFIX "=^c,^d\r", &result, &count);
+dprint(debug, " ret %c %d\n", result, count);
+                if (result != 'S') {
+dprint(debug, " failed with %d\n", count);
+                    return count;
+                }
+            }
+        }
+    }
+    
+    waitFor(SSCP_PREFIX "=^c,^d\r", &result, &count);
+dprint(debug, " final ret %c %d\n", result, count);
+    
+    return payloadLength;
+}
+
+int reply(int chan, int code, char *payload)
+{
+    int ret = reply1(chan, code, payload);
+    dprint(debug, "ret: %d\n", ret);
+    return ret;
 }
 
 typedef struct {

@@ -4,7 +4,10 @@
 #include "config.h"
 #include "cgiwifi.h"
 
-//#define DUMP
+//#define DUMP_CMDS
+//#define DUMP_ARGS
+#define DUMP_FILTER
+//#define DUMP_OUTOFBAND
 
 #define SSCP_BUFFER_MAX     128
 #define SSCP_MAX_ARGS       8
@@ -18,11 +21,16 @@ static int sscp_length;
 int sscp_start = SSCP_TKN_START;
 static char *sscp_payload;
 static int sscp_payload_length;
-static void (*sscp_payload_cb)(void *data);
+static int sscp_payload_remaining;
+static void (*sscp_payload_cb)(void *data, int count);
 static void *sscp_payload_data;
 
 sscp_listener sscp_listeners[SSCP_LISTENER_MAX];
 sscp_connection sscp_connections[SSCP_CONNECTION_MAX];
+
+#if defined(DUMP_CMDS) || defined(DUMP_FILTER) || defined(DUMP_OUTOFBAND)
+#define DUMP
+#endif
 
 #ifdef DUMP
 static void dump(char *tag, uint8_t *buf, int len);
@@ -33,15 +41,21 @@ static void dump(char *tag, uint8_t *buf, int len);
 void ICACHE_FLASH_ATTR sscp_init(void)
 {
     int i;
+    
     os_memset(&sscp_listeners, 0, sizeof(sscp_listeners));
+    for (i = 0; i < SSCP_LISTENER_MAX; ++i)
+        sscp_listeners[i].hdr.index = i;
+    
     os_memset(&sscp_connections, 0, sizeof(sscp_connections));
     for (i = 0; i < SSCP_CONNECTION_MAX; ++i)
-        sscp_connections[i].index = i;
+        sscp_connections[i].hdr.index = SSCP_LISTENER_MAX + i;
+    
     sscp_start = SSCP_TKN_START;
     sscp_inside = 0;
     sscp_length = 0;
     sscp_payload = NULL;
-    flashConfig.sscp_enable = SSCP_DEF_ENABLE;
+    sscp_payload_length = 0;
+    sscp_payload_remaining = 0;
 }
 
 void ICACHE_FLASH_ATTR sscp_reset(void)
@@ -50,11 +64,15 @@ void ICACHE_FLASH_ATTR sscp_reset(void)
     
     for (i = 0; i < SSCP_LISTENER_MAX; ++i)
         sscp_close_listener(&sscp_listeners[i]);
+    for (i = 0; i < SSCP_CONNECTION_MAX; ++i)
+        sscp_close_connection(&sscp_connections[i]);
         
     sscp_start = SSCP_TKN_START;
     sscp_inside = 0;
     sscp_length = 0;
     sscp_payload = NULL;
+    sscp_payload_length = 0;
+    sscp_payload_remaining = 0;
 }
 
 void ICACHE_FLASH_ATTR sscp_enable(int enable)
@@ -71,17 +89,35 @@ int ICACHE_FLASH_ATTR sscp_isEnabled(void)
     return flashConfig.sscp_enable;
 }
 
-void ICACHE_FLASH_ATTR sscp_capturePayload(char *buf, int length, void (*cb)(void *data), void *data)
+void ICACHE_FLASH_ATTR sscp_capturePayload(char *buf, int length, void (*cb)(void *data, int count), void *data)
 {
     sscp_payload = buf;
     sscp_payload_length = length;
+    sscp_payload_remaining = length;
     sscp_payload_cb = cb;
     sscp_payload_data = data;
 }
 
 sscp_listener ICACHE_FLASH_ATTR *sscp_get_listener(int i)
 {
-    return i >= 0 && i < SSCP_LISTENER_MAX ? &sscp_listeners[i] : NULL;
+    if (i < 0 || i >= SSCP_LISTENER_MAX)
+        return NULL;
+    return &sscp_listeners[i];
+}
+
+sscp_listener *sscp_allocate_listener(int type, char *path, sscp_dispatch *dispatch)
+{
+    int i;
+    for (i = 0; i < SSCP_LISTENER_MAX; ++i) {
+        sscp_listener *listener = &sscp_listeners[i];
+        if (listener->hdr.type == TYPE_UNUSED) {
+            listener->hdr.type = type;
+            listener->hdr.dispatch = dispatch;
+            os_strcpy(listener->path, path);
+            return listener;
+        }
+    }
+    return NULL;
 }
 
 sscp_listener ICACHE_FLASH_ATTR *sscp_find_listener(const char *path, int type)
@@ -93,7 +129,7 @@ sscp_listener ICACHE_FLASH_ATTR *sscp_find_listener(const char *path, int type)
     for (i = 0, listener = sscp_listeners; i < SSCP_LISTENER_MAX; ++i, ++listener) {
 
         // only check channels to which the MCU is listening
-        if (listener->type == type) {
+        if (listener->hdr.type == type) {
 os_printf("listener: matching '%s' with '%s'\n", listener->path, path);
 
             // check for a literal match
@@ -115,68 +151,44 @@ os_printf("listener: matching '%s' with '%s'\n", listener->path, path);
 
 void ICACHE_FLASH_ATTR sscp_close_listener(sscp_listener *listener)
 {
-    sscp_connection *connection = listener->connections;
-    while (connection) {
-        sscp_connection *next = connection->next;
-        switch (listener->type) {
-        case LISTENER_HTTP:
-            http_disconnect(connection);
-            break;
-        case LISTENER_WEBSOCKET:
-            ws_disconnect(connection);
-            break;
-        case LISTENER_TCP:
-            tcp_disconnect(connection);
-            break;
-        default:
-            sscp_free_connection(connection);
-            break;
-        }
-        connection = next;
-    }
-    listener->connections = NULL;
+    listener->hdr.type = TYPE_UNUSED;
 }
 
 sscp_connection ICACHE_FLASH_ATTR *sscp_get_connection(int i)
 {
-    return i >= 0 && i < SSCP_CONNECTION_MAX ? &sscp_connections[i] : NULL;
+    if (i < SSCP_LISTENER_MAX || i >= SSCP_LISTENER_MAX + SSCP_CONNECTION_MAX)
+        return NULL;
+    return &sscp_connections[i - SSCP_LISTENER_MAX];
 }
 
-sscp_connection ICACHE_FLASH_ATTR *sscp_allocate_connection(sscp_listener *listener)
+sscp_connection ICACHE_FLASH_ATTR *sscp_allocate_connection(int type, sscp_dispatch *dispatch)
 {
-    sscp_connection *connection;
     int i;
-    for (i = 0, connection = sscp_connections; i < SSCP_CONNECTION_MAX; ++i, ++connection) {
-        if (!connection->listener) {
+    for (i = 0; i < SSCP_CONNECTION_MAX; ++i) {
+        sscp_connection *connection = &sscp_connections[i];
+        if (connection->hdr.type == TYPE_UNUSED) {
+            connection->hdr.type = type;
+            connection->hdr.dispatch = dispatch;
             connection->flags = CONNECTION_INIT;
-            connection->listener = listener;
-            connection->next = listener->connections;
-            listener->connections = connection;
+            connection->rxCount = 0;
+            connection->rxIndex = 0;
+            connection->txCount = 0;
+            connection->txIndex = 0;
+            os_memset(&connection->d, 0, sizeof(connection->d));
             return connection;
         }
     }
     return NULL;
 }
 
-void ICACHE_FLASH_ATTR sscp_free_connection(sscp_connection *connection)
+void ICACHE_FLASH_ATTR sscp_close_connection(sscp_connection *connection)
 {
-    connection->listener = NULL;
-}
-
-void ICACHE_FLASH_ATTR sscp_remove_connection(sscp_connection *connection)
-{
-    sscp_listener *listener = connection->listener;
-    if (listener) {
-        sscp_connection **pNext = &listener->connections;
-        sscp_connection *c;
-        while ((c = *pNext) != NULL) {
-            if (c == connection) {
-                *pNext = c->next;
-                sscp_free_connection(c);
-                break;
-            }
-            pNext = &c->next;
-        }
+    if (connection->hdr.type != TYPE_UNUSED) {
+os_printf("closing connection %d\n", connection->hdr.index);
+        if (connection->hdr.dispatch->close)
+            (*connection->hdr.dispatch->close)((sscp_hdr *)connection);
+os_printf(" done closing connection %d\n", connection->hdr.index);
+        connection->hdr.type = TYPE_UNUSED;
     }
 }
 
@@ -239,20 +251,17 @@ typedef struct {
 static cmd_def cmds[] = {
 {   "",                 -1,                     cmds_do_nothing     },
 {   "JOIN",             SSCP_TKN_JOIN,          cmds_do_join        },
-{   "GET",              SSCP_TKN_GET,           cmds_do_get         },
+{   "CHECK",            SSCP_TKN_CHECK,         cmds_do_get         },
 {   "SET",              SSCP_TKN_SET,           cmds_do_set         },
+{   "LISTEN",           SSCP_TKN_LISTEN,        cmds_do_listen      },
 {   "POLL",             SSCP_TKN_POLL,          cmds_do_poll        },
 {   "PATH",             SSCP_TKN_PATH,          cmds_do_path        },
 {   "SEND",             SSCP_TKN_SEND,          cmds_do_send        },
 {   "RECV",             SSCP_TKN_RECV,          cmds_do_recv        },
-{   "LISTEN",           SSCP_TKN_LISTEN,        http_do_listen      },
+{   "CLOSE",            SSCP_TKN_CLOSE,         cmds_do_close       },
 {   "ARG",              SSCP_TKN_ARG,           http_do_arg         },
-{   "POSTARG",          SSCP_TKN_POSTARG,       http_do_postarg     },
-{   "BODY",             SSCP_TKN_BODY,          http_do_body        },
 {   "REPLY",            SSCP_TKN_REPLY,         http_do_reply       },
-{   "WSLISTEN",         SSCP_TKN_WSLISTEN,      ws_do_wslisten      },
-{   "TCPCONNECT",       SSCP_TKN_TCPCONNECT,    tcp_do_connect      },
-{   "TCPDISCONNECT",    SSCP_TKN_TCPDISCONNECT, tcp_do_disconnect   },
+{   "CONNECT",          SSCP_TKN_CONNECT,       tcp_do_connect      },
 {   NULL,               0,                      NULL                }
 };
 
@@ -271,7 +280,9 @@ static void ICACHE_FLASH_ATTR sscp_process(char *buf, short len)
     int argc, tkn, i;
     char *p, *next;
     
+#ifdef DUMP_CMDS
     dump("sscp", (uint8_t *)buf, len);
+#endif
     
     p = buf;
     argc = 0;
@@ -337,7 +348,7 @@ static void ICACHE_FLASH_ATTR sscp_process(char *buf, short len)
         
     argv[argc] = NULL;
         
-#ifdef DUMP
+#ifdef DUMP_ARGS
     for (i = 0; i < argc; ++i)
         os_printf("argv[%d] = '%s'\n", i, argv[i]);
 #endif
@@ -356,14 +367,16 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
         return;
     }
 
+#ifdef DUMP_FILTER
     dump("filter", p, len);
+#endif
 
     while (--len >= 0) {
         if (sscp_payload) {
             *sscp_payload++ = *p++;
-            if (--sscp_payload_length == 0) {
+            if (--sscp_payload_remaining == 0) {
                 sscp_payload = NULL;
-                (*sscp_payload_cb)(sscp_payload_data);
+                (*sscp_payload_cb)(sscp_payload_data, sscp_payload_length);
             }
             ++start;
         }
@@ -385,7 +398,9 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
         else {
             if (*p == sscp_start) {
                 if (p > start && outOfBand) {
+#ifdef DUMP_OUTOFBAND
                     dump("outOfBand", start, p - start);
+#endif
                     (*outOfBand)(data, (char *)start, p - start);
                 }
                 sscp_inside = 1;
@@ -399,7 +414,9 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
         }
     }
     if (!sscp_inside && p > start && outOfBand) {
+#ifdef DUMP_OUTOFBAND
         dump("outOfBand", start, p - start);
+#endif
         (*outOfBand)(data, (char *)start, p - start);
     }
 }

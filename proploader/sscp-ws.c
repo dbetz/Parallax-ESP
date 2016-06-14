@@ -1,64 +1,17 @@
 #include "esp8266.h"
 #include "sscp.h"
 
-// WSLISTEN,chan,path
-void ICACHE_FLASH_ATTR ws_do_wslisten(int argc, char *argv[])
-{
-    sscp_listener *listener;
+static void path_handler(sscp_hdr *hdr); 
+static void send_handler(sscp_hdr *hdr, int size);
+static void recv_handler(sscp_hdr *hdr, int size);
+static void close_handler(sscp_hdr *hdr);
 
-    if (argc != 3) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
-        return;
-    }
-
-    if (!(listener = sscp_get_listener(atoi(argv[1])))) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-        return;
-    }
-
-    if (os_strlen(argv[2]) >= SSCP_PATH_MAX) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_SIZE);
-        return;
-    }
-
-    sscp_close_listener(listener);
-
-    os_printf("Listening for '%s'\n", argv[2]);
-    os_strcpy(listener->path, argv[2]);
-    listener->type = LISTENER_WEBSOCKET;
-    
-    sscp_sendResponse("S,0");
-}
-
-static void ICACHE_FLASH_ATTR send_cb(void *data)
-{
-    sscp_connection *connection = (sscp_connection *)data;
-    Websock *ws = (Websock *)connection->d.ws.ws;
-
-    char sendBuff[1024];
-    httpdSetSendBuffer(ws->conn, sendBuff, sizeof(sendBuff));
-    cgiWebsocketSend(ws, connection->txBuffer, connection->txCount, WEBSOCK_FLAG_NONE);
-    connection->flags &= ~CONNECTION_TXFULL;
-
-    sscp_sendResponse("S,0");
-}
-
-// helper for SEND,chan,count
-void ICACHE_FLASH_ATTR ws_send_helper(sscp_connection *connection, int argc, char *argv[])
-{
-    if ((connection->txCount = atoi(argv[2])) < 0 || connection->txCount > SSCP_TX_BUFFER_MAX) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_SIZE);
-        return;
-    }
-    
-    if (connection->txCount == 0)
-        sscp_sendResponse("S,0");
-    else {
-        // response is sent by tcp_sent_cb
-        sscp_capturePayload(connection->txBuffer, connection->txCount, send_cb, connection);
-        connection->flags |= CONNECTION_TXFULL;
-    }
-}
+static sscp_dispatch wsDispatch = {
+    .path = path_handler,
+    .send = send_handler,
+    .recv = recv_handler,
+    .close = close_handler
+};
 
 static void ICACHE_FLASH_ATTR websocketRecvCb(Websock *ws, char *data, int len, int flags)
 {
@@ -89,13 +42,13 @@ void ICACHE_FLASH_ATTR sscp_websocketConnect(Websock *ws)
     sscp_connection *connection;
     
     // find a matching listener
-    if (!(listener = sscp_find_listener(ws->conn->url, LISTENER_WEBSOCKET))) {
+    if (!(listener = sscp_find_listener(ws->conn->url, TYPE_WEBSOCKET_LISTENER))) {
         cgiWebsocketClose(ws, 0);
         return;
     }
 
     // find an unused connection
-    if (!(connection = sscp_allocate_connection(listener))) {
+    if (!(connection = sscp_allocate_connection(TYPE_WEBSOCKET_CONNECTION, &wsDispatch))) {
         cgiWebsocketClose(ws, 0);
         return;
     }
@@ -108,11 +61,71 @@ void ICACHE_FLASH_ATTR sscp_websocketConnect(Websock *ws)
     ws->userData = connection;
 }
 
-void ICACHE_FLASH_ATTR ws_disconnect(sscp_connection *connection)
+static void ICACHE_FLASH_ATTR path_handler(sscp_hdr *hdr)
 {
+    sscp_connection *connection = (sscp_connection *)hdr;
+    Websock *ws = (Websock *)connection->d.ws.ws;
+    
+    if (!ws || !ws->conn) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_STATE);
+        return;
+    }
+    
+    sscp_sendResponse("S,%s", ws->conn->url);
+}
+
+static void ICACHE_FLASH_ATTR send_cb(void *data, int count)
+{
+    sscp_connection *connection = (sscp_connection *)data;
+    Websock *ws = (Websock *)connection->d.ws.ws;
+
+    char sendBuff[1024];
+    httpdSetSendBuffer(ws->conn, sendBuff, sizeof(sendBuff));
+    cgiWebsocketSend(ws, connection->txBuffer, count, WEBSOCK_FLAG_NONE);
+    connection->flags &= ~CONNECTION_TXFULL;
+
+    sscp_sendResponse("S,%d", count);
+}
+
+static void ICACHE_FLASH_ATTR send_handler(sscp_hdr *hdr, int size)
+{
+    sscp_connection *connection = (sscp_connection *)hdr;
+    
+    if (size == 0)
+        sscp_sendResponse("S,0");
+    else {
+        // response is sent by tcp_sent_cb
+        sscp_capturePayload(connection->txBuffer, size, send_cb, connection);
+        connection->flags |= CONNECTION_TXFULL;
+    }
+}
+
+static void ICACHE_FLASH_ATTR recv_handler(sscp_hdr *hdr, int size)
+{
+    sscp_connection *connection = (sscp_connection *)hdr;
+    
+    if (!(connection->flags & CONNECTION_RXFULL)) {
+        sscp_sendResponse("S,0");
+        return;
+    }
+
+    if (connection->rxIndex + size > connection->rxCount)
+        size = connection->rxCount - connection->rxIndex;
+
+    sscp_sendResponse("S,%d", size);
+    if (size > 0) {
+        sscp_sendPayload(connection->rxBuffer + connection->rxIndex, size);
+        connection->rxIndex += size;
+    }
+    
+    if (connection->rxIndex >= connection->rxCount)
+        connection->flags &= ~CONNECTION_RXFULL;
+}
+
+static void ICACHE_FLASH_ATTR close_handler(sscp_hdr *hdr)
+{
+    sscp_connection *connection = (sscp_connection *)hdr;
     Websock *ws = connection->d.ws.ws;
     if (ws)
         cgiWebsocketClose(ws, 0);
-    sscp_free_connection(connection);
 }
-

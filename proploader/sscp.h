@@ -12,6 +12,8 @@
 #define SSCP_RX_BUFFER_MAX  1024
 #define SSCP_TX_BUFFER_MAX  1024
 
+#define SSCP_HANDLE_MAX     (SSCP_LISTENER_MAX + SSCP_CONNECTION_MAX)
+
 enum {
     SSCP_TKN_START              = 0xFE,
     
@@ -26,23 +28,21 @@ enum {
     // gap for more tokens
     
     SSCP_TKN_JOIN               = 0xEF,
-    SSCP_TKN_GET                = 0xEE,
+    SSCP_TKN_CHECK              = 0xEE,
     SSCP_TKN_SET                = 0xED,
     SSCP_TKN_POLL               = 0xEC,
     SSCP_TKN_PATH               = 0xEB,
     SSCP_TKN_SEND               = 0xEA,
     SSCP_TKN_RECV               = 0xE9,
-    SSCP_TKN_LISTEN             = 0xE8,
-    SSCP_TKN_ARG                = 0xE7,
-    SSCP_TKN_POSTARG            = 0xE6,
-    SSCP_TKN_BODY               = 0xE5,
-    SSCP_TKN_REPLY              = 0xE4,
-    SSCP_TKN_WSLISTEN           = 0xE3,
-    SSCP_TKN_TCPCONNECT         = 0xE2,
-    SSCP_TKN_TCPDISCONNECT      = 0xE1,
+    SSCP_TKN_CLOSE              = 0xE8,
+    SSCP_TKN_LISTEN             = 0xE7,
+    SSCP_TKN_ARG                = 0xE6,
+    SSCP_TKN_REPLY              = 0xE5,
+    SSCP_TKN_CONNECT            = 0xE4,
     SSCP_MIN_TOKEN              = 0x80
 };
 
+typedef struct sscp_hdr sscp_hdr;
 typedef struct sscp_listener sscp_listener;
 typedef struct sscp_connection sscp_connection;
 
@@ -64,16 +64,31 @@ enum {
 };
 
 enum {
-    LISTENER_UNUSED = 0,
-    LISTENER_HTTP,
-    LISTENER_WEBSOCKET,
-    LISTENER_TCP
+    TYPE_UNUSED = 0,
+    TYPE_HTTP_LISTENER,
+    TYPE_WEBSOCKET_LISTENER,
+    TYPE_TCP_LISTENER,
+    TYPE_HTTP_CONNECTION,
+    TYPE_WEBSOCKET_CONNECTION,
+    TYPE_TCP_CONNECTION
+};
+
+typedef struct {
+    void (*path)(sscp_hdr *hdr); 
+    void (*send)(sscp_hdr *hdr, int size);
+    void (*recv)(sscp_hdr *hdr, int size); 
+    void (*close)(sscp_hdr *hdr);
+} sscp_dispatch;
+
+struct sscp_hdr {
+    int type;
+    int index;
+    sscp_dispatch *dispatch;
 };
 
 struct sscp_listener {
-    int type;
+    sscp_hdr hdr;
     char path[SSCP_PATH_MAX];
-    sscp_connection *connections;
 };
 
 enum {
@@ -89,14 +104,13 @@ enum {
 };
 
 struct sscp_connection {
-    int index;
+    sscp_hdr hdr;
     int flags;
-    sscp_listener *listener;
-    sscp_connection *next;
     union {
         struct {
             HttpdConnData *conn;
             int code;
+            int count;
         } http;
         struct {
             Websock *ws;
@@ -112,6 +126,7 @@ struct sscp_connection {
     int rxIndex;
     char txBuffer[SSCP_TX_BUFFER_MAX];
     int txCount;
+    int txIndex;
 };
 
 extern int sscp_start;
@@ -121,27 +136,28 @@ extern sscp_connection sscp_connections[];
 void sscp_init(void);
 void sscp_enable(int enable);
 int sscp_isEnabled(void);
-void sscp_capturePayload(char *buf, int length, void (*cb)(void *data), void *data);
+void sscp_capturePayload(char *buf, int length, void (*cb)(void *data, int count), void *data);
 void sscp_filter(char *buf, short len, void (*outOfBand)(void *data, char *buf, short len), void *data);
-void sscp_websocketConnect(Websock *ws);
 
 sscp_listener *sscp_get_listener(int i);
+sscp_listener *sscp_allocate_listener(int type, char *path, sscp_dispatch *dispatch);
 sscp_listener *sscp_find_listener(const char *path, int type);
 void sscp_close_listener(sscp_listener *listener);
 sscp_connection *sscp_get_connection(int i);
-sscp_connection *sscp_allocate_connection(sscp_listener *listener);
-void sscp_free_connection(sscp_connection *connection);
-void sscp_remove_connection(sscp_connection *connection);
+sscp_connection *sscp_allocate_connection(int type, sscp_dispatch *dispatch);
+void sscp_close_connection(sscp_connection *connection);
 void sscp_sendResponse(char *fmt, ...);
 void sscp_sendPayload(char *buf, int cnt);
 
 // from sscp-cmds.c
 void cmds_do_nothing(int argc, char *argv[]);
+void cmds_do_listen(int argc, char *argv[]);
 void cmds_do_join(int argc, char *argv[]);
 void cmds_do_poll(int argc, char *argv[]);
 void cmds_do_path(int argc, char *argv[]);
 void cmds_do_send(int argc, char *argv[]);
 void cmds_do_recv(int argc, char *argv[]);
+void cmds_do_close(int argc, char *argv[]);
 int cgiPropEnableSerialProtocol(HttpdConnData *connData);
 int cgiPropModuleInfo(HttpdConnData *connData);
 
@@ -157,21 +173,15 @@ int tplSettings(HttpdConnData *connData, char *token, void **arg);
 // from sscp-http.c
 void http_do_listen(int argc, char *argv[]);
 void http_do_arg(int argc, char *argv[]);
-void http_do_postarg(int argc, char *argv[]);
 void http_do_body(int argc, char *argv[]);
 void http_do_reply(int argc, char *argv[]);
 int cgiSSCPHandleRequest(HttpdConnData *connData);
 void http_disconnect(sscp_connection *connection);
 
 // from sscp-ws.c
-void ws_do_wslisten(int argc, char *argv[]);
-void ws_send_helper(sscp_connection *connection, int argc, char *argv[]);
-void ws_disconnect(sscp_connection *connection);
+void sscp_websocketConnect(Websock *ws);
 
 // from sscp-tcp.c
 void tcp_do_connect(int argc, char *argv[]);
-void tcp_do_disconnect(int argc, char *argv[]);
-void tcp_send_helper(sscp_connection *c, int argc, char *argv[]);
-void tcp_disconnect(sscp_connection *connection);
 
 #endif

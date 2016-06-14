@@ -1,16 +1,24 @@
 #include "esp8266.h"
 #include "sscp.h"
 
-static sscp_listener tcp_listener = {
-    .type = LISTENER_TCP,
-    .connections = NULL
-};
-
 static void dns_cb(const char *name, ip_addr_t *ipaddr, void *arg);
 static void tcp_connect_cb(void *arg);
 static void tcp_discon_cb(void *arg);
 static void tcp_recv_cb(void *arg, char *data, unsigned short len);
+static void tcp_sent_cb(void *arg);
 static void tcp_recon_cb(void *arg, sint8 errType);
+
+static void path_handler(sscp_hdr *hdr); 
+static void send_handler(sscp_hdr *hdr, int size);
+static void recv_handler(sscp_hdr *hdr, int size);
+static void close_handler(sscp_hdr *hdr);
+
+static sscp_dispatch tcpDispatch = {
+    .path = path_handler,
+    .send = send_handler,
+    .recv = recv_handler,
+    .close = close_handler
+};
 
 void ICACHE_FLASH_ATTR tcp_do_connect(int argc, char *argv[])
 {
@@ -24,7 +32,7 @@ void ICACHE_FLASH_ATTR tcp_do_connect(int argc, char *argv[])
     }
     
     // allocate a connection
-    if (!(c = sscp_allocate_connection(&tcp_listener))) {
+    if (!(c = sscp_allocate_connection(TYPE_TCP_CONNECTION, &tcpDispatch))) {
         sscp_sendResponse("E,%d", SSCP_ERROR_NO_FREE_CONNECTION);
         return;
     }
@@ -68,70 +76,6 @@ void ICACHE_FLASH_ATTR tcp_do_connect(int argc, char *argv[])
     c->d.tcp.state = TCP_STATE_CONNECTING;
 }
 
-void ICACHE_FLASH_ATTR tcp_do_disconnect(int argc, char *argv[])
-{
-    sscp_connection *c;
-
-    if (argc != 2) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
-        return;
-    }
-    
-    if (!(c = sscp_get_connection(atoi(argv[1])))) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-        return;
-    }
-
-    if (!c->listener || c->listener->type != LISTENER_TCP) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-        return;
-    }
-    
-    tcp_disconnect(c);
-    
-    sscp_sendResponse("S,0");
-}
-
-static void ICACHE_FLASH_ATTR tcp_sent_cb(void *arg)
-{
-    struct espconn *conn = (struct espconn *)arg;
-    sscp_connection *c = (sscp_connection *)conn->reverse;
-    c->flags &= ~CONNECTION_TXFULL;
-    sscp_sendResponse("S,0");
-}
-
-static void ICACHE_FLASH_ATTR send_cb(void *data)
-{
-    sscp_connection *c = (sscp_connection *)data;
-    struct espconn *conn = &c->d.tcp.conn;
-    if (espconn_send(conn, (uint8 *)c->txBuffer, c->txCount) != ESPCONN_OK) {
-        c->flags &= ~CONNECTION_TXFULL;
-        sscp_sendResponse("E,%d", SSCP_ERROR_SEND_FAILED);
-    }
-}
-
-// helper for SEND,chan,count
-void ICACHE_FLASH_ATTR tcp_send_helper(sscp_connection *c, int argc, char *argv[])
-{
-    if (c->d.tcp.state != TCP_STATE_CONNECTED) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_STATE);
-        return;
-    }
-    
-    if ((c->txCount = atoi(argv[2])) < 0 || c->txCount > SSCP_TX_BUFFER_MAX) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_SIZE);
-        return;
-    }
-    
-    if (c->txCount == 0)
-        sscp_sendResponse("S,0");
-    else {
-        // response is sent by tcp_sent_cb
-        sscp_capturePayload(c->txBuffer, c->txCount, send_cb, c);
-        c->flags |= CONNECTION_TXFULL;
-    }
-}
-
 static void ICACHE_FLASH_ATTR dns_cb(const char *name, ip_addr_t *ipaddr, void *arg)
 {
     struct espconn *conn = (struct espconn *)arg;
@@ -153,7 +97,7 @@ static void ICACHE_FLASH_ATTR dns_cb(const char *name, ip_addr_t *ipaddr, void *
     os_memcpy(conn->proto.tcp->remote_ip, &ipaddr->addr, 4);
     
     if (espconn_connect(conn) != ESPCONN_OK) {
-        sscp_free_connection(c);
+        sscp_close_connection(c);
         sscp_sendResponse("E,%d", SSCP_ERROR_CONNECT_FAILED);
     }
     
@@ -171,14 +115,14 @@ static void ICACHE_FLASH_ATTR tcp_connect_cb(void *arg)
     espconn_regist_sentcb(conn, tcp_sent_cb);
 
     c->d.tcp.state = TCP_STATE_CONNECTED;
-    sscp_sendResponse("S,%d", c->index);
+    sscp_sendResponse("S,%d", c->hdr.index);
 }
 
 static void ICACHE_FLASH_ATTR tcp_discon_cb(void *arg)
 {
     struct espconn *conn = (struct espconn *)arg;
     sscp_connection *c = (sscp_connection *)conn->reverse;
-    os_printf("TCP: %d disconnected\n", c->index);
+    os_printf("TCP: %d disconnected\n", c->hdr.index);
     c->d.tcp.state = TCP_STATE_IDLE;
 }
 
@@ -186,7 +130,7 @@ static void ICACHE_FLASH_ATTR tcp_recv_cb(void *arg, char *data, unsigned short 
 {
     struct espconn *conn = (struct espconn *)arg;
     sscp_connection *c = (sscp_connection *)conn->reverse;
-    os_printf("TCP: %d received %d bytes\n", c->index, len);
+    os_printf("TCP: %d received %d bytes\n", c->hdr.index, len);
     if (!(c->flags & CONNECTION_RXFULL)) {
         if (len > SSCP_RX_BUFFER_MAX)
             len = SSCP_RX_BUFFER_MAX;
@@ -206,11 +150,73 @@ static void ICACHE_FLASH_ATTR tcp_recon_cb(void *arg, sint8 errType)
     sscp_sendResponse("E,%d", SSCP_ERROR_DISCONNECTED);
 }
 
-void ICACHE_FLASH_ATTR tcp_disconnect(sscp_connection *connection)
+static void ICACHE_FLASH_ATTR path_handler(sscp_hdr *hdr)
 {
+    sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+}
+
+static void ICACHE_FLASH_ATTR tcp_sent_cb(void *arg)
+{
+    struct espconn *conn = (struct espconn *)arg;
+    sscp_connection *c = (sscp_connection *)conn->reverse;
+    c->flags &= ~CONNECTION_TXFULL;
+    sscp_sendResponse("S,0");
+}
+
+static void ICACHE_FLASH_ATTR send_cb(void *data, int count)
+{
+    sscp_connection *c = (sscp_connection *)data;
+    struct espconn *conn = &c->d.tcp.conn;
+    if (espconn_send(conn, (uint8 *)c->txBuffer, count) != ESPCONN_OK) {
+        c->flags &= ~CONNECTION_TXFULL;
+        sscp_sendResponse("E,%d", SSCP_ERROR_SEND_FAILED);
+    }
+}
+
+static void ICACHE_FLASH_ATTR send_handler(sscp_hdr *hdr, int size)
+{
+    sscp_connection *c = (sscp_connection *)hdr;
+    
+    if (c->d.tcp.state != TCP_STATE_CONNECTED) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_STATE);
+        return;
+    }
+    
+    if (size == 0)
+        sscp_sendResponse("S,0");
+    else {
+        // response is sent by tcp_sent_cb
+        sscp_capturePayload(c->txBuffer, size, send_cb, c);
+        c->flags |= CONNECTION_TXFULL;
+    }
+}
+
+static void ICACHE_FLASH_ATTR recv_handler(sscp_hdr *hdr, int size)
+{
+    sscp_connection *connection = (sscp_connection *)hdr;
+    
+    if (!(connection->flags & CONNECTION_RXFULL)) {
+        sscp_sendResponse("S,0");
+        return;
+    }
+
+    if (connection->rxIndex + size > connection->rxCount)
+        size = connection->rxCount - connection->rxIndex;
+
+    sscp_sendResponse("S,%d", size);
+    if (size > 0) {
+        sscp_sendPayload(connection->rxBuffer + connection->rxIndex, size);
+        connection->rxIndex += size;
+    }
+    
+    if (connection->rxIndex >= connection->rxCount)
+        connection->flags &= ~CONNECTION_RXFULL;
+}
+
+static void ICACHE_FLASH_ATTR close_handler(sscp_hdr *hdr)
+{
+    sscp_connection *connection = (sscp_connection *)hdr;
     struct espconn *conn = &connection->d.tcp.conn;
     if (conn)
         espconn_disconnect(conn);
-    sscp_free_connection(connection);
 }
-

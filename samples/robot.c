@@ -31,8 +31,12 @@ void init_robot(void);
 int process_robot_command(int whichWay);            
 void set_robot_speed(int left, int right);
 
+#define LONG_REPLY  "This is a very long reply that should be broken into multiple chunks to test REPLY followed by SEND.\r\n"
+
 int main(void)
 {    
+    int listenChan;
+    
     // Close default same-cog terminal
     simpleterm_close();                         
 
@@ -58,8 +62,8 @@ int main(void)
     nrequest(SSCP_TKN_SET, "cmd-pause-time,5");
     waitFor(SSCP_PREFIX "=S,0\r");
 
-    request("LISTEN:0,/robot*");
-    waitFor(SSCP_PREFIX "=S,0\r");
+    request("LISTEN:HTTP,/robot*");
+    waitFor(SSCP_PREFIX "=S,^d\r", &listenChan);
     
     for (;;) {
         char url[128], arg[128];
@@ -78,18 +82,16 @@ int main(void)
             waitFor(SSCP_PREFIX "=S,^s\r", url, sizeof(url));
             dprint(debug, "%d: path '%s'\n", chan, url);
             if (strcmp(url, "/robot") == 0) {
-                request("POSTARG:%d,gto", chan);
+                request("ARG:%d,gto", chan);
                 waitFor(SSCP_PREFIX "=S,^s\r", arg, sizeof(arg));
                 dprint(debug, "gto='%s'\n", arg);
                 if (process_robot_command(arg[0]) != 0)
                     dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
-                reply(chan, 200, "OK");
-                waitFor(SSCP_PREFIX "=S,0\r");
+                reply(chan, 200, "");
             }
             else {
                 dprint(debug, "Unknown POST URL\n");
                 reply(chan, 404, "unknown");
-                waitFor(SSCP_PREFIX "=S,0\r");
             }
             break;
         case 'G':
@@ -99,12 +101,13 @@ int main(void)
             if (strcmp(url, "/robot-ping") == 0) {
                 sprintf(arg, "%d", ping_cm(PING_PIN));
                 reply(chan, 200, arg);
-                waitFor(SSCP_PREFIX "=S,0\r");
+            }
+            else if (strcmp(url, "/robot-test") == 0) {
+                reply(chan, 200, LONG_REPLY);
             }
             else {
                 dprint(debug, "Unknown GET URL\n");
                 reply(chan, 404, "unknown");
-                waitFor(SSCP_PREFIX "=S,0\r");
             }
             break;
         case 'N':
