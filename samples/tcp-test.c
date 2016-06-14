@@ -87,9 +87,9 @@ Host: www-eng-x.llnl.gov\r\n\
                 }
             }
     
-            request("TCPDISCONNECT:%d", chan);
+            request("CLOSE:%d", chan);
             waitFor(SSCP_PREFIX "=^s\r", buf, sizeof(buf));
-            dprint(debug, "Disconnect returned '%s'\n", buf);
+            dprint(debug, "Close returned '%s'\n", buf);
         }
     
         waitcnt(CNT + CLKFREQ/4);

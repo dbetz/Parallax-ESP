@@ -25,16 +25,11 @@ void ICACHE_FLASH_ATTR cmds_do_join(int argc, char *argv[])
         sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
 }
 
-static void close_listener_handler(sscp_hdr *hdr)
-{
-    hdr->type = TYPE_UNUSED;
-}
-
 static sscp_dispatch listenerDispatch = {
     .path = NULL,
     .send = NULL,
     .recv = NULL,
-    .close = close_listener_handler
+    .close = NULL
 };
 
 // LISTEN,proto,chan
@@ -272,6 +267,7 @@ void ICACHE_FLASH_ATTR cmds_do_close(int argc, char *argv[])
     
     if (connection->hdr.dispatch->close)
         (*connection->hdr.dispatch->close)((sscp_hdr *)connection);
+    connection->hdr.type = TYPE_UNUSED;
         
     sscp_sendResponse("S,0");
 }

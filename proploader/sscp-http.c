@@ -79,13 +79,8 @@ static void ICACHE_FLASH_ATTR reply_cb(void *data, int count)
     
     httpdSend(connData, connection->txBuffer, count);
     httpdFlushSendBuffer(connData);
-    
-    connection->flags &= ~CONNECTION_TXFULL;
-    
-    if ((connection->txIndex += count) >= connection->txCount)
-        sscp_close_connection(connection);
 
-    sscp_sendResponse("S,%d", count);
+    connection->d.http.count = count;
 }
 
 // REPLY,chan,code[,payload-size]
@@ -257,5 +252,5 @@ static void ICACHE_FLASH_ATTR close_handler(sscp_hdr *hdr)
     sscp_connection *connection = (sscp_connection *)hdr;
     HttpdConnData *connData = connection->d.http.conn;
     if (connData)
-        httpdCgiIsDone(connData);
+        connData->cgi = NULL;
 }

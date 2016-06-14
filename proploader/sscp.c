@@ -6,7 +6,7 @@
 
 //#define DUMP_CMDS
 //#define DUMP_ARGS
-#define DUMP_FILTER
+//#define DUMP_FILTER
 //#define DUMP_OUTOFBAND
 
 #define SSCP_BUFFER_MAX     128
@@ -19,6 +19,7 @@ static int sscp_inside;
 static int sscp_length;
 
 int sscp_start = SSCP_TKN_START;
+static int sscp_processing;
 static char *sscp_payload;
 static int sscp_payload_length;
 static int sscp_payload_remaining;
@@ -51,6 +52,7 @@ void ICACHE_FLASH_ATTR sscp_init(void)
         sscp_connections[i].hdr.index = SSCP_LISTENER_MAX + i;
     
     sscp_start = SSCP_TKN_START;
+    sscp_processing = 0;
     sscp_inside = 0;
     sscp_length = 0;
     sscp_payload = NULL;
@@ -236,6 +238,8 @@ void ICACHE_FLASH_ATTR sscp_sendResponse(char *fmt, ...)
     else {
         uart_tx_buffer(UART0, buf, cnt);
     }
+    
+    sscp_processing = 0;
 }
 
 void ICACHE_FLASH_ATTR sscp_sendPayload(char *buf, int cnt)
@@ -353,6 +357,7 @@ static void ICACHE_FLASH_ATTR sscp_process(char *buf, short len)
         os_printf("argv[%d] = '%s'\n", i, argv[i]);
 #endif
 
+    sscp_processing = 1;
     os_printf("Calling '%s' handler\n", def->cmd);
     (*def->handler)(argc, argv);
 }
@@ -378,7 +383,7 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
                 sscp_payload = NULL;
                 (*sscp_payload_cb)(sscp_payload_data, sscp_payload_length);
             }
-            ++start;
+            start = p;
         }
         else if (sscp_inside) {
             if (*p == '\r') {
@@ -397,6 +402,11 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
         }
         else {
             if (*p == sscp_start) {
+                if (sscp_processing) {
+                    os_printf("SSCP: busy processing a command\n");
+                    ++p;
+                    continue;
+                }
                 if (p > start && outOfBand) {
 #ifdef DUMP_OUTOFBAND
                     dump("outOfBand", start, p - start);

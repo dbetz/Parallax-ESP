@@ -36,6 +36,7 @@ int main(void)
 {    
     int pingChannel = -1;
     int lastPingDistance = -1;
+    int chan;
     
     // Close default same-cog terminal
     simpleterm_close();                         
@@ -61,12 +62,13 @@ int main(void)
     request("SET:cmd-pause-time,5");
     waitFor(SSCP_PREFIX "=S,0\r");
 
-    request("WSLISTEN:0,/ws/robot");
-    waitFor(SSCP_PREFIX "=S,0\r");
+    request("LISTEN:WS,/ws/robot");
+    waitFor(SSCP_PREFIX "=S,^d\r", &chan);
     
     for (;;) {
         char url[128], arg[128];
         int type, chan, size, count, pingDistance;
+        char result;
         
         waitcnt(CNT + CLKFREQ/4);
 
@@ -99,7 +101,6 @@ int main(void)
             break;
         }
 
-        
         if (pingChannel >= 0) {
             if ((pingDistance = ping_cm(PING_PIN)) != lastPingDistance) {
                 char buf[128];
@@ -108,7 +109,8 @@ int main(void)
                 sprintf(buf, "%d", pingDistance);
                 request("SEND:%d,%d", pingChannel, strlen(buf));
                 requestPayload(buf, strlen(buf));
-                waitFor(SSCP_PREFIX "=S,0\r");
+                waitFor(SSCP_PREFIX "=^c,^i\r", &result, &count);
+                dprint(debug, " got %c %d\n", result, count);
             }
         }
     }
