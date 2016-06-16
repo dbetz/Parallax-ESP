@@ -96,8 +96,22 @@ void ICACHE_FLASH_ATTR cmds_do_poll(int argc, char *argv[])
         
         case TYPE_HTTP_CONNECTION:
             if (connection->flags & CONNECTION_TERM) {
+                HttpdConnData *connData = (HttpdConnData *)connection->d.http.conn;
                 connection->flags &= ~CONNECTION_TERM;
-                sscp_sendResponse("H,%d,0", connection->hdr.handle); // BUG! - need to remember 'G' or 'P'
+                if (connData) {
+                    switch (connData->requestType) {
+                    case HTTPD_METHOD_GET:
+                        sscp_sendResponse("G,%d,0", connection->hdr.handle);
+                        break;
+                    case HTTPD_METHOD_POST:
+                        sscp_sendResponse("P,%d,0", connection->hdr.handle);
+                        break;
+                    default:
+                        sscp_sendResponse("E,%d,0", SSCP_ERROR_INTERNAL_ERROR);
+                        break;
+                    }
+                    return;
+                }
             }
             else if (connection->flags & CONNECTION_INIT) {
                 HttpdConnData *connData = (HttpdConnData *)connection->d.http.conn;
@@ -118,7 +132,7 @@ void ICACHE_FLASH_ATTR cmds_do_poll(int argc, char *argv[])
                 }
             }
             else if (connection->flags & CONNECTION_RXFULL) {
-                sscp_sendResponse("D,%d,%d", connection->hdr.handle, connection->rxCount);
+                sscp_sendResponse("D,%d,%d", connection->hdr.handle, connection->listenerHandle);
                 return;
             }
             break;

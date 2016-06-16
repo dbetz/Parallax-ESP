@@ -175,6 +175,7 @@ sscp_connection ICACHE_FLASH_ATTR *sscp_allocate_connection(int type, sscp_dispa
             connection->hdr.type = type;
             connection->hdr.dispatch = dispatch;
             connection->flags = CONNECTION_INIT;
+            connection->listenerHandle = 0;
             connection->rxCount = 0;
             connection->rxIndex = 0;
             connection->txCount = 0;

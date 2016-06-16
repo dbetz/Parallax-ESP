@@ -22,16 +22,16 @@
 int main(void)
 {    
     char buf[1000];
-    int type, chan;
+    int type, handle;
     
     cmd_init(WIFI_RX, WIFI_TX, 31, 30);
 
     request("CONNECT:maker.ifttt.com,80");
-    waitFor(SSCP_PREFIX "=^c,^i\r", &type, &chan);
-    dprint(debug, "Connect returned '%c,%d'\n", type, chan);
+    waitFor(SSCP_PREFIX "=^c,^i\r", &type, &handle);
+    dprint(debug, "Connect returned '%c,%d'\n", type, handle);
 
     if (type == 'S') {
-        dprint(debug, "Connected on channel %d\n", chan);
+        dprint(debug, "Connected on handle %d\n", handle);
 
 #define REQ "\
 POST /trigger/post_tweet/with/key/" IfTTT_KEY " HTTP/1.1\r\n\
@@ -40,7 +40,7 @@ Connection: keep-alive\r\n\
 Accept: */*\r\n\
 \r\n"
 
-        request("SEND:%d,%d", chan, strlen(REQ));
+        request("SEND:%d,%d", handle, strlen(REQ));
         requestPayload(REQ, strlen(REQ));
         waitFor(SSCP_PREFIX "=^s\r", buf, sizeof(buf));
         dprint(debug, "Send returned '%s'\n", buf);
@@ -50,7 +50,7 @@ Accept: */*\r\n\
             while (--retries >= 0) {
                 int count, i;
 
-                request("RECV:%d,%d", chan, sizeof(buf));
+                request("RECV:%d,%d", handle, sizeof(buf));
                 waitFor(SSCP_PREFIX "=^c,^i\r", &type, &count);
                 collectPayload(buf, sizeof(buf), count);
                 if (count >= sizeof(buf))
@@ -68,7 +68,7 @@ Accept: */*\r\n\
             }
         }
 
-        request("TCPDISCONNECT:%d", chan);
+        request("CLOSE:%d", handle);
         waitFor(SSCP_PREFIX "=^s\r", buf, sizeof(buf));
         dprint(debug, "Disconnect returned '%s'\n", buf);
     }

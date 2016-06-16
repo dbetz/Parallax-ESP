@@ -26,18 +26,18 @@ int main(void)
     for (;;) {
 
         request("CONNECT:www-eng-x.llnl.gov,80");
-        waitFor(SSCP_PREFIX "=^c,^i\r", &type, &chan);
-        dprint(debug, "Connect returned '%c,%d'\n", type, chan);
+        waitFor(SSCP_PREFIX "=^c,^i\r", &type, &handle);
+        dprint(debug, "Connect returned '%c,%d'\n", type, handle);
     
         if (type == 'S') {
-            dprint(debug, "Connected on channel %d\n", chan);
+            dprint(debug, "Connected on handle %d\n", handle);
 
 #define REQ "\
 GET /documents/a_document.txt HTTP/1.1\r\n\
 Host: www-eng-x.llnl.gov\r\n\
 \r\n"
 
-            request("SEND:%d,%d", chan, strlen(REQ));
+            request("SEND:%d,%d", handle, strlen(REQ));
             requestPayload(REQ, strlen(REQ));
             waitFor(SSCP_PREFIX "=^s\r", buf, sizeof(buf));
             dprint(debug, "Send returned '%s'\n", buf);
@@ -47,7 +47,7 @@ Host: www-eng-x.llnl.gov\r\n\
                 while (--retries >= 0) {
                     int count, i;
 
-                    request("RECV:%d,%d", chan, sizeof(buf));
+                    request("RECV:%d,%d", handle, sizeof(buf));
                     waitFor(SSCP_PREFIX "=^c,^i\r", &type, &count);
                     collectPayload(buf, sizeof(buf), count);
                     dprint(debug, "Recv returned '%c,%d'\n", type, count);
@@ -65,7 +65,7 @@ Host: www-eng-x.llnl.gov\r\n\
                 }
             }
     
-            request("CLOSE:%d", chan);
+            request("CLOSE:%d", handle);
             waitFor(SSCP_PREFIX "=^s\r", buf, sizeof(buf));
             dprint(debug, "Close returned '%s'\n", buf);
         }

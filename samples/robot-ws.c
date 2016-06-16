@@ -47,7 +47,7 @@ int main(void)
     
     for (;;) {
         char url[128], arg[128];
-        int type, handle, listener, size, count, pingDistance;
+        int type, handle, listener, count, pingDistance;
         char result;
         
         waitcnt(CNT + CLKFREQ/4);
@@ -65,10 +65,7 @@ int main(void)
             pingHandle = handle;
             break;
         case 'D':
-            size = listener;
-            if ((count = size) > sizeof(arg))
-                count = sizeof(arg);
-            request("RECV:%d,%d", handle, count);
+            request("RECV:%d,%d", handle, sizeof(arg));
             waitFor(SSCP_PREFIX "=S,^i\r", &count);
             collectPayload(arg, sizeof(arg), count);
             dprint(debug, "%d: PAYLOAD %d\n", pingHandle, count);
