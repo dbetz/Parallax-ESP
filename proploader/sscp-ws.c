@@ -52,6 +52,7 @@ void ICACHE_FLASH_ATTR sscp_websocketConnect(Websock *ws)
         cgiWebsocketClose(ws, 0);
         return;
     }
+    connection->listenerHandle = listener->hdr.handle;
     connection->d.ws.ws = ws;
 
     os_printf("sscp_websocketConnect: url '%s'\n", ws->conn->url);

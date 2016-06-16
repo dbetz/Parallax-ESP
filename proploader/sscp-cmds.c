@@ -70,9 +70,9 @@ void ICACHE_FLASH_ATTR cmds_do_listen(int argc, char *argv[])
         return;
     }
 
-    os_printf("Listening for '%s' on %d\n", argv[2], listener->hdr.index);
+    os_printf("Listening for '%s' on %d\n", argv[2], listener->hdr.handle);
     
-    sscp_sendResponse("S,%d", listener->hdr.index);
+    sscp_sendResponse("S,%d", listener->hdr.handle);
 }
 
 // POLL
@@ -95,16 +95,20 @@ void ICACHE_FLASH_ATTR cmds_do_poll(int argc, char *argv[])
             break;
         
         case TYPE_HTTP_CONNECTION:
-            if (connection->flags & CONNECTION_INIT) {
+            if (connection->flags & CONNECTION_TERM) {
+                connection->flags &= ~CONNECTION_TERM;
+                sscp_sendResponse("H,%d,0", connection->hdr.handle); // BUG! - need to remember 'G' or 'P'
+            }
+            else if (connection->flags & CONNECTION_INIT) {
                 HttpdConnData *connData = (HttpdConnData *)connection->d.http.conn;
                 connection->flags &= ~CONNECTION_INIT;
                 if (connData) {
                     switch (connData->requestType) {
                     case HTTPD_METHOD_GET:
-                        sscp_sendResponse("G,%d,%d", connection->hdr.index, 0);
+                        sscp_sendResponse("G,%d,%d", connection->hdr.handle, connection->listenerHandle);
                         break;
                     case HTTPD_METHOD_POST:
-                        sscp_sendResponse("P,%d,%d", connection->hdr.index, connData->post->buff ? connData->post->len : 0);
+                        sscp_sendResponse("P,%d,%d", connection->hdr.handle, connection->listenerHandle);
                         break;
                     default:
                         sscp_sendResponse("E,%d,0", SSCP_ERROR_INTERNAL_ERROR);
@@ -114,32 +118,42 @@ void ICACHE_FLASH_ATTR cmds_do_poll(int argc, char *argv[])
                 }
             }
             else if (connection->flags & CONNECTION_RXFULL) {
-                sscp_sendResponse("D,%d,%d", connection->hdr.index, connection->rxCount);
+                sscp_sendResponse("D,%d,%d", connection->hdr.handle, connection->rxCount);
                 return;
             }
             break;
             
         case TYPE_WEBSOCKET_CONNECTION:
-            if (connection->flags & CONNECTION_INIT) {
+            if (connection->flags & CONNECTION_TERM) {
+                connection->flags &= ~CONNECTION_TERM;
+                sscp_sendResponse("W,%d,0", connection->hdr.handle);
+            }
+            else if (connection->flags & CONNECTION_INIT) {
                 Websock *ws = (Websock *)connection->d.ws.ws;
                 connection->flags &= ~CONNECTION_INIT;
                 if (ws) {
-                    sscp_sendResponse("W,%d,0", connection->hdr.index);
+                    sscp_sendResponse("W,%d,%d", connection->hdr.handle, connection->listenerHandle);
                     return;
                 }
             }
             else if (connection->flags & CONNECTION_RXFULL) {
-                sscp_sendResponse("D,%d,%d", connection->hdr.index, connection->rxCount);
+                sscp_sendResponse("D,%d,%d", connection->hdr.handle, connection->rxCount);
                 return;
             }
             break;
             
         case TYPE_TCP_CONNECTION:
-            if (connection->flags & CONNECTION_INIT) {
+            if (connection->flags & CONNECTION_TERM) {
+                connection->flags &= ~CONNECTION_TERM;
+                sscp_sendResponse("T,%d,0", connection->hdr.handle);
+            }
+            else if (connection->flags & CONNECTION_INIT) {
                 connection->flags &= ~CONNECTION_INIT;
+                sscp_sendResponse("T,%d,%d", connection->hdr.handle, connection->listenerHandle);
+                return;
             }
             else if (connection->flags & CONNECTION_RXFULL) {
-                sscp_sendResponse("D,%d,%d", connection->hdr.index, connection->rxCount);
+                sscp_sendResponse("D,%d,%d", connection->hdr.handle, connection->rxCount);
                 return;
             }
             break;
@@ -156,22 +170,44 @@ void ICACHE_FLASH_ATTR cmds_do_poll(int argc, char *argv[])
 // PATH,chan
 void ICACHE_FLASH_ATTR cmds_do_path(int argc, char *argv[])
 {
-    sscp_connection *connection;
+    sscp_hdr *hdr;
 
     if (argc != 2) {
         sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
     
-    if (!(connection = sscp_get_connection(atoi(argv[1])))) {
+    if (!(hdr = sscp_get_handle(atoi(argv[1])))) {
         sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
 
-    if (connection->hdr.dispatch->path)
-        (*connection->hdr.dispatch->path)((sscp_hdr *)connection);
+    if (hdr->dispatch->path)
+        (*hdr->dispatch->path)(hdr);
     else
         sscp_sendResponse("E,%d", SSCP_ERROR_UNIMPLEMENTED);
+}
+
+// CLOSE,chan
+void ICACHE_FLASH_ATTR cmds_do_close(int argc, char *argv[])
+{
+    sscp_hdr *hdr;
+
+    if (argc != 2) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
+        return;
+    }
+    
+    if (!(hdr = sscp_get_handle(atoi(argv[1])))) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+        return;
+    }
+
+    if (hdr->dispatch->close)
+        (*hdr->dispatch->close)(hdr);
+    hdr->type = TYPE_UNUSED;
+        
+    sscp_sendResponse("S,0");
 }
 
 // SEND,chan,count
@@ -190,11 +226,6 @@ void ICACHE_FLASH_ATTR cmds_do_send(int argc, char *argv[])
         return;
     }
     
-    if (connection->hdr.type == TYPE_UNUSED) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-        return;
-    }
-    
     if (connection->flags & CONNECTION_TXFULL) {
         sscp_sendResponse("E,%d", SSCP_ERROR_BUSY);
         return;
@@ -204,7 +235,7 @@ void ICACHE_FLASH_ATTR cmds_do_send(int argc, char *argv[])
         sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_SIZE);
         return;
     }
-os_printf("SEND %d %d\n", connection->hdr.index, count);
+os_printf("SEND %d %d\n", connection->hdr.handle, count);
     
     if (connection->hdr.dispatch->send)
         (*connection->hdr.dispatch->send)((sscp_hdr *)connection, count);
@@ -228,48 +259,16 @@ void ICACHE_FLASH_ATTR cmds_do_recv(int argc, char *argv[])
         return;
     }
     
-    if (connection->hdr.type == TYPE_UNUSED) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-        return;
-    }
-
     if ((count = atoi(argv[2])) < 0) {
         sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
-os_printf("RECV %d %d\n", connection->hdr.index, count);
+os_printf("RECV %d %d\n", connection->hdr.handle, count);
     
     if (connection->hdr.dispatch->recv)
         (*connection->hdr.dispatch->recv)((sscp_hdr *)connection, count);
     else
         sscp_sendResponse("E,%d", SSCP_ERROR_UNIMPLEMENTED);
-}
-
-// CLOSE,chan
-void ICACHE_FLASH_ATTR cmds_do_close(int argc, char *argv[])
-{
-    sscp_connection *connection;
-
-    if (argc != 2) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
-        return;
-    }
-    
-    if (!(connection = sscp_get_connection(atoi(argv[1])))) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-        return;
-    }
-
-    if (connection->hdr.type == TYPE_UNUSED) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-        return;
-    }
-    
-    if (connection->hdr.dispatch->close)
-        (*connection->hdr.dispatch->close)((sscp_hdr *)connection);
-    connection->hdr.type = TYPE_UNUSED;
-        
-    sscp_sendResponse("S,0");
 }
 
 int ICACHE_FLASH_ATTR cgiPropModuleInfo(HttpdConnData *connData)

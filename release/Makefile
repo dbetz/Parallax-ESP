@@ -23,13 +23,15 @@ release/samples/tcp-test.c \
 release/samples/tcp-test.side \
 release/samples/ifttt.c \
 release/samples/ifttt.side \
+release/samples/test.c \
+release/samples/test.side \
 release/samples/cmd.c \
 release/samples/cmd.h
 
 CP=cp
 
 # this rule doesn't seem to work but running build followed by zip does
-all:
+all:	clean
 	$(MAKE) build
 	$(MAKE) zip
 	cp esp-httpd.zip ~/$(ZIP)

@@ -8,13 +8,12 @@ static void tcp_recv_cb(void *arg, char *data, unsigned short len);
 static void tcp_sent_cb(void *arg);
 static void tcp_recon_cb(void *arg, sint8 errType);
 
-static void path_handler(sscp_hdr *hdr); 
 static void send_handler(sscp_hdr *hdr, int size);
 static void recv_handler(sscp_hdr *hdr, int size);
 static void close_handler(sscp_hdr *hdr);
 
 static sscp_dispatch tcpDispatch = {
-    .path = path_handler,
+    .path = NULL,
     .send = send_handler,
     .recv = recv_handler,
     .close = close_handler
@@ -115,14 +114,15 @@ static void ICACHE_FLASH_ATTR tcp_connect_cb(void *arg)
     espconn_regist_sentcb(conn, tcp_sent_cb);
 
     c->d.tcp.state = TCP_STATE_CONNECTED;
-    sscp_sendResponse("S,%d", c->hdr.index);
+    sscp_sendResponse("S,%d", c->hdr.handle);
 }
 
 static void ICACHE_FLASH_ATTR tcp_discon_cb(void *arg)
 {
     struct espconn *conn = (struct espconn *)arg;
     sscp_connection *c = (sscp_connection *)conn->reverse;
-    os_printf("TCP: %d disconnected\n", c->hdr.index);
+    c->flags |= CONNECTION_TERM;
+    os_printf("TCP: %d disconnected\n", c->hdr.handle);
     c->d.tcp.state = TCP_STATE_IDLE;
 }
 
@@ -130,7 +130,7 @@ static void ICACHE_FLASH_ATTR tcp_recv_cb(void *arg, char *data, unsigned short 
 {
     struct espconn *conn = (struct espconn *)arg;
     sscp_connection *c = (sscp_connection *)conn->reverse;
-    os_printf("TCP: %d received %d bytes\n", c->hdr.index, len);
+    os_printf("TCP: %d received %d bytes\n", c->hdr.handle, len);
     if (!(c->flags & CONNECTION_RXFULL)) {
         if (len > SSCP_RX_BUFFER_MAX)
             len = SSCP_RX_BUFFER_MAX;
@@ -148,11 +148,6 @@ static void ICACHE_FLASH_ATTR tcp_recon_cb(void *arg, sint8 errType)
 
     c->d.tcp.state = TCP_STATE_IDLE;
     sscp_sendResponse("E,%d", SSCP_ERROR_DISCONNECTED);
-}
-
-static void ICACHE_FLASH_ATTR path_handler(sscp_hdr *hdr)
-{
-    sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
 }
 
 static void ICACHE_FLASH_ATTR tcp_sent_cb(void *arg)

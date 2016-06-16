@@ -45,19 +45,13 @@ void ICACHE_FLASH_ATTR sscp_init(void)
     
     os_memset(&sscp_listeners, 0, sizeof(sscp_listeners));
     for (i = 0; i < SSCP_LISTENER_MAX; ++i)
-        sscp_listeners[i].hdr.index = i;
+        sscp_listeners[i].hdr.handle = i + 1;
     
     os_memset(&sscp_connections, 0, sizeof(sscp_connections));
     for (i = 0; i < SSCP_CONNECTION_MAX; ++i)
-        sscp_connections[i].hdr.index = SSCP_LISTENER_MAX + i;
+        sscp_connections[i].hdr.handle = SSCP_LISTENER_MAX + i + 1;
     
-    sscp_start = SSCP_TKN_START;
-    sscp_processing = 0;
-    sscp_inside = 0;
-    sscp_length = 0;
-    sscp_payload = NULL;
-    sscp_payload_length = 0;
-    sscp_payload_remaining = 0;
+    sscp_reset();
 }
 
 void ICACHE_FLASH_ATTR sscp_reset(void)
@@ -70,6 +64,7 @@ void ICACHE_FLASH_ATTR sscp_reset(void)
         sscp_close_connection(&sscp_connections[i]);
         
     sscp_start = SSCP_TKN_START;
+    sscp_processing = 0;
     sscp_inside = 0;
     sscp_length = 0;
     sscp_payload = NULL;
@@ -79,11 +74,7 @@ void ICACHE_FLASH_ATTR sscp_reset(void)
 
 void ICACHE_FLASH_ATTR sscp_enable(int enable)
 {
-    if (enable != flashConfig.sscp_enable) {
-        if (enable)
-            sscp_reset();
-        flashConfig.sscp_enable = enable;
-    }
+    flashConfig.sscp_enable = enable;
 }
 
 int ICACHE_FLASH_ATTR sscp_isEnabled(void)
@@ -100,11 +91,18 @@ void ICACHE_FLASH_ATTR sscp_capturePayload(char *buf, int length, void (*cb)(voi
     sscp_payload_data = data;
 }
 
-sscp_listener ICACHE_FLASH_ATTR *sscp_get_listener(int i)
+sscp_hdr ICACHE_FLASH_ATTR *sscp_get_handle(int i)
 {
-    if (i < 0 || i >= SSCP_LISTENER_MAX)
+    sscp_hdr *hdr;
+    
+    if (i >= 1 && i <= SSCP_LISTENER_MAX)
+        hdr = (sscp_hdr *)&sscp_listeners[i - 1];
+    else if (i >= SSCP_LISTENER_MAX + 1 && i <= SSCP_LISTENER_MAX + SSCP_CONNECTION_MAX)
+        hdr = (sscp_hdr *)&sscp_connections[i - SSCP_LISTENER_MAX - 1];
+    else
         return NULL;
-    return &sscp_listeners[i];
+
+    return hdr->type == TYPE_UNUSED ? NULL : hdr;
 }
 
 sscp_listener *sscp_allocate_listener(int type, char *path, sscp_dispatch *dispatch)
@@ -158,9 +156,14 @@ void ICACHE_FLASH_ATTR sscp_close_listener(sscp_listener *listener)
 
 sscp_connection ICACHE_FLASH_ATTR *sscp_get_connection(int i)
 {
-    if (i < SSCP_LISTENER_MAX || i >= SSCP_LISTENER_MAX + SSCP_CONNECTION_MAX)
+    sscp_connection *connection;
+    
+    if (i >= SSCP_LISTENER_MAX + 1 && i <= SSCP_LISTENER_MAX + SSCP_CONNECTION_MAX)
+        connection = &sscp_connections[i - SSCP_LISTENER_MAX - 1];
+    else
         return NULL;
-    return &sscp_connections[i - SSCP_LISTENER_MAX];
+
+    return connection->hdr.type == TYPE_UNUSED ? NULL : connection;
 }
 
 sscp_connection ICACHE_FLASH_ATTR *sscp_allocate_connection(int type, sscp_dispatch *dispatch)
@@ -186,10 +189,8 @@ sscp_connection ICACHE_FLASH_ATTR *sscp_allocate_connection(int type, sscp_dispa
 void ICACHE_FLASH_ATTR sscp_close_connection(sscp_connection *connection)
 {
     if (connection->hdr.type != TYPE_UNUSED) {
-os_printf("closing connection %d\n", connection->hdr.index);
         if (connection->hdr.dispatch->close)
             (*connection->hdr.dispatch->close)((sscp_hdr *)connection);
-os_printf(" done closing connection %d\n", connection->hdr.index);
         connection->hdr.type = TYPE_UNUSED;
     }
 }

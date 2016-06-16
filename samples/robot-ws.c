@@ -31,9 +31,9 @@ void set_robot_speed(int left, int right);
 
 int main(void)
 {    
-    int pingChannel = -1;
+    int pingHandle = 0;
     int lastPingDistance = -1;
-    int chan;
+    int handle;
     
     cmd_init(WIFI_RX, WIFI_TX, 31, 30);
     
@@ -43,34 +43,35 @@ int main(void)
     waitFor(SSCP_PREFIX "=S,0\r");
 
     request("LISTEN:WS,/ws/robot");
-    waitFor(SSCP_PREFIX "=S,^d\r", &chan);
+    waitFor(SSCP_PREFIX "=S,^d\r", &handle);
     
     for (;;) {
         char url[128], arg[128];
-        int type, chan, size, count, pingDistance;
+        int type, handle, listener, size, count, pingDistance;
         char result;
         
         waitcnt(CNT + CLKFREQ/4);
 
         request("POLL");
-        waitFor(SSCP_PREFIX "=^c,^i,^i\r", &type, &chan, &size);
+        waitFor(SSCP_PREFIX "=^c,^i,^i\r", &type, &handle, &listener);
         if (type != 'N')
-            dprint(debug, "Got %c: chan %d, size %d\n", type, chan, size);
+            dprint(debug, "Got %c: handle %d, listener %d\n", type, handle, listener);
         
         switch (type) {
         case 'W':
-            request("PATH:%d", chan);
+            request("PATH:%d", handle);
             waitFor(SSCP_PREFIX "=S,^s\r", url, sizeof(url));
-            dprint(debug, "%d: path '%s'\n", chan, url);
-            pingChannel = chan;
+            dprint(debug, "%d: path '%s'\n", handle, url);
+            pingHandle = handle;
             break;
         case 'D':
+            size = listener;
             if ((count = size) > sizeof(arg))
                 count = sizeof(arg);
-            request("RECV:%d,%d", pingChannel, count);
+            request("RECV:%d,%d", handle, count);
             waitFor(SSCP_PREFIX "=S,^i\r", &count);
             collectPayload(arg, sizeof(arg), count);
-            dprint(debug, "%d: PAYLOAD %d\n", pingChannel, count);
+            dprint(debug, "%d: PAYLOAD %d\n", pingHandle, count);
             if (process_robot_command(arg[0]) != 0)
                 dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
             break;
@@ -81,13 +82,13 @@ int main(void)
             break;
         }
 
-        if (pingChannel >= 0) {
+        if (pingHandle > 0) {
             if ((pingDistance = ping_cm(PING_PIN)) != lastPingDistance) {
                 char buf[128];
                 dprint(debug, "New PING))) distance: %d\n", pingDistance);
                 lastPingDistance = pingDistance;
                 sprintf(buf, "%d", pingDistance);
-                request("SEND:%d,%d", pingChannel, strlen(buf));
+                request("SEND:%d,%d", pingHandle, strlen(buf));
                 requestPayload(buf, strlen(buf));
                 waitFor(SSCP_PREFIX "=^c,^i\r", &result, &count);
                 dprint(debug, " got %c %d\n", result, count);

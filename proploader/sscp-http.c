@@ -136,16 +136,18 @@ os_printf("REPLY: %d, %d\n", connection->txCount, count);
 
 int ICACHE_FLASH_ATTR cgiSSCPHandleRequest(HttpdConnData *connData)
 {
+    sscp_connection *connection = (sscp_connection *)connData->cgiData;
     sscp_listener *listener;
-    sscp_connection *connection;
     
     // check for the cleanup call
-    if (connData->conn == NULL)
+    if (connData->conn == NULL) {
+        if (connection)
+            connection->flags |= CONNECTION_TERM;
         return HTTPD_CGI_DONE;
+    }
     
     // check to see if this request is already in progress
-    if (connData->cgiData) {
-        sscp_connection *connection = (sscp_connection *)connData->cgiData;
+    if (connection) {
         
 os_printf("  send complete\n");
         connection->flags &= ~CONNECTION_TXFULL;
@@ -171,10 +173,11 @@ os_printf("sscp: no connections available for %s request\n", connData->url);
         httpdSend(connData, "No connections available", -1);
         return HTTPD_CGI_DONE;
     }
+    connection->listenerHandle = listener->hdr.handle;
     connData->cgiData = connection;
     connection->d.http.conn = connData;
 
-os_printf("sscp: %d handling %s request\n", connection->hdr.index, connData->url);
+os_printf("sscp: %d handling %s request\n", connection->hdr.handle, connData->url);
         
     return HTTPD_CGI_MORE;
 }

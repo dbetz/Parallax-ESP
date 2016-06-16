@@ -32,7 +32,7 @@ void set_robot_speed(int left, int right);
 
 int main(void)
 {    
-    int listenChan;
+    int listenHandle;
     
     cmd_init(WIFI_RX, WIFI_TX, 31, 30);
 
@@ -43,51 +43,51 @@ int main(void)
     waitFor(SSCP_PREFIX "=S,0\r");
 
     request("LISTEN:HTTP,/robot*");
-    waitFor(SSCP_PREFIX "=S,^d\r", &listenChan);
+    waitFor(SSCP_PREFIX "=S,^d\r", &listenHandle);
     
     for (;;) {
         char url[128], arg[128];
-        int type, chan, size;
+        int type, handle, listener;
 
         waitcnt(CNT + CLKFREQ/4);
 
         request("POLL");
-        waitFor(SSCP_PREFIX "=^c,^i,^i\r", &type, &chan, &size);
+        waitFor(SSCP_PREFIX "=^c,^i,^i\r", &type, &handle, &listener);
         if (type != 'N')
-            dprint(debug, "Got %c: chan %d, size %d\n", type, chan, size);
+            dprint(debug, "Got %c: handle %d, listener %d\n", type, handle, listener);
         
         switch (type) {
         case 'P':
-            request("PATH:%d", chan);
+            request("PATH:%d", handle);
             waitFor(SSCP_PREFIX "=S,^s\r", url, sizeof(url));
-            dprint(debug, "%d: path '%s'\n", chan, url);
+            dprint(debug, "%d: path '%s'\n", handle, url);
             if (strcmp(url, "/robot") == 0) {
-                request("ARG:%d,gto", chan);
+                request("ARG:%d,gto", handle);
                 waitFor(SSCP_PREFIX "=S,^s\r", arg, sizeof(arg));
                 dprint(debug, "gto='%s'\n", arg);
                 if (process_robot_command(arg[0]) != 0)
                     dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
-                reply(chan, 200, "");
+                reply(handle, 200, "");
             }
             else {
                 dprint(debug, "Unknown POST URL\n");
-                reply(chan, 404, "unknown");
+                reply(handle, 404, "unknown");
             }
             break;
         case 'G':
-            request("PATH:%d", chan);
+            request("PATH:%d", handle);
             waitFor(SSCP_PREFIX "=S,^s\r", url, sizeof(url));
-            dprint(debug, "%d: path '%s'\n", chan, url);
+            dprint(debug, "%d: path '%s'\n", handle, url);
             if (strcmp(url, "/robot-ping") == 0) {
                 sprintf(arg, "%d", ping_cm(PING_PIN));
-                reply(chan, 200, arg);
+                reply(handle, 200, arg);
             }
             else if (strcmp(url, "/robot-test") == 0) {
-                reply(chan, 200, LONG_REPLY);
+                reply(handle, 200, LONG_REPLY);
             }
             else {
                 dprint(debug, "Unknown GET URL\n");
-                reply(chan, 404, "unknown");
+                reply(handle, 404, "unknown");
             }
             break;
         case 'N':

@@ -5,7 +5,7 @@
 #include "httpd.h"
 #include "cgiwebsocket.h"
 
-#define SSCP_LISTENER_MAX   2
+#define SSCP_LISTENER_MAX   4
 #define SSCP_PATH_MAX       32
 
 #define SSCP_CONNECTION_MAX 4
@@ -47,20 +47,20 @@ typedef struct sscp_listener sscp_listener;
 typedef struct sscp_connection sscp_connection;
 
 enum {
-    SSCP_ERROR_INVALID_REQUEST      = -1,
-    SSCP_ERROR_INVALID_ARGUMENT     = -2,
-    SSCP_ERROR_WRONG_ARGUMENT_COUNT = -3,
-    SSCP_ERROR_NO_FREE_LISTENER     = -4,
-    SSCP_ERROR_NO_FREE_CONNECTION   = -5,
-    SSCP_ERROR_LOOKUP_FAILED        = -6,
-    SSCP_ERROR_CONNECT_FAILED       = -7,
-    SSCP_ERROR_SEND_FAILED          = -8,
-    SSCP_ERROR_INVALID_STATE        = -9,
-    SSCP_ERROR_INVALID_SIZE         = -10,
-    SSCP_ERROR_DISCONNECTED         = -11,
-    SSCP_ERROR_UNIMPLEMENTED        = -12,
-    SSCP_ERROR_BUSY                 = -13,
-    SSCP_ERROR_INTERNAL_ERROR       = -14
+    SSCP_ERROR_INVALID_REQUEST      = 1,
+    SSCP_ERROR_INVALID_ARGUMENT     = 2,
+    SSCP_ERROR_WRONG_ARGUMENT_COUNT = 3,
+    SSCP_ERROR_NO_FREE_LISTENER     = 4,
+    SSCP_ERROR_NO_FREE_CONNECTION   = 5,
+    SSCP_ERROR_LOOKUP_FAILED        = 6,
+    SSCP_ERROR_CONNECT_FAILED       = 7,
+    SSCP_ERROR_SEND_FAILED          = 8,
+    SSCP_ERROR_INVALID_STATE        = 9,
+    SSCP_ERROR_INVALID_SIZE         = 10,
+    SSCP_ERROR_DISCONNECTED         = 11,
+    SSCP_ERROR_UNIMPLEMENTED        = 12,
+    SSCP_ERROR_BUSY                 = 13,
+    SSCP_ERROR_INTERNAL_ERROR       = 14
 };
 
 enum {
@@ -82,7 +82,7 @@ typedef struct {
 
 struct sscp_hdr {
     int type;
-    int index;
+    int handle;
     sscp_dispatch *dispatch;
 };
 
@@ -93,8 +93,9 @@ struct sscp_listener {
 
 enum {
     CONNECTION_INIT         = 0x00000001,
-    CONNECTION_RXFULL       = 0x00000002,
-    CONNECTION_TXFULL       = 0x00000004
+    CONNECTION_TERM         = 0x00000002,
+    CONNECTION_RXFULL       = 0x00000004,
+    CONNECTION_TXFULL       = 0x00000008
 };
 
 enum {
@@ -106,6 +107,7 @@ enum {
 struct sscp_connection {
     sscp_hdr hdr;
     int flags;
+    int listenerHandle;
     union {
         struct {
             HttpdConnData *conn;
@@ -134,12 +136,13 @@ extern sscp_listener sscp_listeners[];
 extern sscp_connection sscp_connections[];
 
 void sscp_init(void);
+void sscp_reset(void);
 void sscp_enable(int enable);
 int sscp_isEnabled(void);
 void sscp_capturePayload(char *buf, int length, void (*cb)(void *data, int count), void *data);
 void sscp_filter(char *buf, short len, void (*outOfBand)(void *data, char *buf, short len), void *data);
 
-sscp_listener *sscp_get_listener(int i);
+sscp_hdr *sscp_get_handle(int i);
 sscp_listener *sscp_allocate_listener(int type, char *path, sscp_dispatch *dispatch);
 sscp_listener *sscp_find_listener(const char *path, int type);
 void sscp_close_listener(sscp_listener *listener);
