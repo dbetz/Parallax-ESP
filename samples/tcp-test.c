@@ -19,14 +19,14 @@
 int main(void)
 {    
     char buf[1000];
-    int chan, type;
+    int type, handle;
     
     cmd_init(WIFI_RX, WIFI_TX, 31, 30);
 
     for (;;) {
 
         request("CONNECT:www-eng-x.llnl.gov,80");
-        waitFor(SSCP_PREFIX "=^c,^i\r", &type, &handle);
+        waitFor(CMD_PREFIX "=^c,^i\r", &type, &handle);
         dprint(debug, "Connect returned '%c,%d'\n", type, handle);
     
         if (type == 'S') {
@@ -39,7 +39,7 @@ Host: www-eng-x.llnl.gov\r\n\
 
             request("SEND:%d,%d", handle, strlen(REQ));
             requestPayload(REQ, strlen(REQ));
-            waitFor(SSCP_PREFIX "=^s\r", buf, sizeof(buf));
+            waitFor(CMD_PREFIX "=^s\r", buf, sizeof(buf));
             dprint(debug, "Send returned '%s'\n", buf);
 
             if (buf[0] == 'S') {
@@ -48,7 +48,7 @@ Host: www-eng-x.llnl.gov\r\n\
                     int count, i;
 
                     request("RECV:%d,%d", handle, sizeof(buf));
-                    waitFor(SSCP_PREFIX "=^c,^i\r", &type, &count);
+                    waitFor(CMD_PREFIX "=^c,^i\r", &type, &count);
                     collectPayload(buf, sizeof(buf), count);
                     dprint(debug, "Recv returned '%c,%d'\n", type, count);
                     if (count >= sizeof(buf))
@@ -66,7 +66,7 @@ Host: www-eng-x.llnl.gov\r\n\
             }
     
             request("CLOSE:%d", handle);
-            waitFor(SSCP_PREFIX "=^s\r", buf, sizeof(buf));
+            waitFor(CMD_PREFIX "=^s\r", buf, sizeof(buf));
             dprint(debug, "Close returned '%s'\n", buf);
         }
     

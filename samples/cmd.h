@@ -1,33 +1,43 @@
-#ifndef __SSCP_CLIENT_H__
-#define __SSCP_CLIENT_H__
+#ifndef __CMD_H__
+#define __CMD_H__
 
 #include "fdserial.h"
 
-#define SSCP_PREFIX "\xFE"
-#define SSCP_START  0xFE
+#define CMD_PREFIX  "\xFE"
+#define CMD_START   0xFE
 
 enum {
-    SSCP_TKN_START              = 0xFE,
-    SSCP_TKN_INT8               = 0xFD,
-    SSCP_TKN_UINT8              = 0xFC,
-    SSCP_TKN_INT16              = 0xFB,
-    SSCP_TKN_UINT16             = 0xFA,
-    SSCP_TKN_INT32              = 0xF9,
-    SSCP_TKN_UINT32             = 0xF8,
+    CMD_TKN_START           = 0xFE,
+    CMD_TKN_INT8            = 0xFD,
+    CMD_TKN_UINT8           = 0xFC,
+    CMD_TKN_INT16           = 0xFB,
+    CMD_TKN_UINT16          = 0xFA,
+    CMD_TKN_INT32           = 0xF9,
+    CMD_TKN_UINT32          = 0xF8,
+    
+    CMD_TKN_HTTP            = 0xF7,
+    CMD_TKN_WS              = 0xF6,
+    CMD_TKN_TCP             = 0xF5,
+    CMD_TKN_STA             = 0xF4,
+    CMD_TKN_AP              = 0xF3,
+    CMD_TKN_STA_AP          = 0xF2,
+    
     // gap for more tokens
-    SSCP_TKN_JOIN               = 0xEF,
-    SSCP_TKN_CHECK              = 0xEE,
-    SSCP_TKN_SET                = 0xED,
-    SSCP_TKN_POLL               = 0xEC,
-    SSCP_TKN_PATH               = 0xEB,
-    SSCP_TKN_SEND               = 0xEA,
-    SSCP_TKN_RECV               = 0xE9,
-    SSCP_TKN_CLOSE              = 0xE8,
-    SSCP_TKN_LISTEN             = 0xE7,
-    SSCP_TKN_ARG                = 0xE6,
-    SSCP_TKN_REPLY              = 0xE5,
-    SSCP_TKN_CONNECT            = 0xE4,
-    SSCP_MIN_TOKEN              = 0x80
+    
+    CMD_TKN_JOIN            = 0xEF,
+    CMD_TKN_CHECK           = 0xEE,
+    CMD_TKN_SET             = 0xED,
+    CMD_TKN_POLL            = 0xEC,
+    CMD_TKN_PATH            = 0xEB,
+    CMD_TKN_SEND            = 0xEA,
+    CMD_TKN_RECV            = 0xE9,
+    CMD_TKN_CLOSE           = 0xE8,
+    CMD_TKN_LISTEN          = 0xE7,
+    CMD_TKN_ARG             = 0xE6,
+    CMD_TKN_REPLY           = 0xE5,
+    CMD_TKN_CONNECT         = 0xE4,
+    
+    CMD_MIN_TOKEN           = 0x80
 };
 
 extern fdserial *wifi;

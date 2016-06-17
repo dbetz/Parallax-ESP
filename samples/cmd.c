@@ -13,7 +13,7 @@ void cmd_init(int wifi_rx, int wifi_tx, int debug_rx, int debug_tx)
     // Set to open collector instead of driven
     wifi = fdserial_open(wifi_rx, wifi_tx, 0b0100, 115200);
 
-    // Generate a BREAK to enter SSCP command mode
+    // Generate a BREAK to enter CMD command mode
     pause(10);
     low(wifi_tx);
     pause(1);
@@ -35,7 +35,7 @@ void request(char *fmt, ...)
     vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
     
-    fdserial_txChar(wifi, SSCP_START);
+    fdserial_txChar(wifi, CMD_START);
     while (*p != '\0')
         fdserial_txChar(wifi, *p++);
     fdserial_txChar(wifi, '\r');
@@ -50,7 +50,7 @@ void nrequest(int token, char *fmt, ...)
     vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
     
-    fdserial_txChar(wifi, SSCP_START);
+    fdserial_txChar(wifi, CMD_START);
     fdserial_txChar(wifi, token);
     while (*p != '\0')
         fdserial_txChar(wifi, *p++);
@@ -94,7 +94,7 @@ dprint(debug, "SEND %d, %d\n", chan, count);
             payload += count;
             remaining -= count;
             if (remaining > 0) {
-                waitFor(SSCP_PREFIX "=^c,^d\r", &result, &count);
+                waitFor(CMD_PREFIX "=^c,^d\r", &result, &count);
 dprint(debug, " ret %c %d\n", result, count);
                 if (result != 'S') {
 dprint(debug, " failed with %d\n", count);
@@ -104,7 +104,7 @@ dprint(debug, " failed with %d\n", count);
         }
     }
     
-    waitFor(SSCP_PREFIX "=^c,^d\r", &result, &count);
+    waitFor(CMD_PREFIX "=^c,^d\r", &result, &count);
 dprint(debug, " final ret %c %d\n", result, count);
     
     return payloadLength;

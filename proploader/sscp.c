@@ -14,8 +14,18 @@
 
 #define SSCP_DEF_ENABLE     0
 
-static uint8_t sscp_buffer[SSCP_BUFFER_MAX + 1];
-static int sscp_inside;
+enum {
+    STATE_IDLE,
+    STATE_PARSING,
+    STATE_COLLECTING,
+    STATE_PAYLOAD
+};
+
+static int sscp_state;
+static int sscp_collect;
+static int sscp_token;
+static int sscp_separator;
+static uint8_t sscp_buffer[SSCP_BUFFER_MAX + 16]; // add some extra space for os_sprintf of numeric tokens
 static int sscp_length;
 
 int sscp_start = SSCP_TKN_START;
@@ -65,7 +75,8 @@ void ICACHE_FLASH_ATTR sscp_reset(void)
         
     sscp_start = SSCP_TKN_START;
     sscp_processing = 0;
-    sscp_inside = 0;
+    sscp_state = STATE_IDLE;
+    sscp_separator = -1;
     sscp_length = 0;
     sscp_payload = NULL;
     sscp_payload_length = 0;
@@ -89,6 +100,7 @@ void ICACHE_FLASH_ATTR sscp_capturePayload(char *buf, int length, void (*cb)(voi
     sscp_payload_remaining = length;
     sscp_payload_cb = cb;
     sscp_payload_data = data;
+    sscp_state = STATE_PAYLOAD;
 }
 
 sscp_hdr ICACHE_FLASH_ATTR *sscp_get_handle(int i)
@@ -251,40 +263,31 @@ void ICACHE_FLASH_ATTR sscp_sendPayload(char *buf, int cnt)
 
 typedef struct {
     char *cmd;
-    int token;
     void (*handler)(int argc, char *argv[]);
 } cmd_def;
 static cmd_def cmds[] = {
-{   "",                 -1,                     cmds_do_nothing     },
-{   "JOIN",             SSCP_TKN_JOIN,          cmds_do_join        },
-{   "CHECK",            SSCP_TKN_CHECK,         cmds_do_get         },
-{   "SET",              SSCP_TKN_SET,           cmds_do_set         },
-{   "LISTEN",           SSCP_TKN_LISTEN,        cmds_do_listen      },
-{   "POLL",             SSCP_TKN_POLL,          cmds_do_poll        },
-{   "PATH",             SSCP_TKN_PATH,          cmds_do_path        },
-{   "SEND",             SSCP_TKN_SEND,          cmds_do_send        },
-{   "RECV",             SSCP_TKN_RECV,          cmds_do_recv        },
-{   "CLOSE",            SSCP_TKN_CLOSE,         cmds_do_close       },
-{   "ARG",              SSCP_TKN_ARG,           http_do_arg         },
-{   "REPLY",            SSCP_TKN_REPLY,         http_do_reply       },
-{   "CONNECT",          SSCP_TKN_CONNECT,       tcp_do_connect      },
-{   NULL,               0,                      NULL                }
+{   "",                 cmds_do_nothing     },
+{   "JOIN",             cmds_do_join        },
+{   "CHECK",            cmds_do_get         },
+{   "SET",              cmds_do_set         },
+{   "LISTEN",           cmds_do_listen      },
+{   "POLL",             cmds_do_poll        },
+{   "PATH",             cmds_do_path        },
+{   "SEND",             cmds_do_send        },
+{   "RECV",             cmds_do_recv        },
+{   "CLOSE",            cmds_do_close       },
+{   "ARG",              http_do_arg         },
+{   "REPLY",            http_do_reply       },
+{   "CONNECT",          tcp_do_connect      },
+{   NULL,               NULL                }
 };
 
-/*
-    case SSCP_TKN_INT8:
-    case SSCP_TKN_UINT8:
-    case SSCP_TKN_INT16:
-    case SSCP_TKN_UINT16:
-    case SSCP_TKN_INT32:
-    case SSCP_TKN_UINT32:
-*/
 static void ICACHE_FLASH_ATTR sscp_process(char *buf, short len)
 {
-    char *argv[SSCP_MAX_ARGS + 1], tknbuf[2];
+    char *argv[SSCP_MAX_ARGS + 1];
     cmd_def *def = NULL;
-    int argc, tkn, i;
     char *p, *next;
+    int argc, i;
     
 #ifdef DUMP_CMDS
     dump("sscp", (uint8_t *)buf, len);
@@ -292,51 +295,26 @@ static void ICACHE_FLASH_ATTR sscp_process(char *buf, short len)
     
     p = buf;
     argc = 0;
-    tkn = *(uint8_t *)p;
     
-    if (tkn >= SSCP_MIN_TOKEN) {
+    if (!(next = os_strchr(p, ':')))
+        next = &p[os_strlen(p)];
+    else
+        *next++ = '\0';
+                
+    argv[argc++] = p;
+    p = next;
     
-        for (i = 0; cmds[i].cmd; ++i) {
-            if (tkn == cmds[i].token) {
-                def = &cmds[i];
-                break;
-            }
+    for (i = 0; cmds[i].cmd; ++i) {
+        if (strcmp(argv[0], cmds[i].cmd) == 0) {
+            def = &cmds[i];
+            break;
         }
-        
-        if (!def) {
-            os_printf("No handler for 0x%02x\n", tkn);
-            sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_REQUEST);
-            return;
-        }
-        
-        tknbuf[0] = tkn; // this may be needed to choose between terse and verbose responses
-        tknbuf[1] = '\0';
-        argv[argc++] = tknbuf;
-        ++p;
     }
     
-    else {
-    
-        if (!(next = os_strchr(p, ':')))
-            next = &p[os_strlen(p)];
-        else
-            *next++ = '\0';
-                    
-        argv[argc++] = p;
-        p = next;
-        
-        for (i = 0; cmds[i].cmd; ++i) {
-            if (strcmp(argv[0], cmds[i].cmd) == 0) {
-                def = &cmds[i];
-                break;
-            }
-        }
-        
-        if (!def) {
-            os_printf("No handler for '%s'\n", argv[0]);
-            sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_REQUEST);
-            return;
-        }
+    if (!def) {
+        os_printf("No handler for '%s'\n", argv[0]);
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_REQUEST);
+        return;
     }
     
     if (*p) {
@@ -379,43 +357,23 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
 #endif
 
     while (--len >= 0) {
-        if (sscp_payload) {
-            *sscp_payload++ = *p++;
-            if (--sscp_payload_remaining == 0) {
-                sscp_payload = NULL;
-                (*sscp_payload_cb)(sscp_payload_data, sscp_payload_length);
-            }
-            start = p;
-        }
-        else if (sscp_inside) {
-            if (*p == '\r') {
-                sscp_buffer[sscp_length] = '\0';
-                sscp_process((char *)sscp_buffer, sscp_length);
-                sscp_inside = 0;
-                start = ++p;
-            }
-            else if (sscp_length < SSCP_BUFFER_MAX)
-                sscp_buffer[sscp_length++] = *p++;
-            else {
-                os_printf("SSCP: command too long\n");
-                sscp_inside = 0;
-                start = p++;
-            }
-        }
-        else {
+        switch (sscp_state) {
+        case STATE_IDLE:
             if (*p == sscp_start) {
                 if (sscp_processing) {
                     os_printf("SSCP: busy processing a command\n");
                     ++p;
                     continue;
                 }
-                if (p > start && outOfBand) {
+                if (p > start) {
 #ifdef DUMP_OUTOFBAND
                     dump("outOfBand", start, p - start);
 #endif
-                    (*outOfBand)(data, (char *)start, p - start);
+                    if (outOfBand)
+                        (*outOfBand)(data, (char *)start, p - start);
                 }
-                sscp_inside = 1;
+                sscp_state = STATE_PARSING;
+                sscp_separator = -1;
                 sscp_length = 0;
                 ++p;
             }
@@ -423,13 +381,204 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
                 // just accumulate data outside of a command
                 ++p;
             }
+            break;
+        case STATE_PARSING:
+            if (*p != '\r' && sscp_separator != -1) {
+                if (sscp_length < SSCP_BUFFER_MAX) {
+                    sscp_buffer[sscp_length++] = sscp_separator;
+                    sscp_separator = -1;
+                }
+                else {
+                    os_printf("SSCP: command too long\n");
+                    sscp_state = STATE_IDLE;
+                    start = p++;
+                }
+            }
+            switch (*p) {
+            case '\r':
+                sscp_buffer[sscp_length] = '\0';
+                sscp_state = STATE_IDLE; // could be changed to STATE_COLLECTING by handler
+                sscp_process((char *)sscp_buffer, sscp_length);
+                start = ++p;
+                break;
+            case SSCP_TKN_INT8:
+            case SSCP_TKN_UINT8:
+                sscp_token = *p++;
+                sscp_state = STATE_COLLECTING;
+                sscp_collect = 1;
+                break;
+            case SSCP_TKN_INT16:
+            case SSCP_TKN_UINT16:
+                sscp_token = *p++;
+                sscp_state = STATE_COLLECTING;
+                sscp_collect = 2;
+                break;
+            case SSCP_TKN_INT32:
+            case SSCP_TKN_UINT32:
+                sscp_token = *p++;
+                sscp_state = STATE_COLLECTING;
+                sscp_collect = 4;
+                break;
+            case SSCP_TKN_JOIN:
+            case SSCP_TKN_CHECK:
+            case SSCP_TKN_SET:
+            case SSCP_TKN_POLL:
+            case SSCP_TKN_PATH:
+            case SSCP_TKN_SEND:
+            case SSCP_TKN_RECV:
+            case SSCP_TKN_CLOSE:
+            case SSCP_TKN_LISTEN:
+            case SSCP_TKN_ARG:
+            case SSCP_TKN_REPLY:
+            case SSCP_TKN_CONNECT:
+            case SSCP_TKN_HTTP:
+            case SSCP_TKN_WS:
+            case SSCP_TKN_TCP:
+            case SSCP_TKN_STA:
+            case SSCP_TKN_AP:
+            case SSCP_TKN_STA_AP:
+                {
+                    int length, sep;
+                    char *name;
+                    switch (*p++) {
+                    case SSCP_TKN_JOIN:     name = "HTTP";    sep = ':'; break;
+                    case SSCP_TKN_CHECK:    name = "CHECK";   sep = ':'; break;
+                    case SSCP_TKN_SET:      name = "SET";     sep = ':'; break;
+                    case SSCP_TKN_POLL:     name = "POLL";    sep = ':'; break;
+                    case SSCP_TKN_PATH:     name = "PATH";    sep = ':'; break;
+                    case SSCP_TKN_SEND:     name = "SEND";    sep = ':'; break;
+                    case SSCP_TKN_RECV:     name = "RECV";    sep = ':'; break;
+                    case SSCP_TKN_CLOSE:    name = "CLOSE";   sep = ':'; break;
+                    case SSCP_TKN_LISTEN:   name = "LISTEN";  sep = ':'; break;
+                    case SSCP_TKN_ARG:      name = "ARG";     sep = ':'; break;
+                    case SSCP_TKN_REPLY:    name = "REPLY";   sep = ':'; break;
+                    case SSCP_TKN_CONNECT:  name = "CONNECT"; sep = ':'; break;
+                    case SSCP_TKN_HTTP:     name = "HTTP";    sep = ','; break;
+                    case SSCP_TKN_WS:       name = "WS";      sep = ','; break;
+                    case SSCP_TKN_TCP:      name = "TCP";     sep = ','; break;
+                    case SSCP_TKN_STA:      name = "STA";     sep = ','; break;
+                    case SSCP_TKN_AP:       name = "AP";      sep = ','; break;
+                    case SSCP_TKN_STA_AP:   name = "STA+AP";  sep = ','; break;
+                    default:
+                        // internal error
+                        name = "";
+                        sep = -1;
+                        break;
+                    }
+                    length = os_strlen(name);
+                    if (sscp_length + length < SSCP_BUFFER_MAX) {
+                        os_strcpy((char *)&sscp_buffer[sscp_length], name);
+                        sscp_length += length;
+                        sscp_separator = sep;
+                    }
+                    else {
+                        os_printf("SSCP: command too long\n");
+                        sscp_state = STATE_IDLE;
+                        start = p++;
+                    }
+                }
+                break;
+            default:
+                if (sscp_length < SSCP_BUFFER_MAX)
+                    sscp_buffer[sscp_length++] = *p++;
+                else {
+                    os_printf("SSCP: command too long\n");
+                    sscp_state = STATE_IDLE;
+                    start = p++;
+                }
+                break;
+            }
+            break;
+        case STATE_COLLECTING:
+            if (sscp_length < SSCP_BUFFER_MAX)
+                sscp_buffer[sscp_length++] = *p++;
+            else {
+                os_printf("SSCP: command too long\n");
+                sscp_state = STATE_IDLE;
+                start = p++;
+                continue;
+            }
+            if (--sscp_collect == 0) {
+                switch (sscp_token) {
+                case SSCP_TKN_INT8:
+                    {
+                        int8_t value = *(int8_t *)&sscp_buffer[sscp_length - 1];
+                        os_sprintf((char *)&sscp_buffer[sscp_length - 1], "%d", value);
+                    }
+                    break;
+                case SSCP_TKN_UINT8:
+                    {
+                        uint8_t value = *(uint8_t *)&sscp_buffer[sscp_length - 1];
+                        os_sprintf((char *)&sscp_buffer[sscp_length - 1], "%u", value);
+                    }
+                    break;
+                case SSCP_TKN_INT16:
+                    {
+                        int16_t value = *(int8_t *)&sscp_buffer[sscp_length - 2] << 8;
+                        value|= *(uint8_t *)&sscp_buffer[sscp_length - 1];
+                        os_sprintf((char *)&sscp_buffer[sscp_length - 2], "%d", value);
+                    }
+                    break;
+                case SSCP_TKN_UINT16:
+                    {
+                        uint16_t value = *(uint8_t *)&sscp_buffer[sscp_length - 1] << 8;
+                        value |= *(uint8_t *)&sscp_buffer[sscp_length - 2];
+                        os_sprintf((char *)&sscp_buffer[sscp_length - 2], "%u", value);
+                    }
+                    break;
+                case SSCP_TKN_INT32:
+                    {
+                        int32_t value = *(int8_t *)&sscp_buffer[sscp_length - 1] << 24;
+                        value |= *(uint8_t *)&sscp_buffer[sscp_length - 2] << 16;
+                        value |= *(uint8_t *)&sscp_buffer[sscp_length - 3] << 8;
+                        value |= *(uint8_t *)&sscp_buffer[sscp_length - 4];
+                        os_sprintf((char *)&sscp_buffer[sscp_length - 4], "%ld", value);
+                    }
+                    break;
+                case SSCP_TKN_UINT32:
+                    {
+                        uint32_t value = *(uint8_t *)&sscp_buffer[sscp_length - 1] << 24;
+                        value |= *(uint8_t *)&sscp_buffer[sscp_length - 2] << 16;
+                        value |= *(uint8_t *)&sscp_buffer[sscp_length - 3] << 8;
+                        value |= *(uint8_t *)&sscp_buffer[sscp_length - 4];
+                        os_sprintf((char *)&sscp_buffer[sscp_length - 4], "%lu", value);
+                    }
+                    break;
+                default:
+                    // internal error
+                    break;
+                }
+                sscp_length = os_strlen((char *)sscp_buffer);
+                if (sscp_length > SSCP_BUFFER_MAX) {
+                    os_printf("SSCP: command too long\n");
+                    sscp_state = STATE_IDLE;
+                    start = p;
+                    continue;
+                }
+                sscp_state = STATE_PARSING;
+                sscp_separator = ',';
+            }
+            break;
+        case STATE_PAYLOAD:
+            *sscp_payload++ = *p++;
+            if (--sscp_payload_remaining == 0) {
+                (*sscp_payload_cb)(sscp_payload_data, sscp_payload_length);
+                sscp_state = STATE_IDLE;
+            }
+            start = p;
+            break;
+        default:
+            // internal error
+            break;
         }
     }
-    if (!sscp_inside && p > start && outOfBand) {
+    
+    if (sscp_state == STATE_IDLE && p > start) {
 #ifdef DUMP_OUTOFBAND
         dump("outOfBand", start, p - start);
 #endif
-        (*outOfBand)(data, (char *)start, p - start);
+        if (outOfBand)
+            (*outOfBand)(data, (char *)start, p - start);
     }
 }
 

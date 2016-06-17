@@ -17,13 +17,19 @@
 enum {
     SSCP_TKN_START              = 0xFE,
     
-    // these tokens are not yet implemented
     SSCP_TKN_INT8               = 0xFD,
     SSCP_TKN_UINT8              = 0xFC,
     SSCP_TKN_INT16              = 0xFB,
     SSCP_TKN_UINT16             = 0xFA,
     SSCP_TKN_INT32              = 0xF9,
     SSCP_TKN_UINT32             = 0xF8,
+    
+    SSCP_TKN_HTTP               = 0xF7,
+    SSCP_TKN_WS                 = 0xF6,
+    SSCP_TKN_TCP                = 0xF5,
+    SSCP_TKN_STA                = 0xF4,
+    SSCP_TKN_AP                 = 0xF3,
+    SSCP_TKN_STA_AP             = 0xF2,
     
     // gap for more tokens
     
@@ -39,6 +45,7 @@ enum {
     SSCP_TKN_ARG                = 0xE6,
     SSCP_TKN_REPLY              = 0xE5,
     SSCP_TKN_CONNECT            = 0xE4,
+    
     SSCP_MIN_TOKEN              = 0x80
 };
 

@@ -29,13 +29,13 @@ static int getWiFiMode(void *data, char *value)
 {
     switch (wifi_get_opmode()) {
     case STATION_MODE:
-        os_strcpy(value, "Station");
+        os_strcpy(value, "STA");
         break;
     case SOFTAP_MODE:
-        os_strcpy(value, "SoftAP");
+        os_strcpy(value, "AP");
         break;
     case STATIONAP_MODE:
-        os_strcpy(value, "Station+SoftAP");
+        os_strcpy(value, "STA+AP");
         break;
     default:
         return -1;
@@ -47,11 +47,11 @@ static int setWiFiMode(void *data, char *value)
 {
     int mode;
     
-    if (os_strcmp(value, "Station") == 0)
+    if (os_strcmp(value, "STA") == 0)
         mode = STATION_MODE;
-    else if (os_strcmp(value, "SoftAP") == 0)
+    else if (os_strcmp(value, "AP") == 0)
         mode = SOFTAP_MODE;
-    else if (os_strcmp(value, "Station+SoftAP") == 0)
+    else if (os_strcmp(value, "STA+AP") == 0)
         mode = STATIONAP_MODE;
     else if (isdigit((int)value[0]))
         mode = atoi(value);

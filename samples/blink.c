@@ -21,7 +21,7 @@ int main(void)
     for (;;) {
         waitcnt(CNT + CLKFREQ/2);
         request("SET:pin-gpio15,%d", blink);
-        waitFor(SSCP_PREFIX "=S,0\r");
+        waitFor(CMD_PREFIX "=S,0\r");
         blink = !blink;
     }
     
