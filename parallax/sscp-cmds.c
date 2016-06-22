@@ -97,7 +97,7 @@ void ICACHE_FLASH_ATTR cmds_do_poll(int argc, char *argv[])
         case TYPE_HTTP_CONNECTION:
             if (connection->flags & CONNECTION_TERM) {
                 HttpdConnData *connData = (HttpdConnData *)connection->d.http.conn;
-                connection->flags &= ~CONNECTION_TERM;
+                connection->flags = 0;
                 if (connData) {
                     switch (connData->requestType) {
                     case HTTPD_METHOD_GET:
