@@ -185,6 +185,39 @@ static int setSSCPEnable(void *data, char *value)
     return 0;
 }
 
+// the following four functions are from Espressif sample code
+
+void ICACHE_FLASH_ATTR gpio16_output_conf(void)
+{
+    WRITE_PERI_REG(PAD_XPD_DCDC_CONF,
+                   (READ_PERI_REG(PAD_XPD_DCDC_CONF) & 0xffffffbc) | (uint32)0x1);  // mux configuration for XPD_DCDC to output rtc_gpio0
+    WRITE_PERI_REG(RTC_GPIO_CONF,
+                   (READ_PERI_REG(RTC_GPIO_CONF) & (uint32)0xfffffffe) | (uint32)0x0);  //mux configuration for out enable
+    WRITE_PERI_REG(RTC_GPIO_ENABLE,
+                   (READ_PERI_REG(RTC_GPIO_ENABLE) & (uint32)0xfffffffe) | (uint32)0x1);    //out enable
+}
+
+void ICACHE_FLASH_ATTR gpio16_output_set(uint8 value)
+{
+    WRITE_PERI_REG(RTC_GPIO_OUT,
+                   (READ_PERI_REG(RTC_GPIO_OUT) & (uint32)0xfffffffe) | (uint32)(value & 1));
+}
+
+void ICACHE_FLASH_ATTR gpio16_input_conf(void)
+{
+    WRITE_PERI_REG(PAD_XPD_DCDC_CONF,
+                   (READ_PERI_REG(PAD_XPD_DCDC_CONF) & 0xffffffbc) | (uint32)0x1);  // mux configuration for XPD_DCDC and rtc_gpio0 connection
+    WRITE_PERI_REG(RTC_GPIO_CONF,
+                   (READ_PERI_REG(RTC_GPIO_CONF) & (uint32)0xfffffffe) | (uint32)0x0);  //mux configuration for out enable
+    WRITE_PERI_REG(RTC_GPIO_ENABLE,
+                   READ_PERI_REG(RTC_GPIO_ENABLE) & (uint32)0xfffffffe);    //out disable
+}
+
+uint8 ICACHE_FLASH_ATTR gpio16_input_get(void)
+{
+    return (uint8)(READ_PERI_REG(RTC_GPIO_IN_DATA) & 1);
+}
+
 enum {
     PIN_GPIO0 = 0,      // PGM
     PIN_GPIO1 = 1,      // UART RX
@@ -196,6 +229,7 @@ enum {
     PIN_GPIO13 = 13,    // CTS
     PIN_GPIO14 = 14,    // 
     PIN_GPIO15 = 15,    // RTS
+    PIN_GPIO16 = 16,
 };
 
 static int getPinHandler(void *data, char *value)
@@ -216,6 +250,10 @@ static int getPinHandler(void *data, char *value)
         makeGpio(pin);
         GPIO_DIS_OUTPUT(pin);
         ivalue = GPIO_INPUT_GET(pin);
+        break;
+    case PIN_GPIO16:
+        gpio16_input_conf();
+        ivalue = gpio_input_get();
         break;
     default:
         return -1;
@@ -241,6 +279,10 @@ static int setPinHandler(void *data, char *value)
         makeGpio(pin);
         os_printf("Setting pin %d to %d\n", pin, atoi(value));
         GPIO_OUTPUT_SET(pin, atoi(value));
+        break;
+    case PIN_GPIO16:
+        gpio16_output_conf();
+        gpio16_output_set(atoi(value));
         break;
     default:
         return -1;
