@@ -11,10 +11,6 @@ body {
   background-color: #EEEEEE;
   border: 2px solid #000000;
   padding: 20px;
-}
-
-#main,
-#logo {
   -moz-border-radius: 5px;
   -webkit-border-radius: 5px;
   border-radius: 5px;
@@ -22,14 +18,20 @@ body {
   margin: 0 auto;
 }
 
+#content {
+  float: left;
+  width: 600px;
+}
+
 #logo {
-  background-image:url('logo.png');
-  background-repeat: no-repeat;
-  background-position: right;
-  padding-top:115px;
+  text-align: right;
+  padding: 10px 0px 0px 0px;
+  width: 800px;
+  margin: 0 auto;
 }
 
 #ack {
+  clear: left;
   font-size: 12;
   text-align: right;
   margin-bottom: -15px;
@@ -42,9 +44,42 @@ body {
 }
 
 .icon {
-	background-image: url("icons.png");
-	background-color: transparent;
-	width: 32px;
-	height: 32px;
-	display: inline-block;
+  background-image: url("icons.png");
+  background-color: transparent;
+  width: 32px;
+  height: 32px;
+  display: inline-block;
+}
+
+#navigation {
+  float: left;
+  margin: 0px 10px 10px 0px;
+  padding: 0px 10px 10px 10px;
+  border-right: 2px solid #001E42;
+  width: 70px;
+}
+
+#navigation ul {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+}
+
+#navigation li {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  height: 24px;
+  padding-top: 8px;
+  margin-top: 3px;
+  text-align: left;
+}
+
+#navigation li a {
+  text-decoration: none;
+  color: #0000ff;
+}
+
+#navigation li a:hover {
+  color: #ff0000;
 }

@@ -187,15 +187,15 @@ static int setSSCPEnable(void *data, char *value)
 
 enum {
     PIN_GPIO0 = 0,      // PGM
+    PIN_GPIO1 = 1,      // UART RX
     PIN_GPIO2 = 2,      // DBG
+    PIN_GPIO3 = 3,      // UART TX
     PIN_GPIO4 = 4,      // SEL
     PIN_GPIO5 = 5,      // ASC
     PIN_GPIO12 = 12,    // DTR
     PIN_GPIO13 = 13,    // CTS
-    PIN_GPIO14 = 14,    // DIO9
+    PIN_GPIO14 = 14,    // 
     PIN_GPIO15 = 15,    // RTS
-    PIN_RST,
-    PIN_RES
 };
 
 static int getPinHandler(void *data, char *value)
@@ -204,7 +204,9 @@ static int getPinHandler(void *data, char *value)
     int ivalue = 0;
     switch (pin) {
     case PIN_GPIO0:
+    case PIN_GPIO1:
     case PIN_GPIO2:
+    case PIN_GPIO3:
     case PIN_GPIO4:
     case PIN_GPIO5:
     case PIN_GPIO12:
@@ -214,10 +216,6 @@ static int getPinHandler(void *data, char *value)
         makeGpio(pin);
         GPIO_DIS_OUTPUT(pin);
         ivalue = GPIO_INPUT_GET(pin);
-        break;
-    case PIN_RST:
-        break;
-    case PIN_RES:
         break;
     default:
         return -1;
@@ -231,7 +229,9 @@ static int setPinHandler(void *data, char *value)
     int pin = (int)data;
     switch (pin) {
     case PIN_GPIO0:
+    case PIN_GPIO1:
     case PIN_GPIO2:
+    case PIN_GPIO3:
     case PIN_GPIO4:
     case PIN_GPIO5:
     case PIN_GPIO12:
@@ -241,10 +241,6 @@ static int setPinHandler(void *data, char *value)
         makeGpio(pin);
         os_printf("Setting pin %d to %d\n", pin, atoi(value));
         GPIO_OUTPUT_SET(pin, atoi(value));
-        break;
-    case PIN_RST:
-        break;
-    case PIN_RES:
         break;
     default:
         return -1;
@@ -309,24 +305,16 @@ static cmd_def vars[] = {
 {   "reset-pin",        int8GetHandler,     int8SetHandler,     &flashConfig.reset_pin          },
 {   "connect-led-pin",  int8GetHandler,     int8SetHandler,     &flashConfig.conn_led_pin       },
 {   "rx-pullup",        int8GetHandler,     int8SetHandler,     &flashConfig.rx_pullup          },
-{   "pin-pgm",          getPinHandler,      setPinHandler,      (void *)PIN_GPIO0               },
 {   "pin-gpio0",        getPinHandler,      setPinHandler,      (void *)PIN_GPIO0               },
-{   "pin-dbg",          getPinHandler,      setPinHandler,      (void *)PIN_GPIO2               },
+{   "pin-gpio1",        getPinHandler,      setPinHandler,      (void *)PIN_GPIO1               },
 {   "pin-gpio2",        getPinHandler,      setPinHandler,      (void *)PIN_GPIO2               },
-{   "pin-sel",          getPinHandler,      setPinHandler,      (void *)PIN_GPIO4               },
+{   "pin-gpio3",        getPinHandler,      setPinHandler,      (void *)PIN_GPIO3               },
 {   "pin-gpio4",        getPinHandler,      setPinHandler,      (void *)PIN_GPIO4               },
-{   "pin-asc",          getPinHandler,      setPinHandler,      (void *)PIN_GPIO5               },
 {   "pin-gpio5",        getPinHandler,      setPinHandler,      (void *)PIN_GPIO5               },
-{   "pin-dtr",          getPinHandler,      setPinHandler,      (void *)PIN_GPIO12              },
 {   "pin-gpio12",       getPinHandler,      setPinHandler,      (void *)PIN_GPIO12              },
-{   "pin-cts",          getPinHandler,      setPinHandler,      (void *)PIN_GPIO13              },
 {   "pin-gpio13",       getPinHandler,      setPinHandler,      (void *)PIN_GPIO13              },
-{   "pin-dio9",         getPinHandler,      setPinHandler,      (void *)PIN_GPIO14              },
 {   "pin-gpio14",       getPinHandler,      setPinHandler,      (void *)PIN_GPIO14              },
-{   "pin-rts",          getPinHandler,      setPinHandler,      (void *)PIN_GPIO15              },
 {   "pin-gpio15",       getPinHandler,      setPinHandler,      (void *)PIN_GPIO15              },
-{   "pin-rst",          getPinHandler,      setPinHandler,      (void *)PIN_RST                 },
-{   "pin-res",          getPinHandler,      setPinHandler,      (void *)PIN_RES                 },
 {   NULL,               NULL,               NULL,               NULL                            }
 };
 

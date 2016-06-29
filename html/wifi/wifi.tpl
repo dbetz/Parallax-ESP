@@ -77,7 +77,16 @@ window.onload=function(e) {
     <div class="header">
       <h1>Wi-Fi Networks</h1>
     </div>
-    <div class="content">
+    <div id='navigation'>
+      <ul>
+        <li><a href="/index.tpl">Home</a></li>
+        <li><a href="/wifi">Networks</a></li>
+        <li><a href="/update-ffs.html">Files</a></li>
+        <li><a href="/settings.html">Settings</a></li>
+        <li><a href="/flash/index.html">Firmware</a></li>
+      </ul>
+    </div>
+    <div id="content">
       <table>
         <tr>
           <td>Module name:</td>
@@ -115,7 +124,12 @@ window.onload=function(e) {
         </p>
       </form>
     </div>
+    <div id="ack">&nbsp;</div>
   </div>
-  <div id="logo"></div>
+  <div id="logo">
+    <a href="https://www.parallax.com">
+      <img src="/logo.png">
+    </a>
+  </div>
 </body>
 </html>
