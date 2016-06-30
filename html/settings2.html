@@ -1,24 +1,31 @@
+<!DOCTYPE html>
 <html>
-<head><title>Parallax Wi-Fi Module Configuration - Update Settings</title>
-<link rel="stylesheet" type="text/css" href="style.css">
+<head>
+  <title>Parallax Wi-Fi Module Configuration - Update Settings</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="w3.css">
 </head>
-<body>
-  <div id="main">
-    <div id="header">
-      <h1>Settings</h1>
-    </div>
-    <div id='navigation'>
-      <ul>
-        <li><a href="/index.tpl">Home</a></li>
-        <li><a href="/wifi">Networks</a></li>
-        <li><a href="/update-ffs.html">Files</a></li>
-        <li><a href="/settings.html">Settings</a></li>
-        <li><a href="/flash/index.html">Firmware</a></li>
-      </ul>
-    </div>
+<body class="w3-container">
+
+<div class="w3-overlay w3-animate-opacity" onclick="w3_close()" style="cursor:pointer" id="myOverlay"></div>
+
+  <nav class="w3-sidenav w3-white w3-animate-left" style="display:none;z-index:5" id="mySidenav">
+    <a href="javascript:void(0)" onclick="w3_close()"
+    class="w3-closenav w3-large">Close &times;</a>
+    <a href="/index.tpl">Home</a>
+    <a href="/wifi">Networks</a>
+    <a href="/update-ffs.html">Files</a>
+    <a href="/settings.html">Settings</a>
+    <a href="/flash/index.html">Firmware</a>
+  </nav>
+
+  <div class="w3-overlay w3-animate-opacity" onclick="w3_close()" style="cursor:pointer" id="myOverlay"></div>
+
+  <div class="w3-container">
+    <h1><span class="w3-opennav w3-xxlarge" onclick="w3_open()">&#9776;</span><span style="padding-left: 10px;">Settings</span></h1>
     <div id="content">
       <form action='#' onsubmit="return false;">
-        <table id="settings">
+        <table class="w3-table w3-striped">
           <tr>
             <td>Module name:</td>
             <td><input id="module-name" type="text"></td>
@@ -136,13 +143,25 @@
     </div>
     <div id="ack">&nbsp;</div>
   </div>
-  <div id="logo">
+  <div id="logo-left">
     <a href="https://www.parallax.com">
-      <img src="/logo.png">
+      <img src="logo.png">
     </a>
   </div>
 
 <script type='text/javascript'>
+
+function w3_open()
+{
+    document.getElementById("mySidenav").style.display = "block";
+    document.getElementById("myOverlay").style.display = "block";
+}
+
+function w3_close()
+{
+    document.getElementById("mySidenav").style.display = "none";
+    document.getElementById("myOverlay").style.display = "none";
+}
 
 var moduleNameCtl;
 var loaderBaudRateCtl;

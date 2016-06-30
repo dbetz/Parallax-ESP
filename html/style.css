@@ -43,14 +43,6 @@ body {
   overflow: hidden;
 }
 
-.icon {
-  background-image: url("icons.png");
-  background-color: transparent;
-  width: 32px;
-  height: 32px;
-  display: inline-block;
-}
-
 #navigation {
   float: left;
   margin: 0px 10px 10px 0px;
