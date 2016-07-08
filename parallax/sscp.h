@@ -67,7 +67,8 @@ enum {
     SSCP_ERROR_DISCONNECTED         = 11,
     SSCP_ERROR_UNIMPLEMENTED        = 12,
     SSCP_ERROR_BUSY                 = 13,
-    SSCP_ERROR_INTERNAL_ERROR       = 14
+    SSCP_ERROR_INTERNAL_ERROR       = 14,
+    SSCP_ERROR_INVALID_METHOD       = 15
 };
 
 enum {
@@ -139,11 +140,13 @@ struct sscp_connection {
 };
 
 extern int sscp_start;
+extern int sscp_sendEvents;
 extern sscp_listener sscp_listeners[];
 extern sscp_connection sscp_connections[];
 
 void sscp_init(void);
 void sscp_reset(void);
+void sscp_events(int enable);
 void sscp_enable(int enable);
 int sscp_isEnabled(void);
 void sscp_capturePayload(char *buf, int length, void (*cb)(void *data, int count), void *data);
@@ -157,7 +160,10 @@ sscp_connection *sscp_get_connection(int i);
 sscp_connection *sscp_allocate_connection(int type, sscp_dispatch *dispatch);
 void sscp_close_connection(sscp_connection *connection);
 void sscp_sendResponse(char *fmt, ...);
+void sscp_sendEvent(char *fmt, ...);
+void sscp_send(int prefix, char *fmt, ...);
 void sscp_sendPayload(char *buf, int cnt);
+void sscp_log(char *fmt, ...);
 
 // from sscp-cmds.c
 void cmds_do_nothing(int argc, char *argv[]);
@@ -186,12 +192,15 @@ void http_do_arg(int argc, char *argv[]);
 void http_do_body(int argc, char *argv[]);
 void http_do_reply(int argc, char *argv[]);
 int cgiSSCPHandleRequest(HttpdConnData *connData);
+int http_check_for_events(sscp_connection *connection);
 void http_disconnect(sscp_connection *connection);
 
 // from sscp-ws.c
 void sscp_websocketConnect(Websock *ws);
+int ws_check_for_events(sscp_connection *connection);
 
 // from sscp-tcp.c
 void tcp_do_connect(int argc, char *argv[]);
+int tcp_check_for_events(sscp_connection *connection);
 
 #endif

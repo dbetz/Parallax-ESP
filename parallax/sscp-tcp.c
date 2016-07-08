@@ -8,6 +8,9 @@ static void tcp_recv_cb(void *arg, char *data, unsigned short len);
 static void tcp_sent_cb(void *arg);
 static void tcp_recon_cb(void *arg, sint8 errType);
 
+static void send_connect_event(sscp_connection *connection, int prefix);
+static void send_disconnect_event(sscp_connection *connection, int prefix);
+static void send_data_event(sscp_connection *connection, int prefix);
 static void send_handler(sscp_hdr *hdr, int size);
 static void recv_handler(sscp_hdr *hdr, int size);
 static void close_handler(sscp_hdr *hdr);
@@ -56,7 +59,7 @@ void ICACHE_FLASH_ATTR tcp_do_connect(int argc, char *argv[])
             break;
         case ESPCONN_INPROGRESS:
             // response is sent by tcp_connect_cb or tcp_recon_cb
-            os_printf("TCP: looking up '%s'\n", argv[1]);
+            sscp_log("TCP: looking up '%s'", argv[1]);
             return;
         default:
             sscp_sendResponse("E,%d", SSCP_ERROR_LOOKUP_FAILED);
@@ -81,12 +84,12 @@ static void ICACHE_FLASH_ATTR dns_cb(const char *name, ip_addr_t *ipaddr, void *
     sscp_connection *c = (sscp_connection *)conn->reverse;
 
     if (!ipaddr) {
-        os_printf("TCP: no IP address found for '%s'\n", name);
+        sscp_log("TCP: no IP address found for '%s'", name);
         sscp_sendResponse("E,%d", SSCP_ERROR_LOOKUP_FAILED);
         return;
     }
     
-    os_printf("TCP: found IP address %d.%d.%d.%d for '%s'\n",
+    sscp_log("TCP: found IP address %d.%d.%d.%d for '%s'",
                 *((uint8 *)&ipaddr->addr),
                 *((uint8 *)&ipaddr->addr + 1),
                 *((uint8 *)&ipaddr->addr + 2),
@@ -122,7 +125,7 @@ static void ICACHE_FLASH_ATTR tcp_discon_cb(void *arg)
     struct espconn *conn = (struct espconn *)arg;
     sscp_connection *c = (sscp_connection *)conn->reverse;
     c->flags |= CONNECTION_TERM;
-    os_printf("TCP: %d disconnected\n", c->hdr.handle);
+    sscp_log("TCP: %d disconnected", c->hdr.handle);
     c->d.tcp.state = TCP_STATE_IDLE;
 }
 
@@ -130,7 +133,7 @@ static void ICACHE_FLASH_ATTR tcp_recv_cb(void *arg, char *data, unsigned short 
 {
     struct espconn *conn = (struct espconn *)arg;
     sscp_connection *c = (sscp_connection *)conn->reverse;
-    os_printf("TCP: %d received %d bytes\n", c->hdr.handle, len);
+    sscp_log("TCP: %d received %d bytes", c->hdr.handle, len);
     if (!(c->flags & CONNECTION_RXFULL)) {
         if (len > SSCP_RX_BUFFER_MAX)
             len = SSCP_RX_BUFFER_MAX;
@@ -138,6 +141,8 @@ static void ICACHE_FLASH_ATTR tcp_recv_cb(void *arg, char *data, unsigned short 
         c->rxCount = len;
         c->rxIndex = 0;
         c->flags |= CONNECTION_RXFULL;
+        if (sscp_sendEvents)
+            send_data_event(c, '!');
     }
 }
 
@@ -166,6 +171,43 @@ static void ICACHE_FLASH_ATTR send_cb(void *data, int count)
         c->flags &= ~CONNECTION_TXFULL;
         sscp_sendResponse("E,%d", SSCP_ERROR_SEND_FAILED);
     }
+}
+
+static void ICACHE_FLASH_ATTR send_connect_event(sscp_connection *connection, int prefix)
+{
+    connection->flags &= ~CONNECTION_INIT;
+    sscp_sendResponse("T,%d,%d", connection->hdr.handle, connection->listenerHandle);
+}
+
+static void ICACHE_FLASH_ATTR send_disconnect_event(sscp_connection *connection, int prefix)
+{
+    connection->flags &= ~CONNECTION_TERM;
+    sscp_sendResponse("T,%d,0", connection->hdr.handle);
+}
+
+static void ICACHE_FLASH_ATTR send_data_event(sscp_connection *connection, int prefix)
+{
+    sscp_sendResponse("D,%d,%d", connection->hdr.handle, connection->rxCount);
+}
+
+int ICACHE_FLASH_ATTR tcp_check_for_events(sscp_connection *connection)
+{
+    if (connection->flags & CONNECTION_TERM) {
+        send_disconnect_event(connection, '=');
+        return 1;
+    }
+    
+    else if (connection->flags & CONNECTION_INIT) {
+        send_connect_event(connection, '=');
+        return 1;
+    }
+    
+    else if (connection->flags & CONNECTION_RXFULL) {
+        send_data_event(connection, '=');
+        return 1;
+    }
+    
+    return 0;
 }
 
 static void ICACHE_FLASH_ATTR send_handler(sscp_hdr *hdr, int size)

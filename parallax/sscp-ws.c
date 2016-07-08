@@ -1,6 +1,9 @@
 #include "esp8266.h"
 #include "sscp.h"
 
+static void send_connect_event(sscp_connection *connection, int prefix);
+static void send_disconnect_event(sscp_connection *connection, int prefix);
+static void send_data_event(sscp_connection *connection, int prefix);
 static void path_handler(sscp_hdr *hdr); 
 static void send_handler(sscp_hdr *hdr, int size);
 static void recv_handler(sscp_hdr *hdr, int size);
@@ -23,6 +26,8 @@ static void ICACHE_FLASH_ATTR websocketRecvCb(Websock *ws, char *data, int len, 
         connection->rxCount = len;
         connection->rxIndex = 0;
         connection->flags |= CONNECTION_RXFULL;
+        if (sscp_sendEvents)
+            send_data_event(connection, '!');
     }
 }
 
@@ -55,11 +60,51 @@ void ICACHE_FLASH_ATTR sscp_websocketConnect(Websock *ws)
     connection->listenerHandle = listener->hdr.handle;
     connection->d.ws.ws = ws;
 
-    os_printf("sscp_websocketConnect: url '%s'\n", ws->conn->url);
+    sscp_log("sscp_websocketConnect: url '%s'", ws->conn->url);
     ws->recvCb = websocketRecvCb;
     ws->sentCb = websocketSentCb;
     ws->closeCb = websocketCloseCb;
     ws->userData = connection;
+}
+
+static void ICACHE_FLASH_ATTR send_connect_event(sscp_connection *connection, int prefix)
+{
+    connection->flags &= ~CONNECTION_INIT;
+    sscp_sendResponse("W,%d,%d", connection->hdr.handle, connection->listenerHandle);
+}
+
+static void ICACHE_FLASH_ATTR send_disconnect_event(sscp_connection *connection, int prefix)
+{
+    connection->flags &= ~CONNECTION_TERM;
+    sscp_sendResponse("W,%d,0", connection->hdr.handle);
+}
+
+static void ICACHE_FLASH_ATTR send_data_event(sscp_connection *connection, int prefix)
+{
+    sscp_sendResponse("D,%d,%d", connection->hdr.handle, connection->rxCount);
+}
+
+int ICACHE_FLASH_ATTR ws_check_for_events(sscp_connection *connection)
+{
+    if (!connection->d.ws.ws)
+        return 0;
+    
+    if (connection->flags & CONNECTION_TERM) {
+        send_disconnect_event(connection, '=');
+        return 1;
+    }
+    
+    else if (connection->flags & CONNECTION_INIT) {
+        send_connect_event(connection, '=');
+        return 1;
+    }
+    
+    else if (connection->flags & CONNECTION_RXFULL) {
+        send_data_event(connection, '=');
+        return 1;
+    }
+    
+    return 0;
 }
 
 static void ICACHE_FLASH_ATTR path_handler(sscp_hdr *hdr)

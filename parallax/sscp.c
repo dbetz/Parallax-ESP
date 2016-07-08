@@ -29,6 +29,7 @@ static uint8_t sscp_buffer[SSCP_BUFFER_MAX + 16]; // add some extra space for os
 static int sscp_length;
 
 int sscp_start = SSCP_TKN_START;
+int sscp_sendEvents;
 static int sscp_processing;
 static char *sscp_payload;
 static int sscp_payload_length;
@@ -74,6 +75,7 @@ void ICACHE_FLASH_ATTR sscp_reset(void)
         sscp_close_connection(&sscp_connections[i]);
         
     sscp_start = SSCP_TKN_START;
+    sscp_sendEvents = 0;
     sscp_processing = 0;
     sscp_state = STATE_IDLE;
     sscp_separator = -1;
@@ -81,6 +83,11 @@ void ICACHE_FLASH_ATTR sscp_reset(void)
     sscp_payload = NULL;
     sscp_payload_length = 0;
     sscp_payload_remaining = 0;
+}
+
+void ICACHE_FLASH_ATTR sscp_events(int enable)
+{
+    sscp_sendEvents = enable;
 }
 
 void ICACHE_FLASH_ATTR sscp_enable(int enable)
@@ -142,17 +149,20 @@ sscp_listener ICACHE_FLASH_ATTR *sscp_find_listener(const char *path, int type)
 
         // only check channels to which the MCU is listening
         if (listener->hdr.type == type) {
-os_printf("listener: matching '%s' with '%s'\n", listener->path, path);
 
             // check for a literal match
-            if (os_strcmp(listener->path, path) == 0)
+            if (os_strcmp(listener->path, path) == 0) {
+sscp_log("listener: matching '%s' with '%s'", listener->path, path);
                 return listener;
+            }
             
             // check for a wildcard match
             else {
                 int len_m1 = os_strlen(listener->path) - 1;
-                if (listener->path[len_m1] == '*' && os_strncmp(listener->path, path, len_m1) == 0)
+                if (listener->path[len_m1] == '*' && os_strncmp(listener->path, path, len_m1) == 0) {
+sscp_log("listener: matching '%s' with '%s'", listener->path, path);
                     return listener;
+                }
             }
         }
     }
@@ -208,27 +218,24 @@ void ICACHE_FLASH_ATTR sscp_close_connection(sscp_connection *connection)
     }
 }
 
-void ICACHE_FLASH_ATTR sscp_sendResponse(char *fmt, ...)
+static void ICACHE_FLASH_ATTR sendToMCU(int prefix, char *fmt, va_list ap)
 {
     char buf[128];
     int cnt;
 
     // insert the header
     buf[0] = sscp_start;
-    buf[1] = '=';
+    buf[1] = prefix;
 
     // insert the formatted response
-    va_list ap;
-    va_start(ap, fmt);
     cnt = ets_vsnprintf(&buf[2], sizeof(buf) - 3, fmt, ap);
-    va_end(ap);
 
     // check to see if the response was truncated
     if (cnt >= sizeof(buf) - 3)
         cnt = sizeof(buf) - 3 - 1;
 
     // display the response before inserting the final \r
-    os_printf("Replying: '%s'\n", &buf[1]);
+    sscp_log("Replying: '%s'", &buf[1]);
 
     // terminate the response with a \r
     buf[2 + cnt] = '\r';
@@ -242,7 +249,6 @@ void ICACHE_FLASH_ATTR sscp_sendResponse(char *fmt, ...)
             uart_tx_one_char(UART0, byte);
             for (i = 0; i < flashConfig.sscp_need_pause_cnt; ++i) {
                 if (byte == flashConfig.sscp_need_pause[i]) {
-//os_printf("Delaying after '%c' 0x%02x for %d MS\n", byte, byte, sscp_pauseTimeMS);
                     uart_drain_tx_buffer(UART0);
                     os_delay_us(flashConfig.sscp_pause_time_ms * 1000);
                 }
@@ -256,9 +262,43 @@ void ICACHE_FLASH_ATTR sscp_sendResponse(char *fmt, ...)
     sscp_processing = 0;
 }
 
+void ICACHE_FLASH_ATTR sscp_send(int prefix, char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    sendToMCU(prefix, fmt, ap);
+    va_end(ap);
+}
+
+void ICACHE_FLASH_ATTR sscp_sendResponse(char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    sendToMCU('=', fmt, ap);
+    va_end(ap);
+}
+
 void ICACHE_FLASH_ATTR sscp_sendPayload(char *buf, int cnt)
 {
     uart_tx_buffer(UART0, buf, cnt);
+}
+
+void ICACHE_FLASH_ATTR sscp_sendEvent(char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    sendToMCU('!', fmt, ap);
+    va_end(ap);
+}
+
+void ICACHE_FLASH_ATTR sscp_log(char *fmt, ...)
+{
+    char buf[128];
+    va_list ap;
+    va_start(ap, fmt);
+    ets_vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    os_printf("[%u] %s\n", system_get_time() / 1000, buf);
 }
 
 typedef struct {
@@ -338,7 +378,7 @@ static void ICACHE_FLASH_ATTR sscp_process(char *buf, short len)
 #endif
 
     sscp_processing = 1;
-    os_printf("Calling '%s' handler\n", def->cmd);
+    sscp_log("Calling '%s' handler", def->cmd);
     (*def->handler)(argc, argv);
 }
 
@@ -361,7 +401,7 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
         case STATE_IDLE:
             if (*p == sscp_start) {
                 if (sscp_processing) {
-                    os_printf("SSCP: busy processing a command\n");
+                    sscp_log("SSCP: busy processing a command");
                     ++p;
                     continue;
                 }

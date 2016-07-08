@@ -2,6 +2,9 @@
 #include "sscp.h"
 #include "httpd.h"
 
+static void send_connect_event(sscp_connection *connection, int prefix);
+static void send_disconnect_event(sscp_connection *connection, int prefix);
+static void send_data_event(sscp_connection *connection, int prefix);
 static void path_handler(sscp_hdr *hdr); 
 static void send_handler(sscp_hdr *hdr, int size);
 static void recv_handler(sscp_hdr *hdr, int size);
@@ -69,6 +72,7 @@ static void ICACHE_FLASH_ATTR reply_cb(void *data, int count)
     char sendBuff[MAX_SENDBUFF_LEN];
     httpdSetSendBuffer(connData, sendBuff, sizeof(sendBuff));
     
+sscp_log("REPLY payload callback: %d bytes of %d", count, connection->txCount);
     if (connection->txIndex == 0) {
         char buf[20];
         os_sprintf(buf, "%d", connection->txCount);
@@ -77,9 +81,13 @@ static void ICACHE_FLASH_ATTR reply_cb(void *data, int count)
         httpdEndHeaders(connData);
     }
     
-    httpdSend(connData, connection->txBuffer, count);
+    if (count > 0)
+        httpdSend(connData, connection->txBuffer, count);
     httpdFlushSendBuffer(connData);
 
+    connection->flags &= ~CONNECTION_TXFULL;
+    sscp_sendResponse("S,%d", connection->d.http.count);
+    
     connection->d.http.count = count;
 }
 
@@ -115,7 +123,7 @@ void ICACHE_FLASH_ATTR http_do_reply(int argc, char *argv[])
     connection->txCount = (argc > 3 ? atoi(argv[3]) : 0);
     count = (argc > 4 ? atoi(argv[4]) : connection->txCount);
     connection->txIndex = 0;
-os_printf("REPLY: %d, %d\n", connection->txCount, count);
+sscp_log("REPLY: total %d, this %d", connection->txCount, count);
 
     if (connection->txCount < 0
     ||  count < 0
@@ -141,22 +149,22 @@ int ICACHE_FLASH_ATTR cgiSSCPHandleRequest(HttpdConnData *connData)
     
     // check for the cleanup call
     if (connData->conn == NULL) {
-        if (connection)
+        if (connection) {
             connection->flags |= CONNECTION_TERM;
+            if (sscp_sendEvents)
+                send_disconnect_event(connection, '!');
+        }
         return HTTPD_CGI_DONE;
     }
     
     // check to see if this request is already in progress
     if (connection) {
         
-os_printf("  send complete\n");
-        connection->flags &= ~CONNECTION_TXFULL;
-        sscp_sendResponse("S,%d", connection->d.http.count);
-    
+sscp_log("REPLY send complete");    
         if ((connection->txIndex += connection->d.http.count) < connection->txCount)
             return HTTPD_CGI_MORE;
 
-os_printf("  reply complete\n");
+sscp_log("REPLY complete");
         connection->hdr.type = TYPE_UNUSED;
         return HTTPD_CGI_DONE;
     }
@@ -177,9 +185,77 @@ os_printf("sscp: no connections available for %s request\n", connData->url);
     connData->cgiData = connection;
     connection->d.http.conn = connData;
 
-os_printf("sscp: %d handling %s request\n", connection->hdr.handle, connData->url);
+sscp_log("sscp: %d handling %s request", connection->hdr.handle, connData->url);
+    if (sscp_sendEvents)
+        send_connect_event(connection, '!');
         
     return HTTPD_CGI_MORE;
+}
+
+static void ICACHE_FLASH_ATTR send_connect_event(sscp_connection *connection, int prefix)
+{
+    connection->flags &= ~CONNECTION_INIT;
+    HttpdConnData *connData = (HttpdConnData *)connection->d.http.conn;
+    if (connData) {
+        switch (connData->requestType) {
+        case HTTPD_METHOD_GET:
+            sscp_send(prefix, "G,%d,%d", connection->hdr.handle, connection->listenerHandle);
+            break;
+        case HTTPD_METHOD_POST:
+            sscp_send(prefix, "P,%d,%d", connection->hdr.handle, connection->listenerHandle);
+            break;
+        default:
+            sscp_send(prefix, "E,%d,%d", SSCP_ERROR_INVALID_METHOD, connData->requestType);
+            break;
+        }
+    }
+}
+
+static void ICACHE_FLASH_ATTR send_disconnect_event(sscp_connection *connection, int prefix)
+{
+    connection->flags = 0;
+    HttpdConnData *connData = (HttpdConnData *)connection->d.http.conn;
+    if (connData) {
+        switch (connData->requestType) {
+        case HTTPD_METHOD_GET:
+            sscp_send(prefix, "G,%d,0", connection->hdr.handle);
+            break;
+        case HTTPD_METHOD_POST:
+            sscp_send(prefix, "P,%d,0", connection->hdr.handle);
+            break;
+        default:
+            sscp_send(prefix, "E,%d,%d", SSCP_ERROR_INVALID_METHOD, connData->requestType);
+            break;
+        }
+    }
+}
+
+static void ICACHE_FLASH_ATTR send_data_event(sscp_connection *connection, int prefix)
+{
+    sscp_send(prefix, "D,%d,%d", connection->hdr.handle, connection->listenerHandle);
+}
+
+int ICACHE_FLASH_ATTR http_check_for_events(sscp_connection *connection)
+{
+    if (!connection->d.http.conn)
+        return 0;
+        
+    if (connection->flags & CONNECTION_TERM) {
+        send_disconnect_event(connection, '=');
+        return 1;
+    }
+    
+    else if (connection->flags & CONNECTION_INIT) {
+        send_connect_event(connection, '=');
+        return 1;
+    }
+    
+    else if (connection->flags & CONNECTION_RXFULL) {
+        send_data_event(connection, '=');
+        return 1;
+    }
+    
+    return 0;
 }
 
 static void ICACHE_FLASH_ATTR path_handler(sscp_hdr *hdr)
@@ -199,13 +275,16 @@ static void ICACHE_FLASH_ATTR send_cb(void *data, int count)
 {
     sscp_connection *connection = (sscp_connection *)data;
     HttpdConnData *connData = connection->d.http.conn;
-os_printf("  captured %d bytes\n", count);
+sscp_log("  captured %d bytes", count);
     
     char sendBuff[MAX_SENDBUFF_LEN];
     httpdSetSendBuffer(connData, sendBuff, sizeof(sendBuff));
     httpdSend(connData, connection->txBuffer, count);
     httpdFlushSendBuffer(connData);
     
+    connection->flags &= ~CONNECTION_TXFULL;
+    sscp_sendResponse("S,%d", connection->d.http.count);
+
     connection->d.http.count = count;
 }
 

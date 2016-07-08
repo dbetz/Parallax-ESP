@@ -70,7 +70,7 @@ void ICACHE_FLASH_ATTR cmds_do_listen(int argc, char *argv[])
         return;
     }
 
-    os_printf("Listening for '%s' on %d\n", argv[2], listener->hdr.handle);
+    sscp_log("Listening for '%s' on %d", argv[2], listener->hdr.handle);
     
     sscp_sendResponse("S,%d", listener->hdr.handle);
 }
@@ -87,91 +87,22 @@ void ICACHE_FLASH_ATTR cmds_do_poll(int argc, char *argv[])
 
     for (i = 0; i < SSCP_CONNECTION_MAX; ++i) {
         sscp_connection *connection = &sscp_connections[i];
-        
         switch (connection->hdr.type) {
-        
         case TYPE_UNUSED:
             // nothing to do on an unused connection
             break;
-        
         case TYPE_HTTP_CONNECTION:
-            if (connection->flags & CONNECTION_TERM) {
-                HttpdConnData *connData = (HttpdConnData *)connection->d.http.conn;
-                connection->flags = 0;
-                if (connData) {
-                    switch (connData->requestType) {
-                    case HTTPD_METHOD_GET:
-                        sscp_sendResponse("G,%d,0", connection->hdr.handle);
-                        break;
-                    case HTTPD_METHOD_POST:
-                        sscp_sendResponse("P,%d,0", connection->hdr.handle);
-                        break;
-                    default:
-                        sscp_sendResponse("E,%d,0", SSCP_ERROR_INTERNAL_ERROR);
-                        break;
-                    }
-                    return;
-                }
-            }
-            else if (connection->flags & CONNECTION_INIT) {
-                HttpdConnData *connData = (HttpdConnData *)connection->d.http.conn;
-                connection->flags &= ~CONNECTION_INIT;
-                if (connData) {
-                    switch (connData->requestType) {
-                    case HTTPD_METHOD_GET:
-                        sscp_sendResponse("G,%d,%d", connection->hdr.handle, connection->listenerHandle);
-                        break;
-                    case HTTPD_METHOD_POST:
-                        sscp_sendResponse("P,%d,%d", connection->hdr.handle, connection->listenerHandle);
-                        break;
-                    default:
-                        sscp_sendResponse("E,%d,0", SSCP_ERROR_INTERNAL_ERROR);
-                        break;
-                    }
-                    return;
-                }
-            }
-            else if (connection->flags & CONNECTION_RXFULL) {
-                sscp_sendResponse("D,%d,%d", connection->hdr.handle, connection->listenerHandle);
+            if (http_check_for_events(connection))
                 return;
-            }
             break;
-            
         case TYPE_WEBSOCKET_CONNECTION:
-            if (connection->flags & CONNECTION_TERM) {
-                connection->flags &= ~CONNECTION_TERM;
-                sscp_sendResponse("W,%d,0", connection->hdr.handle);
-            }
-            else if (connection->flags & CONNECTION_INIT) {
-                Websock *ws = (Websock *)connection->d.ws.ws;
-                connection->flags &= ~CONNECTION_INIT;
-                if (ws) {
-                    sscp_sendResponse("W,%d,%d", connection->hdr.handle, connection->listenerHandle);
-                    return;
-                }
-            }
-            else if (connection->flags & CONNECTION_RXFULL) {
-                sscp_sendResponse("D,%d,%d", connection->hdr.handle, connection->rxCount);
+            if (ws_check_for_events(connection))
                 return;
-            }
             break;
-            
         case TYPE_TCP_CONNECTION:
-            if (connection->flags & CONNECTION_TERM) {
-                connection->flags &= ~CONNECTION_TERM;
-                sscp_sendResponse("T,%d,0", connection->hdr.handle);
-            }
-            else if (connection->flags & CONNECTION_INIT) {
-                connection->flags &= ~CONNECTION_INIT;
-                sscp_sendResponse("T,%d,%d", connection->hdr.handle, connection->listenerHandle);
+            if (tcp_check_for_events(connection))
                 return;
-            }
-            else if (connection->flags & CONNECTION_RXFULL) {
-                sscp_sendResponse("D,%d,%d", connection->hdr.handle, connection->rxCount);
-                return;
-            }
             break;
-            
         default:
             sscp_sendResponse("E,%d,0", SSCP_ERROR_INTERNAL_ERROR);
             break;
@@ -249,7 +180,7 @@ void ICACHE_FLASH_ATTR cmds_do_send(int argc, char *argv[])
         sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_SIZE);
         return;
     }
-os_printf("SEND %d %d\n", connection->hdr.handle, count);
+sscp_log("SEND %d %d", connection->hdr.handle, count);
     
     if (connection->hdr.dispatch->send)
         (*connection->hdr.dispatch->send)((sscp_hdr *)connection, count);
@@ -277,7 +208,7 @@ void ICACHE_FLASH_ATTR cmds_do_recv(int argc, char *argv[])
         sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
         return;
     }
-os_printf("RECV %d %d\n", connection->hdr.handle, count);
+sscp_log("RECV %d %d", connection->hdr.handle, count);
     
     if (connection->hdr.dispatch->recv)
         (*connection->hdr.dispatch->recv)((sscp_hdr *)connection, count);

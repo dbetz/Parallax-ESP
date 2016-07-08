@@ -179,6 +179,12 @@ static int setPauseChars(void *data, char *value)
     return 0;
 }
 
+static int setSSCPEvents(void *data, char *value)
+{
+    sscp_events(atoi(value));
+    return 0;
+}
+
 static int setSSCPEnable(void *data, char *value)
 {
     sscp_enable(atoi(value));
@@ -277,7 +283,6 @@ static int setPinHandler(void *data, char *value)
     case PIN_GPIO14:
     case PIN_GPIO15:
         makeGpio(pin);
-        os_printf("Setting pin %d to %d\n", pin, atoi(value));
         GPIO_OUTPUT_SET(pin, atoi(value));
         break;
     case PIN_GPIO16:
@@ -338,6 +343,7 @@ static cmd_def vars[] = {
 {   "cmd-start-char",   intGetHandler,      intSetHandler,      &sscp_start                     },
 {   "cmd-pause-time",   intGetHandler,      intSetHandler,      &flashConfig.sscp_pause_time_ms },
 {   "cmd-pause-chars",  getPauseChars,      setPauseChars,      NULL                            },
+{   "cmd-events",       intGetHandler,      setSSCPEvents,      &sscp_sendEvents                },
 {   "cmd-enable",       int8GetHandler,     setSSCPEnable,      &flashConfig.sscp_enable        },
 {   "loader-baud-rate", intGetHandler,      setLoaderBaudrate,  &flashConfig.loader_baud_rate   },
 {   "baud-rate",        intGetHandler,      setBaudrate,        &flashConfig.baud_rate          },
