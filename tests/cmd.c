@@ -5,19 +5,6 @@
 fdserial *wifi;
 fdserial *debug;
 
-enum {
-    STATE_START,
-    STATE_DATA
-};
-
-static int messageState;
-static char messageBuffer[1024];
-static int messageHead;
-static int messageTail;
-static int messageStart;
-
-static int parseBuffer1(char *buf, char *fmt, va_list ap);
-
 void cmd_init(int wifi_rx, int wifi_tx, int debug_rx, int debug_tx)
 {
     // Close default same-cog terminal
@@ -37,9 +24,6 @@ void cmd_init(int wifi_rx, int wifi_tx, int debug_rx, int debug_tx)
         debug = fdserial_open(debug_rx, debug_tx, 0, 115200);
     else
         debug = wifi;
-        
-    messageHead = messageTail = 0;
-    messageState = STATE_START;
 }
 
 void request(char *fmt, ...)
@@ -110,7 +94,7 @@ dprint(debug, "SEND %d, %d\n", chan, count);
             payload += count;
             remaining -= count;
             if (remaining > 0) {
-                parseResponse(CMD_PREFIX "=^c,^d\r", &result, &count);
+                waitFor(CMD_PREFIX "=^c,^d\r", &result, &count);
 dprint(debug, " ret %c %d\n", result, count);
                 if (result != 'S') {
 dprint(debug, " failed with %d\n", count);
@@ -120,7 +104,7 @@ dprint(debug, " failed with %d\n", count);
         }
     }
     
-    parseResponse(CMD_PREFIX "=^c,^d\r", &result, &count);
+    waitFor(CMD_PREFIX "=^c,^d\r", &result, &count);
 dprint(debug, " final ret %c %d\n", result, count);
     
     return payloadLength;
@@ -133,105 +117,7 @@ int reply(int chan, int code, char *payload)
     return ret;
 }
 
-int checkForMessage(int type, char *buf, int maxSize)
-{
-    int ch, newTail, i, j;
-    
-    while ((ch = fdserial_rxCheck(wifi)) != -1) {
-        switch (messageState) {
-        case STATE_START:
-            if (ch == CMD_START) {
-                messageStart = messageTail;
-                newTail = (messageTail + 1) % sizeof(messageBuffer);
-                if (newTail != messageHead) {
-                    messageBuffer[messageTail] = ch;
-                    messageTail = newTail;
-                }
-                else {
-                    dprint(debug, "MSG: queue overflow\n");
-                    return -1;
-                }
-                messageState = STATE_DATA;
-            }
-            else {
-                // out of band data
-                return -1;
-            }
-            break;
-        case STATE_DATA:
-            newTail = (messageTail + 1) % sizeof(messageBuffer);
-            if (newTail != messageHead) {
-                messageBuffer[messageTail] = ch;
-                messageTail = newTail;
-            }
-            else {
-                dprint(debug, "MSG: queue overflow\n");
-                return -1;
-            }
-            if (ch == '\r') {
-                {   char tmp[128];
-                    i = messageStart;
-                    j = 0;
-                    while (i != messageTail) {
-                        if (messageBuffer[i] != '\r' && j < sizeof(tmp) - 1)
-                            tmp[j++] = messageBuffer[i];
-                        i = (i + 1) % sizeof(messageBuffer);
-                    }
-                    tmp[j] = '\0';
-                    dprint(debug, "Got: '%s'\n", &tmp[1]);
-                }
-                messageState = STATE_START;
-                i = (messageStart + 1) % sizeof(messageBuffer);
-                if (messageBuffer[i] == type) {
-                    i = messageStart;
-                    j = 0;
-                    while (i != messageTail) {
-                        if (j < maxSize - 1)
-                            buf[j++] = messageBuffer[i];
-                        i = (i + 1) % sizeof(messageBuffer);
-                    }
-                    buf[j] = '\0';
-                    messageTail = messageStart;
-                    return j;
-                }
-            }
-            break;
-        default:
-            dprint(debug, "MSG: internal error\n");
-            return -1;
-        }
-    }
-        
-    return 0;
-}
-
-int checkForEvent(char *buf, int maxSize)
-{
-    if (messageHead != messageTail) {
-        int j = 0;
-        int ch;
-        while (messageHead != messageTail) {
-            ch = messageBuffer[messageHead];
-            if (j < maxSize - 1)
-                buf[j++] = ch;
-            messageHead = (messageHead + 1) % sizeof(messageBuffer);
-        } while (ch != '\r');
-        buf[j] = '\0';
-        return j;           
-    }
-    return checkForMessage('!', buf, maxSize);
-}
-
-int getResponse(char *buf, int maxSize)
-{
-    int ret;
-    while ((ret = checkForMessage('=', buf, maxSize)) <= 0)
-        ;
-    return ret;
-}
-
 typedef struct {
-    char *p;
     int savedChar;
 } State;
 
@@ -241,7 +127,7 @@ static int nextchar(State *state)
     if ((ch = state->savedChar) != EOF)
         state->savedChar = EOF;
     else
-        ch = *state->p ? *state->p++ : EOF;
+        ch = fdserial_rxChar(wifi);
     return ch;
 }
 
@@ -250,40 +136,39 @@ static void ungetchar(State *state, int ch)
     state->savedChar = ch;
 }
 
-int parseBuffer(char *buf, char *fmt, ...)
+int waitFor(char *fmt, ...)
 {
-    va_list ap;
-    int ret;
+    State state = { .savedChar = EOF };
+    int ch, rch, len, i;
+    char *p = fmt;
+    char buf[100];
+    int ret = -1;
     
-    va_start(ap, fmt);
-    ret = parseBuffer1(buf, fmt, ap);
-    va_end(ap);
-    
-    return ret;
-}
-
-int parseResponse(char *fmt, ...)
-{
-    char buf[128];
-    va_list ap;
-    int ret;
-    
-    if (getResponse(buf, sizeof(buf)) <= 0)
+    len = 0;
+    while (*p != '\0' && *p != '^') {
+        ++len;
+        ++p;
+    }
+        
+    if (len > sizeof(buf))
         return -1;
         
-    va_start(ap, fmt);
-    ret = parseBuffer1(buf, fmt, ap);
-    va_end(ap);
+    for (i = 0; i < len; ++i) {
+        if ((rch = nextchar(&state)) == EOF)
+            return -1;
+        buf[i] = rch;
+    }
+        
+    while (strncmp(fmt, buf, len) != 0) {
+        memcpy(buf, &buf[1], len - 1);
+        if ((rch = nextchar(&state)) == EOF)
+            return -1;
+        buf[len - 1] = rch;
+    }
     
-    return ret;
-}
-
-static int parseBuffer1(char *buf, char *fmt, va_list ap)
-{
-    State state = { .p = buf, .savedChar = EOF };
-    char *p = fmt;
-    int ch, rch;
-
+    va_list ap;
+    va_start(ap, fmt);
+    
     while ((ch = *p++) != '\0') {
     
         rch = nextchar(&state);
@@ -292,7 +177,7 @@ static int parseBuffer1(char *buf, char *fmt, va_list ap)
             switch (*p++) {
             case 'c':
                 if (rch == EOF)
-                    return -1;
+                    goto done;
                 *va_arg(ap, char *) = rch;
                 break;
             case 'i':
@@ -300,14 +185,14 @@ static int parseBuffer1(char *buf, char *fmt, va_list ap)
                     int value = 0;
                     int sign = 1;
                     if (rch == EOF)
-                        return -1;
+                        goto done;
                     if (rch == '-') {
                         if ((rch = nextchar(&state)) == EOF)
-                            return -1;
+                            goto done;
                         sign = -1;
                     }
                     if (!isdigit(rch))
-                        return -1;
+                        goto done;
                     do {
                         value = value * 10 + rch - '0';
                     } while ((rch = nextchar(&state)) != EOF && isdigit(rch));
@@ -333,22 +218,40 @@ static int parseBuffer1(char *buf, char *fmt, va_list ap)
                 break;
             case '^':
                 if (rch != '^')
-                    return -1;
+                    goto done;
                 break;
             case '\0':
                 // fall through
             default:
-                return -1;
+                goto done;
             }
         }
         
         else {
             if (rch != ch)
-                return -1;
+                goto done;
        }
     }
 
-    return 0;
+    ret = 0;
+        
+done:
+    va_end(ap);
+    
+    return ret;
+}
+
+void collectUntil(int term, char *buf, int size)
+{
+    int ch, i;
+    i = 0;
+    while ((ch = fdserial_rxChar(wifi)) != EOF && ch != term) {
+        if (i < size - 1)
+            buf[i++] = ch;
+    }
+    buf[i] = '\0';
+}
+
 void collectPayload(char *buf, int bufSize, int count)
 {
     while (--count >= 0) {
@@ -360,4 +263,9 @@ void collectPayload(char *buf, int bufSize, int count)
     }
 }
 
+void skipUntil(int term)
+{
+    int ch;
+    while ((ch = fdserial_rxChar(wifi)) != EOF && ch != term)
+        ;
 }

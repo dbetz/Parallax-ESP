@@ -30,8 +30,6 @@ void set_robot_speed(int left, int right);
 
 #define LONG_REPLY  "This is a very long reply that should be broken into multiple chunks to test REPLY followed by SEND.\r\n"
 
-void parseEvent(char *buf);
-
 int main(void)
 {    
     int listenHandle;
@@ -40,68 +38,67 @@ int main(void)
 
     init_robot();
     
-    request("SET:cmd-events,1");
-    parseResponse(CMD_PREFIX "=S,0\r");
+//    request("SET:cmd-pause-time,5");
+    nrequest(CMD_TKN_SET, "cmd-pause-time,5");
+    waitFor(CMD_PREFIX "=S,0\r");
 
     request("LISTEN:HTTP,/robot*");
-    parseResponse(CMD_PREFIX "=S,^d\r", &listenHandle);
+    waitFor(CMD_PREFIX "=S,^d\r", &listenHandle);
     
     for (;;) {
-        char buf[128];
-        if (checkForEvent(buf, sizeof(buf)) > 0)
-            parseEvent(buf);
+        char url[128], arg[128];
+        int type, handle, listener;
+
+        waitcnt(CNT + CLKFREQ/4);
+
+        request("POLL");
+        waitFor(CMD_PREFIX "=^c,^i,^i\r", &type, &handle, &listener);
+        if (type != 'N')
+            dprint(debug, "Got %c: handle %d, listener %d\n", type, handle, listener);
+        
+        switch (type) {
+        case 'P':
+            request("PATH:%d", handle);
+            waitFor(CMD_PREFIX "=S,^s\r", url, sizeof(url));
+            dprint(debug, "%d: path '%s'\n", handle, url);
+            if (strcmp(url, "/robot") == 0) {
+                request("ARG:%d,gto", handle);
+                waitFor(CMD_PREFIX "=S,^s\r", arg, sizeof(arg));
+                dprint(debug, "gto='%s'\n", arg);
+                if (process_robot_command(arg[0]) != 0)
+                    dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
+                reply(handle, 200, "");
+            }
+            else {
+                dprint(debug, "Unknown POST URL\n");
+                reply(handle, 404, "unknown");
+            }
+            break;
+        case 'G':
+            request("PATH:%d", handle);
+            waitFor(CMD_PREFIX "=S,^s\r", url, sizeof(url));
+            dprint(debug, "%d: path '%s'\n", handle, url);
+            if (strcmp(url, "/robot-ping") == 0) {
+                sprintf(arg, "%d", ping_cm(PING_PIN));
+                reply(handle, 200, arg);
+            }
+            else if (strcmp(url, "/robot-test") == 0) {
+                reply(handle, 200, LONG_REPLY);
+            }
+            else {
+                dprint(debug, "Unknown GET URL\n");
+                reply(handle, 404, "unknown");
+            }
+            break;
+        case 'N':
+            break;
+        default:
+            dprint(debug, "unknown response: '%c' 0x%02x\n", type, type);
+            break;
+        }
     }
     
     return 0;
-}
-
-void parseEvent(char *buf)
-{
-    char url[128], arg[128];
-    int handle, listener;
-    char type;
-
-    if (parseBuffer(buf, CMD_PREFIX "!^c,^i,^i\r", &type, &handle, &listener) != 0)
-        return;
-        
-    switch (type) {
-    case 'P':
-        request("PATH:%d", handle);
-        parseResponse(CMD_PREFIX "=S,^s\r", url, sizeof(url));
-        dprint(debug, "%d: path '%s'\n", handle, url);
-        if (strcmp(url, "/robot") == 0) {
-            request("ARG:%d,gto", handle);
-            parseResponse(CMD_PREFIX "=S,^s\r", arg, sizeof(arg));
-            dprint(debug, "gto='%s'\n", arg);
-            if (process_robot_command(arg[0]) != 0)
-                dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
-            reply(handle, 200, "");
-        }
-        else {
-            dprint(debug, "Unknown POST URL\n");
-            reply(handle, 404, "unknown");
-        }
-        break;
-    case 'G':
-        request("PATH:%d", handle);
-        parseResponse(CMD_PREFIX "=S,^s\r", url, sizeof(url));
-        dprint(debug, "%d: path '%s'\n", handle, url);
-        if (strcmp(url, "/robot-ping") == 0) {
-            sprintf(arg, "%d", ping_cm(PING_PIN));
-            reply(handle, 200, arg);
-        }
-        else if (strcmp(url, "/robot-test") == 0) {
-            reply(handle, 200, LONG_REPLY);
-        }
-        else {
-            dprint(debug, "Unknown GET URL\n");
-            reply(handle, 404, "unknown");
-        }
-        break;
-    default:
-        dprint(debug, "unknown event: '%c' 0x%02x\n", type, type);
-        break;
-    }
 }
 
 void init_robot(void)

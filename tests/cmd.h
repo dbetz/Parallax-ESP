@@ -1,7 +1,6 @@
 #ifndef __CMD_H__
 #define __CMD_H__
 
-#include <stdarg.h>
 #include "fdserial.h"
 
 #define CMD_PREFIX  "\xFE"
@@ -49,9 +48,9 @@ void request(char *fmt, ...);
 void nrequest(int token, char *fmt, ...);
 void requestPayload(char *buf, int len);
 int reply(int chan, int code, char *payload);
-int checkForEvent(char *buf, int maxSize);
-int getResponse(char *buf, int maxSize);
-int parseResponse(char *fmt, ...);
-int parseBuffer(char *buf, char *fmt, ...);
+int waitFor(char *fmt, ...);
+void collectUntil(int term, char *buf, int size);
+void collectPayload(char *buf, int bufSize, int count);
+void skipUntil(int term);
 
 #endif
