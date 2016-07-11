@@ -349,6 +349,8 @@ static int parseBuffer1(char *buf, char *fmt, va_list ap)
     }
 
     return 0;
+}
+
 void collectPayload(char *buf, int bufSize, int count)
 {
     while (--count >= 0) {
@@ -358,6 +360,4 @@ void collectPayload(char *buf, int bufSize, int count)
             --bufSize;
         }
     }
-}
-
 }
