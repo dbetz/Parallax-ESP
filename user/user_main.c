@@ -257,7 +257,7 @@ void ICACHE_FLASH_ATTR user_init(void) {
 #ifdef TEST_BROADCAST
 	os_timer_disarm(&websockTimer);
 	os_timer_setfn(&websockTimer, websockTimerCb, NULL);
-	os_timer_arm(&websockTimer, 1000, 1);
+	os_timer_arm(&websockTimer, 10000, 1);
 #endif
 	os_printf("\nReady\n");
 }

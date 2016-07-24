@@ -6,20 +6,33 @@
 #include "ping.h"
 #include "cmd.h"
 
-// uncomment this if the wifi module is on pins other than 31/30
+// uncomment this to use wifi pins other than 31/30
 //#define SEPARATE_WIFI_PINS
 
 #ifdef SEPARATE_WIFI_PINS
-#define WIFI_RX     9
-#define WIFI_TX     8
+#define WIFI_RX    9
+#define WIFI_TX    8
 #else
-#define WIFI_RX     31
-#define WIFI_TX     30
+#define WIFI_RX    31
+#define WIFI_TX    30
+#endif
+
+// uncomment this to use debug pins other than 31/30
+//#define SEPARATE_DEBUG_PINS
+
+#ifdef SEPARATE_DEBUG_PINS
+#define DEBUG_RX    9
+#define DEBUG_TX    8
+#else
+#define DEBUG_RX    31
+#define DEBUG_TX    30
 #endif
 
 #define PING_PIN    10
 
 #define DEBUG
+
+fdserial *debug;
 
 int wheelLeft;
 int wheelRight;
@@ -30,76 +43,88 @@ void set_robot_speed(int left, int right);
 
 #define LONG_REPLY  "This is a very long reply that should be broken into multiple chunks to test REPLY followed by SEND.\r\n"
 
-void parseEvent(char *buf);
+void handleEvent(wifi *esp, char type, char handle, int listener);
 
 int main(void)
 {    
     int listenHandle;
+    wifi *esp;
     
-    cmd_init(WIFI_RX, WIFI_TX, 31, 30);
+    // Close default same-cog terminal
+    simpleterm_close();                         
 
+    esp = wifi_open(WIFI_RX, WIFI_TX);
+#ifdef SEPARATE_DEBUG_PINS
+    debug = fdserial_open(DEBUG_RX, DEBUG_TX, 0, 115200);
+#else
+    debug = esp->port;
+#endif
+
+    dbg("\n\nRobot Firmware 2.0\n");
+    
     init_robot();
     
-    request("SET:cmd-events,1");
-    parseResponse(CMD_PREFIX "=S,0\r");
-
-    request("LISTEN:HTTP,/robot*");
-    parseResponse(CMD_PREFIX "=S,^d\r", &listenHandle);
+    wifi_setInteger(esp, "cmd-events", 1);
+    wifi_listenHTTP(esp, "/robot*", &listenHandle);
     
     for (;;) {
-        char buf[128];
-        if (checkForEvent(buf, sizeof(buf)) > 0)
-            parseEvent(buf);
+        int handle, listener;
+        char type;
+        
+        if (wifi_checkForEvent(esp, &type, &handle, &listener) > 0) {
+            dbg("Got event %c: handle %d, listener %d\n", type, handle, listener);
+            handleEvent(esp, type, handle, listener);
+        }
     }
     
     return 0;
 }
 
-void parseEvent(char *buf)
+void handleEvent(wifi *esp, char type, char handle, int listener)
 {
     char url[128], arg[128];
-    int handle, listener;
-    char type;
 
-    if (parseBuffer(buf, CMD_PREFIX "!^c,^i,^i\r", &type, &handle, &listener) != 0)
-        return;
-        
     switch (type) {
     case 'P':
-        request("PATH:%d", handle);
-        parseResponse(CMD_PREFIX "=S,^s\r", url, sizeof(url));
-        dprint(debug, "%d: path '%s'\n", handle, url);
-        if (strcmp(url, "/robot") == 0) {
-            request("ARG:%d,gto", handle);
-            parseResponse(CMD_PREFIX "=S,^s\r", arg, sizeof(arg));
-            dprint(debug, "gto='%s'\n", arg);
-            if (process_robot_command(arg[0]) != 0)
-                dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
-            reply(handle, 200, "");
-        }
+        if (listener == 0)
+            dbg("%d: disconnected\n", handle);
         else {
-            dprint(debug, "Unknown POST URL\n");
-            reply(handle, 404, "unknown");
+            wifi_path(esp, handle, url, sizeof(url));
+            dbg("%d: path '%s'\n", handle, url);
+            if (strcmp(url, "/robot") == 0) {
+                wifi_arg(esp, handle, "gto", arg, sizeof(arg));
+                dbg("gto='%s'\n", arg);
+                if (process_robot_command(arg[0]) != 0)
+                    dbg("Unknown robot command: '%c'\n", arg[0]);
+                wifi_reply(esp, handle, 200, "");
+            }
+            else {
+                dbg("Unknown POST URL\n");
+                wifi_reply(esp, handle, 404, "unknown");
+            }
         }
         break;
     case 'G':
-        request("PATH:%d", handle);
-        parseResponse(CMD_PREFIX "=S,^s\r", url, sizeof(url));
-        dprint(debug, "%d: path '%s'\n", handle, url);
-        if (strcmp(url, "/robot-ping") == 0) {
-            sprintf(arg, "%d", ping_cm(PING_PIN));
-            reply(handle, 200, arg);
-        }
-        else if (strcmp(url, "/robot-test") == 0) {
-            reply(handle, 200, LONG_REPLY);
-        }
+        if (listener == 0)
+            dbg("%d: disconnected\n", handle);
         else {
-            dprint(debug, "Unknown GET URL\n");
-            reply(handle, 404, "unknown");
+            wifi_path(esp, handle, url, sizeof(url));
+            dbg("%d: path '%s'\n", handle, url);
+            if (strcmp(url, "/robot-ping") == 0) {
+                sprintf(arg, "%d", ping_cm(PING_PIN));
+                wifi_reply(esp, handle, 200, arg);
+            }
+            else if (strcmp(url, "/robot-test") == 0) {
+                wifi_reply(esp, handle, 200, LONG_REPLY);
+            }
+            else {
+                dbg("Unknown GET URL\n");
+                wifi_reply(esp, handle, 404, "unknown");
+            }
         }
         break;
     default:
-        dprint(debug, "unknown event: '%c' 0x%02x\n", type, type);
+        dbg("unknown event: '%c' 0x%02x\n", type, type);
         break;
     }
 }
@@ -119,7 +144,7 @@ int process_robot_command(int whichWay)
   
   case 'F': // forward
     #ifdef DEBUG
-      dprint(debug, "Forward\n");
+      dbg("Forward\n");
     #endif
     if (wheelLeft > wheelRight)
       wheelRight = wheelLeft;
@@ -133,7 +158,7 @@ int process_robot_command(int whichWay)
     
   case 'R': // right
     #ifdef DEBUG
-      dprint(debug, "Right\n");
+      dbg("Right\n");
     #endif
     wheelLeft = wheelLeft + 16;
     wheelRight = wheelRight - 16;
@@ -141,7 +166,7 @@ int process_robot_command(int whichWay)
     
   case 'L': // left
     #ifdef DEBUG
-      dprint(debug, "Left\n");
+      dbg("Left\n");
     #endif
     wheelLeft = wheelLeft - 16;
     wheelRight = wheelRight + 16;
@@ -149,7 +174,7 @@ int process_robot_command(int whichWay)
     
   case 'B': // reverse
     #ifdef DEBUG
-      dprint(debug, "Reverse\n");
+      dbg("Reverse\n");
     #endif
     if(wheelLeft < wheelRight)
       wheelRight = wheelLeft;
@@ -163,7 +188,7 @@ int process_robot_command(int whichWay)
         
   case 'S': // stop
     #ifdef DEBUG
-      dprint(debug, "Stop\n");
+      dbg("Stop\n");
     #endif
     wheelLeft = 0;
     wheelRight = 0;
@@ -186,7 +211,7 @@ int process_robot_command(int whichWay)
 void set_robot_speed(int left, int right)
 {  
   #ifdef DEBUG
-    dprint(debug, "L %d, R %d\n", wheelLeft, wheelRight);
+    dbg("L %d, R %d\n", wheelLeft, wheelRight);
   #endif
   
   wheelLeft = left;

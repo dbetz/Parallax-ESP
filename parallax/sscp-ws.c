@@ -4,12 +4,14 @@
 static void send_connect_event(sscp_connection *connection, int prefix);
 static void send_disconnect_event(sscp_connection *connection, int prefix);
 static void send_data_event(sscp_connection *connection, int prefix);
+static int checkForEvents_handler(sscp_hdr *hdr);
 static void path_handler(sscp_hdr *hdr); 
 static void send_handler(sscp_hdr *hdr, int size);
 static void recv_handler(sscp_hdr *hdr, int size);
 static void close_handler(sscp_hdr *hdr);
 
 static sscp_dispatch wsDispatch = {
+    .checkForEvents = checkForEvents_handler,
     .path = path_handler,
     .send = send_handler,
     .recv = recv_handler,
@@ -84,8 +86,10 @@ static void ICACHE_FLASH_ATTR send_data_event(sscp_connection *connection, int p
     sscp_sendResponse("D,%d,%d", connection->hdr.handle, connection->rxCount);
 }
 
-int ICACHE_FLASH_ATTR ws_check_for_events(sscp_connection *connection)
+static int ICACHE_FLASH_ATTR checkForEvents_handler(sscp_hdr *hdr)
 {
+    sscp_connection *connection = (sscp_connection *)hdr;
+    
     if (!connection->d.ws.ws)
         return 0;
     

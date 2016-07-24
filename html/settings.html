@@ -1,21 +1,16 @@
+<!DOCTYPE html>
 <html>
-<head><title>Parallax Wi-Fi Module Configuration - Update Settings</title>
-<link rel="stylesheet" type="text/css" href="style.css">
+<head>
+  <title>Parallax Wi-Fi Module Configuration - Update Settings</title>
+  <meta content="width=device-width, initial-scale=1" name="viewport">
+  <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
-  <div id="main">
-    <div id="header">
-      <h1>Settings</h1>
-    </div>
-    <div id='navigation'>
-      <ul>
-        <li><a href="/index.tpl">Home</a></li>
-        <li><a href="/wifi">Networks</a></li>
-        <li><a href="/update-ffs.html">Files</a></li>
-        <li><a href="/settings.html">Settings</a></li>
-        <li><a href="/flash/index.html">Firmware</a></li>
-      </ul>
-    </div>
+<div id="page">
+  <div id="header">
+    <h1>Settings</h1>
+  </div>
+  <div id="main" class="clearfix">
     <div id="content">
       <form action='#' onsubmit="return false;">
         <table id="settings">
@@ -44,7 +39,7 @@
           <tr>
             <td>Communications Baud Rate:</td>
             <td>
-            <select id="baud-rate">
+              <select id="baud-rate">
                 <option value="1200">1200</option>
                 <option value="4800">4800</option>
                 <option value="9600">9600</option>
@@ -72,7 +67,7 @@
           <tr>
             <td>Debug Baud Rate:</td>
             <td>
-            <select id="dbg-baud-rate">
+              <select id="dbg-baud-rate">
                 <option value="1200">1200</option>
                 <option value="4800">4800</option>
                 <option value="9600">9600</option>
@@ -134,29 +129,40 @@
       </form>
       <p id='message'></p>
     </div>
-    <div id="ack">&nbsp;</div>
+    <nav id='navigation'>
+      <input type="checkbox" id="resp" /><label for="resp"></label>
+      <ul>
+        <li><a href="index.tpl">Home</a></li>
+        <li><a href="wifi">Networks</a></li>
+        <li><a href="update-ffs.html">Files</a></li>
+        <li><a href="settings.html">Settings</a></li>
+        <li><a href="flash/index.html">Firmware</a></li>
+      </ul>
+    </nav>
   </div>
-  <div id="logo">
+  <div id="ack"></div>
+  <div id="footer">
     <a href="https://www.parallax.com">
-      <img src="/logo.png">
+      <img src="logo.png">
     </a>
   </div>
+</div>
 
 <script type='text/javascript'>
 
-var moduleNameCtl;
-var loaderBaudRateCtl;
-var baudRateCtl;
-var stopBitsCtl;
-var dbgBaudRateCtl;
-var dbgStopBitsCtl;
-var enableSerialProtocolCtl;
-var startCharCtl;
-var pauseTimeCtl;
-var pauseCharsCtl;
+  var moduleNameCtl;
+  var loaderBaudRateCtl;
+  var baudRateCtl;
+  var stopBitsCtl;
+  var dbgBaudRateCtl;
+  var dbgStopBitsCtl;
+  var enableSerialProtocolCtl;
+  var startCharCtl;
+  var pauseTimeCtl;
+  var pauseCharsCtl;
 
-function init()
-{
+  function init()
+  {
     moduleNameCtl = document.getElementById('module-name');
     loaderBaudRateCtl = document.getElementById('loader-baud-rate');
     baudRateCtl = document.getElementById('baud-rate');
@@ -168,49 +174,49 @@ function init()
     pauseTimeCtl = document.getElementById('pause-time');
     pauseCharsCtl = document.getElementById('pause-chars');
     loadSettings();
-}
+  }
 
-function loadSettings() {
+  function loadSettings() {
     var loaderBaudRate, baudRate, dbgBaudRate;
 
     moduleNameCtl.value = getSetting('module-name');
     loaderBaudRate = getSetting('loader-baud-rate');
     for (var i = 0; i < loaderBaudRateCtl.length; ++i)
-        if (loaderBaudRate == loaderBaudRateCtl[i].value) {
-            loaderBaudRateCtl.selectedIndex = i;
-            break;
-        }
+      if (loaderBaudRate == loaderBaudRateCtl[i].value) {
+        loaderBaudRateCtl.selectedIndex = i;
+        break;
+      }
 
     baudRate = getSetting('baud-rate');
     for (var i = 0; i < baudRateCtl.length; ++i)
-        if (baudRate == baudRateCtl[i].value) {
-            baudRateCtl.selectedIndex = i;
-            break;
-        }
+      if (baudRate == baudRateCtl[i].value) {
+        baudRateCtl.selectedIndex = i;
+        break;
+      }
     stopBitsCtl.selectedIndex = getSetting('stop-bits') - 1;
 
     dbgBaudRate = getSetting('dbg-baud-rate');
     for (var i = 0; i < dbgBaudRateCtl.length; ++i)
-        if (dbgBaudRate == dbgBaudRateCtl[i].value) {
-            dbgBaudRateCtl.selectedIndex = i;
-            break;
-        }
+      if (dbgBaudRate == dbgBaudRateCtl[i].value) {
+        dbgBaudRateCtl.selectedIndex = i;
+        break;
+      }
     dbgStopBitsCtl.selectedIndex = getSetting('debug-stop-bits') - 1;
 
     if (getSetting('cmd-enable') == "0")
-        enableSerialProtocolCtl.selectedIndex = 0;
+      enableSerialProtocolCtl.selectedIndex = 0;
     else
-        enableSerialProtocolCtl.selectedIndex = 1;
+      enableSerialProtocolCtl.selectedIndex = 1;
     if (getSetting('cmd-start-char') == 254)
-        startCharCtl.selectedIndex = 0;
+      startCharCtl.selectedIndex = 0;
     else
-        startCharCtl.selectedIndex = 1;
-    
+      startCharCtl.selectedIndex = 1;
+
     pauseTimeCtl.value = getSetting('cmd-pause-time');
     pauseCharsCtl.value = getSetting('cmd-pause-chars');
-}
+  }
 
-function on_save() {
+  function on_save() {
     setMessage("Saving...");
     setSetting('module-name', moduleNameCtl.value);
     setSetting('loader-baud-rate', loaderBaudRateCtl.value);
@@ -223,55 +229,55 @@ function on_save() {
     setSetting('cmd-pause-time', pauseTimeCtl.value);
     setSetting('cmd-pause-chars', pauseCharsCtl.value);
     setMessage("Settings saved");
-}
+  }
 
-function on_saveToFlash() {
+  function on_saveToFlash() {
     on_save();
     var req = new XMLHttpRequest();
     req.open('POST', '/wx/save-settings', false);
     req.send();
     setMessage("Settings saved to flash");
-}
+  }
 
-function on_restore() {
+  function on_restore() {
     setMessage("Restoring settings...");
     var req = new XMLHttpRequest();
     req.open('POST', '/wx/restore-settings', false);
     req.send();
     loadSettings();
     setMessage("Settings restored from flash");
-}
+  }
 
-function on_restoreDefaults() {
+  function on_restoreDefaults() {
     setMessage("Restoring default settings...");
     var req = new XMLHttpRequest();
     req.open('POST', '/wx/restore-default-settings', false);
     req.send();
     loadSettings();
     setMessage("Default settings restored");
-}
+  }
 
-function getSetting(name) {
+  function getSetting(name) {
     var req = new XMLHttpRequest();
     var url = '/wx/setting?name=' + name;
     req.open('GET', url, false);
     req.send();
     return req.responseText;
-}
+  }
 
-function setSetting(name, value) {
+  function setSetting(name, value) {
     var req = new XMLHttpRequest();
     var url = '/wx/setting?name=' + name + '&value=' + value;
     req.open('POST', url, false);
     req.send();
-}
+  }
 
-function setMessage(msg) {
+  function setMessage(msg) {
     var message = document.getElementById('message');
     message.innerHTML = msg;
-}
+  }
 
-window.addEventListener("load", init, false);
+  window.addEventListener("load", init, false);
 
 </script>
 </body>

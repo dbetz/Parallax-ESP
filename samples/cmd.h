@@ -2,7 +2,12 @@
 #define __CMD_H__
 
 #include <stdarg.h>
+#include "simpletools.h"
 #include "fdserial.h"
+
+extern fdserial *debug;
+
+#define dbg(args...) dprint(debug, args)
 
 #define CMD_PREFIX  "\xFE"
 #define CMD_START   0xFE
@@ -41,17 +46,29 @@ enum {
     CMD_MIN_TOKEN           = 0x80
 };
 
-extern fdserial *wifi;
-extern fdserial *debug;
+#define WIFI_QUEUE_MAX  1024
 
-void cmd_init(int wifi_rx, int wifi_tx, int debug_rx, int debug_tx);
-void request(char *fmt, ...);
-void nrequest(int token, char *fmt, ...);
-void requestPayload(char *buf, int len);
-int reply(int chan, int code, char *payload);
-int checkForEvent(char *buf, int maxSize);
-int getResponse(char *buf, int maxSize);
-int parseResponse(char *fmt, ...);
-int parseBuffer(char *buf, char *fmt, ...);
+typedef enum {
+    WIFI_STATE_START,
+    WIFI_STATE_DATA
+} wifi_state;
+
+typedef struct {
+    fdserial *port;
+    wifi_state messageState;
+    char messageBuffer[WIFI_QUEUE_MAX];
+    int messageHead;
+    int messageTail;
+    int messageStart;
+} wifi;
+
+wifi *wifi_open(int wifi_rx, int wifi_tx);
+int wifi_init(wifi *dev, int wifi_rx, int wifi_tx);
+int wifi_setInteger(wifi *dev, const char *name, int value);
+int wifi_listenHTTP(wifi *dev, const char *path, int *pHandle);
+int wifi_path(wifi *dev, int handle, char *path, int maxSize);
+int wifi_arg(wifi *dev, int handle, const char *name, char *buf, int maxSize);
+int wifi_reply(wifi *dev, int chan, int code, const char *payload);
+int wifi_checkForEvent(wifi *dev, char *pType, int *pHandle, int *pListener);
 
 #endif

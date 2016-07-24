@@ -235,7 +235,7 @@ static void ICACHE_FLASH_ATTR sendToMCU(int prefix, char *fmt, va_list ap)
         cnt = sizeof(buf) - 3 - 1;
 
     // display the response before inserting the final \r
-    sscp_log("Replying: '%s'", &buf[1]);
+    sscp_log("%s: '%s'", buf[1] == '!' ? "Event" : "Reply", &buf[1]);
 
     // terminate the response with a \r
     buf[2 + cnt] = '\r';

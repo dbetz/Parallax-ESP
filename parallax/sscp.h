@@ -82,6 +82,7 @@ enum {
 };
 
 typedef struct {
+    int (*checkForEvents)(sscp_hdr *hdr);
     void (*path)(sscp_hdr *hdr); 
     void (*send)(sscp_hdr *hdr, int size);
     void (*recv)(sscp_hdr *hdr, int size); 
@@ -192,15 +193,12 @@ void http_do_arg(int argc, char *argv[]);
 void http_do_body(int argc, char *argv[]);
 void http_do_reply(int argc, char *argv[]);
 int cgiSSCPHandleRequest(HttpdConnData *connData);
-int http_check_for_events(sscp_connection *connection);
 void http_disconnect(sscp_connection *connection);
 
 // from sscp-ws.c
 void sscp_websocketConnect(Websock *ws);
-int ws_check_for_events(sscp_connection *connection);
 
 // from sscp-tcp.c
 void tcp_do_connect(int argc, char *argv[]);
-int tcp_check_for_events(sscp_connection *connection);
 
 #endif

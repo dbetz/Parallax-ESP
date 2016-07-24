@@ -5,12 +5,14 @@
 static void send_connect_event(sscp_connection *connection, int prefix);
 static void send_disconnect_event(sscp_connection *connection, int prefix);
 static void send_data_event(sscp_connection *connection, int prefix);
+static int checkForEvents_handler(sscp_hdr *hdr);
 static void path_handler(sscp_hdr *hdr); 
 static void send_handler(sscp_hdr *hdr, int size);
 static void recv_handler(sscp_hdr *hdr, int size);
 static void close_handler(sscp_hdr *hdr);
 
 static sscp_dispatch httpDispatch = {
+    .checkForEvents = checkForEvents_handler,
     .path = path_handler,
     .send = send_handler,
     .recv = recv_handler,
@@ -73,18 +75,15 @@ static void ICACHE_FLASH_ATTR reply_cb(void *data, int count)
     httpdSetSendBuffer(connData, sendBuff, sizeof(sendBuff));
     
 sscp_log("REPLY payload callback: %d bytes of %d", count, connection->txCount);
-    if (connection->txIndex == 0) {
-        char buf[20];
-        os_sprintf(buf, "%d", connection->txCount);
-        httpdStartResponse(connData, connection->d.http.code);
-        httpdHeader(connData, "Content-Length", buf);
-        httpdEndHeaders(connData);
-    }
+    char buf[20];
+    os_sprintf(buf, "%d", connection->txCount);
     
-    if (count > 0)
-        httpdSend(connData, connection->txBuffer, count);
+    httpdStartResponse(connData, connection->d.http.code);
+    httpdHeader(connData, "Content-Length", buf);
+    httpdEndHeaders(connData);
+    httpdSend(connData, connection->txBuffer, count);
     httpdFlushSendBuffer(connData);
-
+    
     connection->flags &= ~CONNECTION_TXFULL;
     sscp_sendResponse("S,%d", connection->d.http.count);
     
@@ -213,7 +212,6 @@ static void ICACHE_FLASH_ATTR send_connect_event(sscp_connection *connection, in
 
 static void ICACHE_FLASH_ATTR send_disconnect_event(sscp_connection *connection, int prefix)
 {
-    connection->flags = 0;
     HttpdConnData *connData = (HttpdConnData *)connection->d.http.conn;
     if (connData) {
         switch (connData->requestType) {
@@ -228,6 +226,7 @@ static void ICACHE_FLASH_ATTR send_disconnect_event(sscp_connection *connection,
             break;
         }
     }
+    sscp_close_connection(connection);
 }
 
 static void ICACHE_FLASH_ATTR send_data_event(sscp_connection *connection, int prefix)
@@ -235,8 +234,10 @@ static void ICACHE_FLASH_ATTR send_data_event(sscp_connection *connection, int p
     sscp_send(prefix, "D,%d,%d", connection->hdr.handle, connection->listenerHandle);
 }
 
-int ICACHE_FLASH_ATTR http_check_for_events(sscp_connection *connection)
+static int ICACHE_FLASH_ATTR checkForEvents_handler(sscp_hdr *hdr)
 {
+    sscp_connection *connection = (sscp_connection *)hdr;
+    
     if (!connection->d.http.conn)
         return 0;
         
@@ -277,10 +278,7 @@ static void ICACHE_FLASH_ATTR send_cb(void *data, int count)
     HttpdConnData *connData = connection->d.http.conn;
 sscp_log("  captured %d bytes", count);
     
-    char sendBuff[MAX_SENDBUFF_LEN];
-    httpdSetSendBuffer(connData, sendBuff, sizeof(sendBuff));
-    httpdSend(connData, connection->txBuffer, count);
-    httpdFlushSendBuffer(connData);
+    httpdUnbufferedSend(connData, connection->txBuffer, count);
     
     connection->flags &= ~CONNECTION_TXFULL;
     sscp_sendResponse("S,%d", connection->d.http.count);

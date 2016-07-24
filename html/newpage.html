@@ -1,27 +1,26 @@
+<!DOCTYPE html>
 <html>
 <head>
-  <title>Test</title>
+  <title>Page Title</title>
   <meta content="width=device-width, initial-scale=1" name="viewport">
+  <!-- Change path depending on distance to root '../' -->
   <link rel="stylesheet" type="text/css" href="style.css">
 </head>
+
 <body>
 <div id="page">
   <div id="header">
-    <h1>The LED</h1>
+    <h1>Page Title</h1>
   </div>
   <div id="main" class="clearfix">
     <div id="content">
-      <p>
-        If there's a LED connected to GPIO2, it's now %ledstate%. You can change that using the buttons below.
-      </p>
-      <form method="post" action="led.cgi">
-        <input type="submit" name="led" value="1">
-        <input type="submit" name="led" value="0">
-      </form>
+      <!-- Place content in this space -->
+
     </div>
     <nav id='navigation'>
       <input type="checkbox" id="resp" /><label for="resp"></label>
       <ul>
+        <!-- Change path depending on distance to root '../' -->
         <li><a href="index.tpl">Home</a></li>
         <li><a href="wifi/wifi.tpl">Networks</a></li>
         <li><a href="update-ffs.html">Files</a></li>
@@ -30,9 +29,11 @@
       </ul>
     </nav>
   </div>
-  <div id="ack"></div>
+  <!-- Attribution and acknowledgement paragraph -->
+  <div id="ack"><!--<p>Credit to my dog Spot, always happy.</p>--></div>
   <div id="footer">
     <a href="https://www.parallax.com">
+      <!-- Change path depending on distance to root '../' -->
       <img src="logo.png">
     </a>
   </div>
@@ -40,3 +41,4 @@
 
 </body>
 </html>
+

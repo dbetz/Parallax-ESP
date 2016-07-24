@@ -8,26 +8,6 @@ release/httpd.user2.bin \
 release/Parallax-ESP-v010.ota \
 release/blank.bin
 
-SAMPLES=\
-release/samples/Makefile \
-release/samples/blink.c \
-release/samples/blink.side \
-release/samples/robot.c \
-release/samples/robot.side \
-release/samples/robot.html \
-release/samples/robot.pbas \
-release/samples/robot-ws.c \
-release/samples/robot-ws.side \
-release/samples/robot-ws.html \
-release/samples/tcp-test.c \
-release/samples/tcp-test.side \
-release/samples/ifttt.c \
-release/samples/ifttt.side \
-release/samples/test.c \
-release/samples/test.side \
-release/samples/cmd.c \
-release/samples/cmd.h
-
 CP=cp
 
 # this rule doesn't seem to work but running build followed by zip does
@@ -43,7 +23,7 @@ build:
 	$(MAKE) -C .. STA_SSID= STA_PASS= clean
 	$(MAKE) -C .. STA_SSID= STA_PASS=
 
-staged-files:	release release/samples $(IMAGES) $(SAMPLES)
+staged-files:	release release/tests release/samples $(IMAGES)
 	$(CP) flash.sh clear.sh clear-ffs.sh release
 
 release/boot_v1.5.bin:	../../esp_iot_sdk_v1.5.2/bin/boot_v1.5.bin patch
@@ -55,17 +35,25 @@ release/%:	../build/%
 release/Parallax-ESP-v010.ota:	../build/httpd.ota
 	$(CP) $< $@
 
-release/samples/%:	../samples/%
-	$(CP) $< $@
-
 release/blank.bin:	../../esp_iot_sdk_v1.5.2/bin/blank.bin
 	$(CP) $< $@
 
 release:
 	mkdir -p release
 
+release/tests:
+	mkdir -p release/tests
+	cp ../tests/*.[ch] release/tests
+	cp ../tests/*.html release/tests
+	cp ../tests/*.side release/tests
+	cp ../tests/Makefile release/tests
+
 release/samples:
 	mkdir -p release/samples
+	cp ../samples/*.[ch] release/samples
+	cp ../samples/*.html release/samples
+	cp ../samples/*.side release/samples
+	cp ../samples/Makefile release/samples
 
 patch:	patch.c
 	cc -o $@ $<

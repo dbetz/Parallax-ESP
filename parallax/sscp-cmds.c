@@ -26,6 +26,7 @@ void ICACHE_FLASH_ATTR cmds_do_join(int argc, char *argv[])
 }
 
 static sscp_dispatch listenerDispatch = {
+    .checkForEvents = NULL,
     .path = NULL,
     .send = NULL,
     .recv = NULL,
@@ -86,26 +87,10 @@ void ICACHE_FLASH_ATTR cmds_do_poll(int argc, char *argv[])
     }
 
     for (i = 0; i < SSCP_CONNECTION_MAX; ++i) {
-        sscp_connection *connection = &sscp_connections[i];
-        switch (connection->hdr.type) {
-        case TYPE_UNUSED:
-            // nothing to do on an unused connection
-            break;
-        case TYPE_HTTP_CONNECTION:
-            if (http_check_for_events(connection))
+        sscp_hdr *hdr = (sscp_hdr *)&sscp_connections[i];
+        if (hdr->type != TYPE_UNUSED) {
+            if (hdr->dispatch->checkForEvents && (*hdr->dispatch->checkForEvents)(hdr))
                 return;
-            break;
-        case TYPE_WEBSOCKET_CONNECTION:
-            if (ws_check_for_events(connection))
-                return;
-            break;
-        case TYPE_TCP_CONNECTION:
-            if (tcp_check_for_events(connection))
-                return;
-            break;
-        default:
-            sscp_sendResponse("E,%d,0", SSCP_ERROR_INTERNAL_ERROR);
-            break;
         }
     }
     

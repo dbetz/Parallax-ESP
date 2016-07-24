@@ -15,7 +15,7 @@
 
 // magic number to recognize thet these are our flash settings as opposed to some random stuff
 #define FLASH_MAGIC     0x55aa
-#define FLASH_VERSION   4
+#define FLASH_VERSION   5
 
 // size of the setting sector
 #define FLASH_SECT      4096

@@ -1,9 +1,39 @@
-<html><head><title>Webserver test</title></head>
-<link rel="stylesheet" type="text/css" href="../wifi/style.css">
-<script type="text/javascript" src="../wifi/140medley.min.js"></script>
-<script type="text/javascript" src="test.js"></script>
+<html>
+<head>
+  <title>Webserver test</title>
+  <meta content="width=device-width, initial-scale=1" name="viewport">
+  <link rel="stylesheet" type="text/css" href="../wifi/style.css">
+  <script type="text/javascript" src="../wifi/140medley.min.js"></script>
+  <script type="text/javascript" src="test.js"></script>
+</head>
+
 <body>
-<div id="main">
-<div id="log">Initializing test...</div>
+<div id="page">
+  <div id="header">
+    <h1>Webserver Test</h1>
+  </div>
+  <div id="main" class="clearfix">
+    <div id="content">
+      <div id="log">Initializing test...</div>
+    </div>
+    <nav id='navigation'>
+      <input type="checkbox" id="resp" /><label for="resp"></label>
+      <ul>
+        <li><a href="../index.tpl">Home</a></li>
+        <li><a href="../wifi/wifi.tpl">Networks</a></li>
+        <li><a href="../update-ffs.html">Files</a></li>
+        <li><a href="../settings.html">Settings</a></li>
+        <li><a href="../flash/index.html">Firmware</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div id="ack"></div>
+  <div id="footer">
+    <a href="https://www.parallax.com">
+      <img src="../logo.png">
+    </a>
+  </div>
 </div>
+
 </body>
+</html>

@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-
-<meta charset="utf-8" />
-
-<title>WebSocket Test</title>
-
+<html>
+<head>
+  <title>WebSocket Test</title>
+  <meta content="width=device-width, initial-scale=1" name="viewport">
+  <link rel="stylesheet" type="text/css" href="../style.css">
+  <meta charset="utf-8" />
+</head>
 <script language="javascript" type="text/javascript">
 
   var wsUri = "ws://"+window.location.host+"/websocket/ws.cgi";
@@ -48,7 +50,7 @@
 
   function doSend(message)
   {
-    writeToScreen("SENT: " + message); 
+    writeToScreen("SENT: " + message);
     websocket.send(message);
   }
 
@@ -64,6 +66,33 @@
 
 </script>
 
-<h2>WebSocket Test</h2>
+<body>
+<div id="page">
+  <div id="header">
+    <h1>WebSocket Test</h1>
+  </div>
+  <div id="main" class="clearfix">
+    <div id="content">
+      <div id="output"></div>
+    </div>
+    <nav id='navigation'>
+      <input type="checkbox" id="resp" /><label for="resp"></label>
+      <ul>
+        <li><a href="../index.tpl">Home</a></li>
+        <li><a href="../wifi/wifi.tpl">Networks</a></li>
+        <li><a href="../update-ffs.html">Files</a></li>
+        <li><a href="../settings.html">Settings</a></li>
+        <li><a href="../flash/index.html">Firmware</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div id="ack"></div>
+  <div id="footer">
+    <a href="https://www.parallax.com">
+      <img src="../logo.png">
+    </a>
+  </div>
+</div>
 
-<div id="output"></div>
+</body>
+</html>
