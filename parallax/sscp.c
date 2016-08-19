@@ -4,8 +4,8 @@
 #include "config.h"
 #include "cgiwifi.h"
 
-//#define DUMP_CMDS
-//#define DUMP_ARGS
+#define DUMP_CMDS
+#define DUMP_ARGS
 //#define DUMP_FILTER
 //#define DUMP_OUTOFBAND
 

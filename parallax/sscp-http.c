@@ -5,6 +5,7 @@
 static void send_connect_event(sscp_connection *connection, int prefix);
 static void send_disconnect_event(sscp_connection *connection, int prefix);
 static void send_data_event(sscp_connection *connection, int prefix);
+static void send_txdone_event(sscp_connection *connection, int prefix);
 static int checkForEvents_handler(sscp_hdr *hdr);
 static void path_handler(sscp_hdr *hdr); 
 static void send_handler(sscp_hdr *hdr, int size);
@@ -18,6 +19,76 @@ static sscp_dispatch httpDispatch = {
     .recv = recv_handler,
     .close = close_handler
 };
+
+/*
+    This function is called when a request matches the path or path fragment registered
+    by a LISTEN command from the MCU. It is called in several contexts:
+    
+    1) with connData->conn == NULL to cleanup after a connection is terminated
+    2) with connData->cgiData == NULL when a request first arrives
+    3) with connData->cgiData != NULL when additional request data arrives
+    4) with connData->cgiData != NULL when a send completes
+*/
+
+int ICACHE_FLASH_ATTR cgiSSCPHandleRequest(HttpdConnData *connData)
+{
+    sscp_connection *connection = (sscp_connection *)connData->cgiData;
+    sscp_listener *listener;
+    
+    // check for the cleanup call
+    if (connData->conn == NULL) {
+        if (connection) {
+sscp_log("sscp: closing %d", connection->hdr.handle);
+            connection->flags |= CONNECTION_TERM;
+            if (sscp_sendEvents)
+                send_disconnect_event(connection, '!');
+        }
+        return HTTPD_CGI_DONE;
+    }
+    
+    // check to see if this request is already in progress
+    if (connection) {
+        int ret;
+        
+sscp_log("REPLY send complete");
+       connection->flags |= CONNECTION_TXDONE; 
+
+        if ((connection->txIndex += connection->d.http.count) < connection->txCount)
+            ret = HTTPD_CGI_MORE;
+        else {
+sscp_log("REPLY complete");
+            connection->flags |= CONNECTION_TXFREE; 
+            ret = HTTPD_CGI_DONE;
+        }
+
+        if (sscp_sendEvents)
+            send_txdone_event(connection, '!');
+
+        return ret;
+    }
+
+    // find a matching listener
+    if (!(listener = sscp_find_listener(connData->url, TYPE_HTTP_LISTENER)))
+        return HTTPD_CGI_NOTFOUND;
+
+    // allocate a connection
+    if (!(connection = sscp_allocate_connection(TYPE_HTTP_CONNECTION, &httpDispatch))) {
+        httpdStartResponse(connData, 400);
+        httpdEndHeaders(connData);
+os_printf("sscp: no connections available for %s request\n", connData->url);
+        httpdSend(connData, "No connections available", -1);
+        return HTTPD_CGI_DONE;
+    }
+    connection->listenerHandle = listener->hdr.handle;
+    connData->cgiData = connection;
+    connection->d.http.conn = connData;
+
+sscp_log("sscp: %d handling %s request", connection->hdr.handle, connData->url);
+    if (sscp_sendEvents)
+        send_connect_event(connection, '!');
+        
+    return HTTPD_CGI_MORE;
+}
 
 // ARG,chan
 void ICACHE_FLASH_ATTR http_do_arg(int argc, char *argv[])
@@ -66,6 +137,7 @@ void ICACHE_FLASH_ATTR http_do_arg(int argc, char *argv[])
 
 #define MAX_SENDBUFF_LEN 1024
 
+// this is called after all of the data for a REPLY has been received from the MCU
 static void ICACHE_FLASH_ATTR reply_cb(void *data, int count)
 {
     sscp_connection *connection = (sscp_connection *)data;
@@ -141,56 +213,6 @@ sscp_log("REPLY: total %d, this %d", connection->txCount, count);
     }
 }
 
-int ICACHE_FLASH_ATTR cgiSSCPHandleRequest(HttpdConnData *connData)
-{
-    sscp_connection *connection = (sscp_connection *)connData->cgiData;
-    sscp_listener *listener;
-    
-    // check for the cleanup call
-    if (connData->conn == NULL) {
-        if (connection) {
-            connection->flags |= CONNECTION_TERM;
-            if (sscp_sendEvents)
-                send_disconnect_event(connection, '!');
-        }
-        return HTTPD_CGI_DONE;
-    }
-    
-    // check to see if this request is already in progress
-    if (connection) {
-        
-sscp_log("REPLY send complete");    
-        if ((connection->txIndex += connection->d.http.count) < connection->txCount)
-            return HTTPD_CGI_MORE;
-
-sscp_log("REPLY complete");
-        connection->hdr.type = TYPE_UNUSED;
-        return HTTPD_CGI_DONE;
-    }
-    
-    // find a matching listener
-    if (!(listener = sscp_find_listener(connData->url, TYPE_HTTP_LISTENER)))
-        return HTTPD_CGI_NOTFOUND;
-
-    // allocate a connection
-    if (!(connection = sscp_allocate_connection(TYPE_HTTP_CONNECTION, &httpDispatch))) {
-        httpdStartResponse(connData, 400);
-        httpdEndHeaders(connData);
-os_printf("sscp: no connections available for %s request\n", connData->url);
-        httpdSend(connData, "No connections available", -1);
-        return HTTPD_CGI_DONE;
-    }
-    connection->listenerHandle = listener->hdr.handle;
-    connData->cgiData = connection;
-    connection->d.http.conn = connData;
-
-sscp_log("sscp: %d handling %s request", connection->hdr.handle, connData->url);
-    if (sscp_sendEvents)
-        send_connect_event(connection, '!');
-        
-    return HTTPD_CGI_MORE;
-}
-
 static void ICACHE_FLASH_ATTR send_connect_event(sscp_connection *connection, int prefix)
 {
     connection->flags &= ~CONNECTION_INIT;
@@ -212,26 +234,21 @@ static void ICACHE_FLASH_ATTR send_connect_event(sscp_connection *connection, in
 
 static void ICACHE_FLASH_ATTR send_disconnect_event(sscp_connection *connection, int prefix)
 {
-    HttpdConnData *connData = (HttpdConnData *)connection->d.http.conn;
-    if (connData) {
-        switch (connData->requestType) {
-        case HTTPD_METHOD_GET:
-            sscp_send(prefix, "G,%d,0", connection->hdr.handle);
-            break;
-        case HTTPD_METHOD_POST:
-            sscp_send(prefix, "P,%d,0", connection->hdr.handle);
-            break;
-        default:
-            sscp_send(prefix, "E,%d,%d", SSCP_ERROR_INVALID_METHOD, connData->requestType);
-            break;
-        }
-    }
+    sscp_send(prefix, "X,%d,0", connection->hdr.handle);
     sscp_close_connection(connection);
 }
 
 static void ICACHE_FLASH_ATTR send_data_event(sscp_connection *connection, int prefix)
 {
     sscp_send(prefix, "D,%d,%d", connection->hdr.handle, connection->listenerHandle);
+}
+
+static void ICACHE_FLASH_ATTR send_txdone_event(sscp_connection *connection, int prefix)
+{
+    connection->flags &= ~CONNECTION_TXDONE;
+    sscp_send(prefix, "S,%d,0", connection->hdr.handle);
+    if (connection->flags & CONNECTION_TXFREE)
+        connection->hdr.type = TYPE_UNUSED;
 }
 
 static int ICACHE_FLASH_ATTR checkForEvents_handler(sscp_hdr *hdr)
@@ -241,7 +258,12 @@ static int ICACHE_FLASH_ATTR checkForEvents_handler(sscp_hdr *hdr)
     if (!connection->d.http.conn)
         return 0;
         
-    if (connection->flags & CONNECTION_TERM) {
+    if (connection->flags & CONNECTION_TXDONE) {
+        send_txdone_event(connection, '=');
+        return 1;
+    }
+    
+    else if (connection->flags & CONNECTION_TERM) {
         send_disconnect_event(connection, '=');
         return 1;
     }
@@ -272,6 +294,7 @@ static void ICACHE_FLASH_ATTR path_handler(sscp_hdr *hdr)
     sscp_sendResponse("S,%s", connData->url);
 }
 
+// this is called after all of the data for a SEND has been received from the MCU
 static void ICACHE_FLASH_ATTR send_cb(void *data, int count)
 {
     sscp_connection *connection = (sscp_connection *)data;

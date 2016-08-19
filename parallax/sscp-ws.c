@@ -35,6 +35,8 @@ static void ICACHE_FLASH_ATTR websocketRecvCb(Websock *ws, char *data, int len, 
 
 static void ICACHE_FLASH_ATTR websocketSentCb(Websock *ws)
 {
+	sscp_connection *connection = (sscp_connection *)ws->userData;
+    connection->flags |= CONNECTION_TXDONE; 
 }
 
 static void ICACHE_FLASH_ATTR websocketCloseCb(Websock *ws)
@@ -78,7 +80,7 @@ static void ICACHE_FLASH_ATTR send_connect_event(sscp_connection *connection, in
 static void ICACHE_FLASH_ATTR send_disconnect_event(sscp_connection *connection, int prefix)
 {
     connection->flags &= ~CONNECTION_TERM;
-    sscp_sendResponse("W,%d,0", connection->hdr.handle);
+    sscp_sendResponse("X,%d,0", connection->hdr.handle);
 }
 
 static void ICACHE_FLASH_ATTR send_data_event(sscp_connection *connection, int prefix)
@@ -124,6 +126,7 @@ static void ICACHE_FLASH_ATTR path_handler(sscp_hdr *hdr)
     sscp_sendResponse("S,%s", ws->conn->url);
 }
 
+// this is called after all of the data for a SEND has been received from the MCU
 static void ICACHE_FLASH_ATTR send_cb(void *data, int count)
 {
     sscp_connection *connection = (sscp_connection *)data;

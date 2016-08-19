@@ -162,17 +162,8 @@ static void ICACHE_FLASH_ATTR tcp_sent_cb(void *arg)
     struct espconn *conn = (struct espconn *)arg;
     sscp_connection *c = (sscp_connection *)conn->reverse;
     c->flags &= ~CONNECTION_TXFULL;
+    c->flags |= CONNECTION_TXDONE;
     sscp_sendResponse("S,0");
-}
-
-static void ICACHE_FLASH_ATTR send_cb(void *data, int count)
-{
-    sscp_connection *c = (sscp_connection *)data;
-    struct espconn *conn = &c->d.tcp.conn;
-    if (espconn_send(conn, (uint8 *)c->txBuffer, count) != ESPCONN_OK) {
-        c->flags &= ~CONNECTION_TXFULL;
-        sscp_sendResponse("E,%d", SSCP_ERROR_SEND_FAILED);
-    }
 }
 
 static void ICACHE_FLASH_ATTR send_connect_event(sscp_connection *connection, int prefix)
@@ -184,7 +175,7 @@ static void ICACHE_FLASH_ATTR send_connect_event(sscp_connection *connection, in
 static void ICACHE_FLASH_ATTR send_disconnect_event(sscp_connection *connection, int prefix)
 {
     connection->flags &= ~CONNECTION_TERM;
-    sscp_sendResponse("T,%d,0", connection->hdr.handle);
+    sscp_sendResponse("X,%d,0", connection->hdr.handle);
 }
 
 static void ICACHE_FLASH_ATTR send_data_event(sscp_connection *connection, int prefix)
@@ -212,6 +203,17 @@ static int ICACHE_FLASH_ATTR checkForEvents_handler(sscp_hdr *hdr)
     }
     
     return 0;
+}
+
+// this is called after all of the data for a SEND has been received from the MCU
+static void ICACHE_FLASH_ATTR send_cb(void *data, int count)
+{
+    sscp_connection *c = (sscp_connection *)data;
+    struct espconn *conn = &c->d.tcp.conn;
+    if (espconn_send(conn, (uint8 *)c->txBuffer, count) != ESPCONN_OK) {
+        c->flags &= ~CONNECTION_TXFULL;
+        sscp_sendResponse("E,%d", SSCP_ERROR_SEND_FAILED);
+    }
 }
 
 static void ICACHE_FLASH_ATTR send_handler(sscp_hdr *hdr, int size)

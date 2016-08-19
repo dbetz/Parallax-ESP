@@ -2,6 +2,10 @@
 #include "fdserial.h"
 #include "cmd.h"
 
+// this is needed until vsprint gets added to Simple Libraries
+//#define vsprint(buf, fmt, args) _intsprnt((fmt), (args), (buf))
+#define vsprint(buf, fmt, args) vsprintf((buf), (fmt), (args))
+
 static int checkForEvent(wifi *dev, char *buf, int maxSize);
 static void request(wifi *dev, const char *fmt, ...);
 static void requestPayload(wifi *dev, const char *buf, int len);
@@ -52,11 +56,11 @@ int wifi_setInteger(wifi *dev, const char *name, int value)
     return 0;
 }
 
-int wifi_listenHTTP(wifi *dev, const char *path, int *pHandle)
+int wifi_listen(wifi *dev, char *protocol, const char *path, int *pHandle)
 {
     char result;
     int arg;
-    request(dev, "LISTEN:HTTP,%s", path);
+    request(dev, "LISTEN:%s,%s", protocol, path);
     if (parseResponse(dev, CMD_PREFIX "=^c,^d\r", &result, &arg) != 0 || result != 'S')
         return -1;
     *pHandle = arg;
@@ -204,7 +208,7 @@ static void request(wifi *dev, const char *fmt, ...)
     
     va_list ap;
     va_start(ap, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, ap);
+    vsprint(buf, fmt, ap);
     va_end(ap);
     
     fdserial_txChar(dev->port, CMD_START);

@@ -53,19 +53,39 @@ typedef enum {
     WIFI_STATE_DATA
 } wifi_state;
 
-typedef struct {
+typedef struct wifi wifi;
+typedef struct wifi_listener wifi_listener;
+typedef struct wifi_request wifi_request;
+
+struct wifi {
     fdserial *port;
     wifi_state messageState;
     char messageBuffer[WIFI_QUEUE_MAX];
     int messageHead;
     int messageTail;
     int messageStart;
-} wifi;
+    wifi_listener *listeners;
+};
+
+struct wifi_listener {
+    wifi *dev;
+    int handle;
+    int (*doRequest)(wifi *wifi, wifi_request *request);
+    wifi_request *requests;
+};
+
+struct wifi_request {
+    wifi_listener *listener;
+    int handle;
+    void (*doDisconnect)(wifi_request *request);
+    int (*doSent)(wifi_request *request, int count);
+    int (*doError)(wifi_request *request, int err);
+};
 
 wifi *wifi_open(int wifi_rx, int wifi_tx);
 int wifi_init(wifi *dev, int wifi_rx, int wifi_tx);
 int wifi_setInteger(wifi *dev, const char *name, int value);
-int wifi_listenHTTP(wifi *dev, const char *path, int *pHandle);
+int wifi_listen(wifi *dev, char *protocol, const char *path, int *pHandle);
 int wifi_path(wifi *dev, int handle, char *path, int maxSize);
 int wifi_arg(wifi *dev, int handle, const char *name, char *buf, int maxSize);
 int wifi_reply(wifi *dev, int chan, int code, const char *payload);

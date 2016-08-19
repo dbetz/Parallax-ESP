@@ -1,6 +1,7 @@
 /*
   Robot test program
 */
+
 #include "simpletools.h"
 #include "abdrive.h"
 #include "ping.h"
@@ -65,7 +66,7 @@ int main(void)
     init_robot();
     
     wifi_setInteger(esp, "cmd-events", 1);
-    wifi_listenHTTP(esp, "/robot*", &listenHandle);
+    wifi_listen(esp, "HTTP", "/robot*", &listenHandle);
     
     for (;;) {
         int handle, listener;
@@ -111,7 +112,7 @@ void handleEvent(wifi *esp, char type, char handle, int listener)
             wifi_path(esp, handle, url, sizeof(url));
             dbg("%d: path '%s'\n", handle, url);
             if (strcmp(url, "/robot-ping") == 0) {
-                sprintf(arg, "%d", ping_cm(PING_PIN));
+                sprinti(arg, "%d", ping_cm(PING_PIN));
                 wifi_reply(esp, handle, 200, arg);
             }
             else if (strcmp(url, "/robot-test") == 0) {

@@ -79,18 +79,23 @@ void ICACHE_FLASH_ATTR cmds_do_listen(int argc, char *argv[])
 // POLL
 void ICACHE_FLASH_ATTR cmds_do_poll(int argc, char *argv[])
 {
+    uint32_t mask;
     int i;
 
-    if (argc != 1) {
+    if (argc >= 1 && argc <= 2) {
         sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
 
+    mask = (argc > 1 ? atoi(argv[1]) : 0xffffffff);
+
     for (i = 0; i < SSCP_CONNECTION_MAX; ++i) {
         sscp_hdr *hdr = (sscp_hdr *)&sscp_connections[i];
-        if (hdr->type != TYPE_UNUSED) {
-            if (hdr->dispatch->checkForEvents && (*hdr->dispatch->checkForEvents)(hdr))
-                return;
+        if ((1 << hdr->handle) & mask) {
+            if (hdr->type != TYPE_UNUSED) {
+                if (hdr->dispatch->checkForEvents && (*hdr->dispatch->checkForEvents)(hdr))
+                    return;
+            }
         }
     }
     
