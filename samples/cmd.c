@@ -192,9 +192,9 @@ static int checkForEvent(wifi *dev, char *buf, int maxSize)
                 buf[j++] = ch;
             i = (i + 1) % sizeof(dev->messageBuffer);
             if (ch == '\r') {
-                dev->messageHead = 0;
+                dev->messageHead = i;
                 buf[j] = '\0';
-                dbg("Got queued event: %s\n", &buf[1]);
+                dbg("Got *QUEUED* event: %s\n", &buf[1]);
                 return j;
             }   
         }

@@ -44,7 +44,7 @@ void set_robot_speed(int left, int right);
 
 #define LONG_REPLY  "This is a very long reply that should be broken into multiple chunks to test REPLY followed by SEND.\r\n"
 
-void handleEvent(wifi *esp, char type, char handle, int listener);
+void handleEvent(wifi *esp, char type, char handle, int arg);
 
 int main(void)
 {    
@@ -69,60 +69,61 @@ int main(void)
     wifi_listen(esp, "HTTP", "/robot*", &listenHandle);
     
     for (;;) {
-        int handle, listener;
+        int handle, arg;
         char type;
         
-        if (wifi_checkForEvent(esp, &type, &handle, &listener) > 0) {
-            dbg("Got event %c: handle %d, listener %d\n", type, handle, listener);
-            handleEvent(esp, type, handle, listener);
+        if (wifi_checkForEvent(esp, &type, &handle, &arg) > 0) {
+            dbg("Got event %c: handle %d, arg %d\n", type, handle, arg);
+            handleEvent(esp, type, handle, arg);
         }
     }
     
     return 0;
 }
 
-void handleEvent(wifi *esp, char type, char handle, int listener)
+void handleEvent(wifi *esp, char type, char handle, int arg)
 {
-    char url[128], arg[128];
+    char url[128], buf[128];
 
     switch (type) {
     case 'P':
-        if (listener == 0)
-            dbg("%d: disconnected\n", handle);
+        wifi_path(esp, handle, url, sizeof(url));
+        dbg("%d: path '%s'\n", handle, url);
+        if (strcmp(url, "/robot") == 0) {
+            wifi_arg(esp, handle, "gto", buf, sizeof(buf));
+            dbg("gto='%s'\n", buf);
+            if (process_robot_command(buf[0]) != 0)
+                dbg("Unknown robot command: '%c'\n", buf[0]);
+            wifi_reply(esp, handle, 200, "");
+        }
         else {
-            wifi_path(esp, handle, url, sizeof(url));
-            dbg("%d: path '%s'\n", handle, url);
-            if (strcmp(url, "/robot") == 0) {
-                wifi_arg(esp, handle, "gto", arg, sizeof(arg));
-                dbg("gto='%s'\n", arg);
-                if (process_robot_command(arg[0]) != 0)
-                    dbg("Unknown robot command: '%c'\n", arg[0]);
-                wifi_reply(esp, handle, 200, "");
-            }
-            else {
-                dbg("Unknown POST URL\n");
-                wifi_reply(esp, handle, 404, "unknown");
-            }
+            dbg("Unknown POST URL\n");
+            wifi_reply(esp, handle, 404, "unknown");
         }
         break;
     case 'G':
-        if (listener == 0)
-            dbg("%d: disconnected\n", handle);
-        else {
-            wifi_path(esp, handle, url, sizeof(url));
-            dbg("%d: path '%s'\n", handle, url);
-            if (strcmp(url, "/robot-ping") == 0) {
-                sprinti(arg, "%d", ping_cm(PING_PIN));
-                wifi_reply(esp, handle, 200, arg);
-            }
-            else if (strcmp(url, "/robot-test") == 0) {
-                wifi_reply(esp, handle, 200, LONG_REPLY);
-            }
-            else {
-                dbg("Unknown GET URL\n");
-                wifi_reply(esp, handle, 404, "unknown");
-            }
+        wifi_path(esp, handle, url, sizeof(url));
+        dbg("%d: path '%s'\n", handle, url);
+        if (strcmp(url, "/robot-ping") == 0) {
+            sprinti(buf, "%d", ping_cm(PING_PIN));
+            wifi_reply(esp, handle, 200, buf);
         }
+        else if (strcmp(url, "/robot-test") == 0) {
+            wifi_reply(esp, handle, 200, LONG_REPLY);
+        }
+        else {
+            dbg("Unknown GET URL\n");
+            wifi_reply(esp, handle, 404, "unknown");
+        }
+        break;
+    case 'S':
+        dbg("%d: send complete\n", handle);
+        break;
+    case 'X':
+        dbg("%d: disconnected\n", handle);
+        break;
+    case 'E':
+        dbg("%d: connection failed: %d\n", handle, arg);
         break;
     default:
         dbg("unknown event: '%c' 0x%02x\n", type, type);

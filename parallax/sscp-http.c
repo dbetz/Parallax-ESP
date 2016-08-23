@@ -4,6 +4,7 @@
 
 static void send_connect_event(sscp_connection *connection, int prefix);
 static void send_disconnect_event(sscp_connection *connection, int prefix);
+static void send_reconnect_event(sscp_connection *connection, int prefix);
 static void send_data_event(sscp_connection *connection, int prefix);
 static void send_txdone_event(sscp_connection *connection, int prefix);
 static int checkForEvents_handler(sscp_hdr *hdr);
@@ -35,18 +36,27 @@ int ICACHE_FLASH_ATTR cgiSSCPHandleRequest(HttpdConnData *connData)
     sscp_connection *connection = (sscp_connection *)connData->cgiData;
     sscp_listener *listener;
     
-    // check for the cleanup call
+    // check for the cleanup call (CGI_CB_DISCONNECT or CGI_CB_RECONNECT)
     if (connData->conn == NULL) {
         if (connection) {
-sscp_log("sscp: closing %d", connection->hdr.handle);
-            connection->flags |= CONNECTION_TERM;
-            if (sscp_sendEvents)
-                send_disconnect_event(connection, '!');
+            if (connData->cgiReason == CGI_CB_DISCONNECT) {
+sscp_log("sscp: disconnecting %d", connection->hdr.handle);
+                connection->flags |= CONNECTION_TERM;
+                if (sscp_sendEvents)
+                    send_disconnect_event(connection, '!');
+            }
+            else {
+sscp_log("sscp: disconnecting after failure %d", connection->hdr.handle);
+                connection->flags |= CONNECTION_FAIL;
+                connection->error = connData->cgiValue;
+                if (sscp_sendEvents)
+                    send_reconnect_event(connection, '!');
+            }
         }
         return HTTPD_CGI_DONE;
     }
     
-    // check to see if this request is already in progress
+    // check to see if this request is already in progress (CGI_CB_RECV or CGI_CB_SENT)
     if (connection) {
         int ret;
         
@@ -67,7 +77,7 @@ sscp_log("REPLY complete");
         return ret;
     }
 
-    // find a matching listener
+    // find a matching listener (first CGI_CB_RECV)
     if (!(listener = sscp_find_listener(connData->url, TYPE_HTTP_LISTENER)))
         return HTTPD_CGI_NOTFOUND;
 
@@ -238,8 +248,15 @@ static void ICACHE_FLASH_ATTR send_disconnect_event(sscp_connection *connection,
     sscp_close_connection(connection);
 }
 
+static void ICACHE_FLASH_ATTR send_reconnect_event(sscp_connection *connection, int prefix)
+{
+    sscp_send(prefix, "E,%d,%d", connection->hdr.handle, connection->error);
+    sscp_close_connection(connection);
+}
+
 static void ICACHE_FLASH_ATTR send_data_event(sscp_connection *connection, int prefix)
 {
+    connection->flags &= ~CONNECTION_RXFULL;
     sscp_send(prefix, "D,%d,%d", connection->hdr.handle, connection->listenerHandle);
 }
 
@@ -265,6 +282,11 @@ static int ICACHE_FLASH_ATTR checkForEvents_handler(sscp_hdr *hdr)
     
     else if (connection->flags & CONNECTION_TERM) {
         send_disconnect_event(connection, '=');
+        return 1;
+    }
+    
+    else if (connection->flags & CONNECTION_FAIL) {
+        send_reconnect_event(connection, '=');
         return 1;
     }
     

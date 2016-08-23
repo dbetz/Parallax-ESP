@@ -104,8 +104,9 @@ enum {
     // events that are deliverd to the MCU
     CONNECTION_INIT         = 0x00000001,   // set when a new request has been received ('G', 'P', 'T', 'W')
     CONNECTION_TERM         = 0x00000002,   // set when the remote end has closed a connection ('X')
+    CONNECTION_FAIL         = 0x00000004,   // set when the connection has failed ('E')
     CONNECTION_TXFULL       = 0x00000004,   // set when outgoing data buffer is full ('D')
-    CONNECTION_TXDONE       = 0x00000008,   // set when an outgoing transfer is complete ('C')
+    CONNECTION_TXDONE       = 0x00000008,   // set when an outgoing transfer is complete ('S')
 
     // internal state bits
     CONNECTION_RXFULL       = 0x00010000,   // set when incoming data is available
@@ -121,6 +122,7 @@ enum {
 struct sscp_connection {
     sscp_hdr hdr;
     int flags;
+    int error;
     int listenerHandle;
     union {
         struct {
