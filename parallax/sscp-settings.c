@@ -22,6 +22,7 @@ static int setModuleName(void *data, char *value)
 {
     os_memcpy(flashConfig.module_name, value, sizeof(flashConfig.module_name));
     flashConfig.module_name[sizeof(flashConfig.module_name) - 1] = '\0';
+    softap_set_ssid(flashConfig.module_name, os_strlen(flashConfig.module_name));
     return 0;
 }
 
@@ -72,16 +73,6 @@ static int getWiFiSSID(void *data, char *value)
 	wifi_station_get_config(&config);
 	strcpy(value, (char *)config.ssid);
 	return 0;
-}
-
-static int getWiFiAPWarning(void *data, char *value)
-{
-    int mode = wifi_get_opmode();
-    if (mode == SOFTAP_MODE)
-        os_strcpy(value, "<b>Can't scan in this mode.</b> Click <a href=\"setmode.cgi?mode=3\">here</a> to go to STA+AP mode.");
-    else
-        strcpy(value, "Click <a href=\"setmode.cgi?mode=2\">here</a> to go to standalone AP mode.");
-    return 0;
 }
 
 static int getIPAddress(void *data, char *value)
@@ -335,7 +326,6 @@ static cmd_def vars[] = {
 {   "module-name",      getModuleName,      setModuleName,      NULL                            },
 {   "wifi-mode",        getWiFiMode,        setWiFiMode,        NULL                            },
 {   "wifi-ssid",        getWiFiSSID,        NULL,               NULL                            },
-{   "wifi-ap-warning",  getWiFiAPWarning,   NULL,               NULL                            },
 {   "station-ipaddr",   getIPAddress,       setIPAddress,       (void *)STATION_IF              },
 {   "station-macaddr",  getMACAddress,      setMACAddress,      (void *)STATION_IF              },
 {   "softap-ipaddr",    getIPAddress,       setIPAddress,       (void *)SOFTAP_IF               },

@@ -16,7 +16,7 @@ typedef struct {
   int8_t   dbg_stop_bits;
   int8_t   conn_led_pin;
   int8_t   reset_pin;
-  char     module_name[32];
+  char     module_name[32+1];
   char     module_descr[129];
   int8_t   rx_pullup;
   int8_t   sscp_enable;
@@ -33,5 +33,8 @@ bool configRestore(void);
 bool configRestoreDefaults(void);
 void configWipe(void);
 const size_t getFlashSize();
+
+bool softap_get_ssid(char *ssid, int size);
+bool softap_set_ssid(const char *ssid, int size);
 
 #endif

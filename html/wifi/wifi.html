@@ -8,7 +8,8 @@
 
     var ipAddressCtl;
     var xhr=j();
-    var currAp="%wifi-ssid%";
+    var currAp=getSetting("wifi-ssid");
+    var wifiModeCtl;
 
     function createInputForAp(ap) {
       if (ap.essid=="" && ap.rssi==0) return;
@@ -70,8 +71,54 @@
     }
 
     window.onload=function(e) {
+      patchSetting("module-name");
+
+      wifiModeCtl = document.getElementById("wifi-mode");
+      var wifiMode = getSetting("wifi-mode");
+      for (var i = 0; i < wifiModeCtl.length; ++i)
+        if (wifiMode == wifiModeCtl[i].value) {
+          wifiModeCtl.selectedIndex = i;
+          break;
+        }
+
+      patchSetting("station-ipaddr");
+      patchSetting("station-macaddr");
+      patchSetting("softap-ipaddr");
+      patchSetting("softap-macaddr");
       scanAPs();
     };
+
+  function getSetting(name) {
+    var req = new XMLHttpRequest();
+    var url = '/wx/setting?name=' + name;
+    req.open('GET', url, false);
+    req.send();
+    return req.responseText;
+  }
+
+  function setSetting(name, value) {
+    var req = new XMLHttpRequest();
+    var url = '/wx/setting?name=' + name + '&value=' + encodeURIComponent(value);
+    req.open('POST', url, false);
+    req.send();
+  }
+
+  function patchSetting(name) {
+    var element = document.getElementById(name);
+    element.innerHTML = getSetting(name);
+  }
+
+  function on_wifiModeChanged() {
+    var newMode = wifiModeCtl[wifiModeCtl.selectedIndex].value;
+    var req = new XMLHttpRequest();
+    var url = '/wifi/setmode.cgi?mode=' + encodeURIComponent(newMode);
+    req.open('GET', url, false);
+    req.send();
+    if (newMode == "STA")
+      $("#aps").innerHTML = "";
+    else
+      $("#aps").innerHTML = "Scanning...";
+  }
 
   </script>
 </head>
@@ -86,30 +133,36 @@
       <table>
         <tr>
           <td>Module name:</td>
-          <td>%module-name%</td>
-        </tr>
-        <tr>
-          <td>Wi-Fi Mode:</td>
-          <td>%wifi-mode%</td>
+          <td id="module-name"></td>
         </tr>
         <tr>
           <td>Station IP Address:</td>
-          <td>%station-ipaddr%</td>
+          <td id="station-ipaddr"></td>
         </tr>
         <tr>
           <td>Station MAC Address:</td>
-          <td>%station-macaddr%</td>
+          <td id="station-macaddr"></td>
         </tr>
         <tr>
           <td>SoftAP IP Address:</td>
-          <td>%softap-ipaddr%</td>
+          <td id="softap-ipaddr"></td>
         </tr>
         <tr>
           <td>SoftAP MAC Address:</td>
-          <td>%softap-macaddr%</td>
+          <td id="softap-macaddr"></td>
+        </tr>
+        <tr>
+          <td>Wi-Fi Mode:</td>
+          <td>
+            <select id="wifi-mode" onchange='on_wifiModeChanged();'>
+              <option value="STA">STA</option>
+              <option value="AP">AP</option>
+              <option value="STA+AP">STA+AP</option>
+            </select>
+          </td>
         </tr>
       </table>
-      <p>Note: %wifi-ap-warning%</p>
+      <p>Note: Select Wi-Fi Mode "STA+AP" above when scanning for networks.</p>
       <form name="wifiform" action="connect.cgi" method="post">
         <p>
           Select a network from the list, enter password (if needed) in field below and click connect.<br>
@@ -123,8 +176,8 @@
     <nav id='navigation'>
       <input type="checkbox" id="resp" /><label for="resp"></label>
       <ul>
-        <li><a href="../index.tpl">Home</a></li>
-        <li><a href="wifi.tpl">Networks</a></li>
+        <li><a href="../index.html">Home</a></li>
+        <li><a href="wifi.html">Networks</a></li>
         <li><a href="../update-ffs.html">Files</a></li>
         <li><a href="../settings.html">Settings</a></li>
         <li><a href="../flash/index.html">Firmware</a></li>

@@ -1,7 +1,6 @@
 #include <esp8266.h>
 #include <osapi.h>
 #include "config.h"
-#include "cgi.h"
 #include "cgiprop.h"
 #include "proploader.h"
 #include "serbridge.h"

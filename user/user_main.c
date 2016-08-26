@@ -20,7 +20,6 @@ some pictures of cats.
 #include "httpd.h"
 #include "io.h"
 #include "httpdespfs.h"
-#include "cgi.h"
 #include "cgiwifi.h"
 #include "cgiflash.h"
 #include "stdout.h"
@@ -29,7 +28,6 @@ some pictures of cats.
 #include "captdns.h"
 #include "webpages-espfs.h"
 #include "cgiwebsocket.h"
-#include "cgi-test.h"
 
 #include "serbridge.h"
 #include "uart.h"
@@ -144,22 +142,13 @@ should be placed above the URLs they protect.
 */
 HttpdBuiltInUrl builtInUrls[]={
 	{"*", cgiRedirectApClientToHostname, "esp8266.nonet"},
-	{"/", cgiRedirect, "/index.tpl"},
-	{"/index.tpl", cgiEspFsTemplate, tplSettings},
+	{"/", cgiRedirect, "/index.html"},
+	{"/index.html", cgiEspFsTemplate, tplSettings},
 #ifdef INCLUDE_FLASH_FNS
 	{"/flash/next", cgiGetFirmwareNext, &uploadParams},
 	{"/flash/upload", cgiUploadFirmware, &uploadParams},
 #endif
 	{"/flash/reboot", cgiRebootFirmware, NULL},
-
-	{"/led", cgiRedirect, "/led.tpl"},
-	{"/led/", cgiRedirect, "/led.tpl"},
-	{"/led.tpl", cgiEspFsTemplate, tplLed},
-	{"/led.cgi", cgiLed, NULL},
-	
-	{"/test", cgiRedirect, "/test/index.html"},
-	{"/test/", cgiRedirect, "/test/index.html"},
-	{"/test/test.cgi", cgiTestbed, NULL},
 
 	{"/websocket", cgiRedirect, "/websocket/index.html"},
 	{"/websocket/", cgiRedirect, "/websocket/index.html"},
@@ -171,9 +160,8 @@ HttpdBuiltInUrl builtInUrls[]={
 //Enable the line below to protect the WiFi configuration with an username/password combo.
 //	{"/wifi/*", authBasic, myPassFn},
 
-	{"/wifi", cgiRedirect, "/wifi/wifi.tpl"},
-	{"/wifi/", cgiRedirect, "/wifi/wifi.tpl"},
-	{"/wifi/wifi.tpl", cgiEspFsTemplate, tplSettings},
+	{"/wifi", cgiRedirect, "/wifi/wifi.html"},
+	{"/wifi/", cgiRedirect, "/wifi/wifi.html"},
 	{"/wifi/wifiscan.cgi", cgiWiFiScan, NULL},
 	{"/wifi/connect.cgi", cgiWiFiConnect, NULL},
 	{"/wifi/connstatus.cgi", cgiWiFiConnStatus, NULL},

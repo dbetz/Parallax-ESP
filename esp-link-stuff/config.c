@@ -14,11 +14,11 @@
 #define BAUD_RATE           115200
 
 // magic number to recognize thet these are our flash settings as opposed to some random stuff
-#define FLASH_MAGIC     0x55aa
-#define FLASH_VERSION   5
+#define FLASH_MAGIC         0x55aa
+#define FLASH_VERSION       6
 
 // size of the setting sector
-#define FLASH_SECT      4096
+#define FLASH_SECT          4096
 
 #define FIRMWARE_SIZE       0x7b000
 #define CHIP_IN_MODULE_NAME
@@ -138,7 +138,36 @@ bool ICACHE_FLASH_ATTR configRestore(void) {
   }
   // copy good one into global var and return
   os_memcpy(&flashConfig, flash_pri == 0 ? &ff0.fc : &ff1.fc, sizeof(FlashConfig));
+  softap_get_ssid(flashConfig.module_name, sizeof(flashConfig.module_name));
   return true;
+}
+
+bool ICACHE_FLASH_ATTR softap_set_ssid(const char *ssid, int size)
+{
+    struct softap_config apconf;
+    if (size > sizeof(apconf.ssid))
+        return false;
+    if (!wifi_softap_get_config(&apconf))
+        return false;
+    os_memset(apconf.ssid, 0, sizeof(apconf.ssid));
+    os_memcpy(apconf.ssid, ssid, size);
+    apconf.ssid_len = size;
+    os_memset(apconf.password, 0, sizeof(apconf.password));
+    apconf.authmode = AUTH_OPEN;
+    apconf.ssid_hidden = 0;
+    return wifi_softap_set_config(&apconf);
+}
+
+bool ICACHE_FLASH_ATTR softap_get_ssid(char *ssid, int size)
+{
+    struct softap_config apconf;
+    if (size < sizeof(apconf.ssid) + 1)
+        return false;
+    if (!wifi_softap_get_config(&apconf))
+        return false;
+    os_memcpy(ssid, apconf.ssid, sizeof(apconf.ssid));
+    ssid[sizeof(apconf.ssid)] = '\0';
+    return true;
 }
 
 bool ICACHE_FLASH_ATTR configRestoreDefaults(void) {
@@ -150,6 +179,7 @@ bool ICACHE_FLASH_ATTR configRestoreDefaults(void) {
     os_strcpy(module_name, "wx-");
     os_strcat(module_name, chipIdStr);
     os_memcpy(&flashConfig.module_name, module_name, os_strlen(module_name) + 1); // include terminating zero
+    softap_set_ssid(flashConfig.module_name, os_strlen(flashConfig.module_name));
 #endif
     return true;
 }

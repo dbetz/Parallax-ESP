@@ -3,6 +3,26 @@
   <title>Parallax Wi-Fi Module Configuration</title>
   <meta content="width=device-width, initial-scale=1" name="viewport">
   <link rel="stylesheet" type="text/css" href="style.css">
+  <script type="text/javascript">
+
+  function getSetting(name) {
+    var req = new XMLHttpRequest();
+    var url = '/wx/setting?name=' + name;
+    req.open('GET', url, false);
+    req.send();
+    return req.responseText;
+  }
+
+  function patchSetting(name) {
+    var element = document.getElementById(name);
+    element.innerHTML = getSetting(name);
+  }
+
+    window.onload=function(e) {
+      patchSetting("module-name");
+      patchSetting("version");
+    }
+  </script>
 </head>
 <body>
 <div id="page">
@@ -11,14 +31,14 @@
   </div>
   <div id="main" class="clearfix">
     <div id="content">
-      <h2>Module Name: %module-name%</h2>
-      <h2>Version: %version%</h2>
+      <h2>Module Name: <span id="module-name">foo</span></h2>
+      <h2>Version: <span id="version">bar</span></h2>
     </div>
     <nav id='navigation'>
       <input type="checkbox" id="resp" /><label for="resp"></label>
       <ul>
-        <li><a href="index.tpl">Home</a></li>
-        <li><a href="wifi/wifi.tpl">Networks</a></li>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="wifi/wifi.html">Networks</a></li>
         <li><a href="update-ffs.html">Files</a></li>
         <li><a href="settings.html">Settings</a></li>
         <li><a href="flash/index.html">Firmware</a></li>

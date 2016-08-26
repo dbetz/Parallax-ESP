@@ -24,7 +24,7 @@
             $("#status").innerHTML="Trying to connect to selected access point...";
             window.setTimeout(getStatus, 1000);
           } else if (data.status=="fail") {
-            $("#status").innerHTML="Connection failed. Check password and selected AP.<br /><a href=\"wifi.tpl\">Go Back</a>";
+            $("#status").innerHTML="Connection failed. Check password and selected AP.<br /><a href=\"wifi.html\">Go Back</a>";
           }
         }
       }
@@ -51,8 +51,8 @@
     <nav id='navigation'>
       <input type="checkbox" id="resp" /><label for="resp"></label>
       <ul>
-        <li><a href="../index.tpl">Home</a></li>
-        <li><a href="wifi.tpl">Networks</a></li>
+        <li><a href="../index.html">Home</a></li>
+        <li><a href="wifi.html">Networks</a></li>
         <li><a href="../update-ffs.html">Files</a></li>
         <li><a href="../settings.html">Settings</a></li>
         <li><a href="../flash/index.html">Firmware</a></li>
