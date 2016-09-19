@@ -35,26 +35,10 @@ void request(char *fmt, ...)
     vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
     
-    fdserial_txChar(wifi, CMD_START);
+    fdserial_txChar(wifi, CMD_START_BYTE);
     while (*p != '\0')
         fdserial_txChar(wifi, *p++);
-    fdserial_txChar(wifi, '\r');
-}
-
-void nrequest(int token, char *fmt, ...)
-{
-    char buf[100], *p = buf;
-    
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, ap);
-    va_end(ap);
-    
-    fdserial_txChar(wifi, CMD_START);
-    fdserial_txChar(wifi, token);
-    while (*p != '\0')
-        fdserial_txChar(wifi, *p++);
-    fdserial_txChar(wifi, '\r');
+    fdserial_txChar(wifi, CMD_END_BYTE);
 }
 
 void requestPayload(char *buf, int len)
@@ -94,7 +78,7 @@ dprint(debug, "SEND %d, %d\n", chan, count);
             payload += count;
             remaining -= count;
             if (remaining > 0) {
-                waitFor(CMD_PREFIX "=^c,^d\r", &result, &count);
+                waitFor(CMD_START "=^c,^d\r", &result, &count);
 dprint(debug, " ret %c %d\n", result, count);
                 if (result != 'S') {
 dprint(debug, " failed with %d\n", count);
@@ -104,7 +88,7 @@ dprint(debug, " failed with %d\n", count);
         }
     }
     
-    waitFor(CMD_PREFIX "=^c,^d\r", &result, &count);
+    waitFor(CMD_START "=^c,^d\r", &result, &count);
 dprint(debug, " final ret %c %d\n", result, count);
     
     return payloadLength;

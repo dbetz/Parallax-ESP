@@ -59,6 +59,21 @@ static int setWiFiMode(void *data, char *value)
     else
         return -1;
         
+    switch (mode) {
+    case STATION_MODE:
+        os_printf("Entering STA mode\n");
+        break;
+    case SOFTAP_MODE:
+        os_printf("Entering AP mode\n");
+        break;
+    case STATIONAP_MODE:
+        os_printf("Entering STA+AP mode\n");
+        break;
+    default:
+        os_printf("Unknown wi-fi mode: %d\n", mode);
+        return -1;
+    }
+
     if (mode != wifi_get_opmode()) {
         wifi_set_opmode(mode);
         system_restart();

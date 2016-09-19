@@ -1,7 +1,8 @@
 #ifndef __CMD_H__
 #define __CMD_H__
 
-#include "fdserial.h"
+#include <stdint.h>
+#include "serial.h"
 
 #define CMD_START_BYTE      0xFE
 #define CMD_END_BYTE        '\r'
@@ -36,16 +37,35 @@
 
 #define CMD_END             "\r"
 
-extern fdserial *wifi;
-extern fdserial *debug;
+#define WIFI_BUFFER_MAX 64
+#define WIFI_QUEUE_MAX  1024
 
-void cmd_init(int wifi_rx, int wifi_tx, int debug_rx, int debug_tx);
-void request(char *fmt, ...);
-void requestPayload(char *buf, int len);
-int reply(int chan, int code, char *payload);
-int waitFor(char *fmt, ...);
-void collectUntil(int term, char *buf, int size);
-void collectPayload(char *buf, int bufSize, int count);
-void skipUntil(int term);
+typedef enum {
+    WIFI_STATE_START,
+    WIFI_STATE_DATA
+} wifi_state;
+
+typedef struct wifi wifi;
+
+struct wifi {
+    SERIAL *port;
+    uint8_t inputBuffer[WIFI_BUFFER_MAX];
+    int inputNext;
+    int inputCount;
+    wifi_state messageState;
+    char messageBuffer[WIFI_QUEUE_MAX];
+    int messageHead;
+    int messageTail;
+    int messageStart;
+};
+
+int sscpOpen(wifi *dev, const char *deviceName);
+int sscpClose(wifi *dev);
+int sscpRequest(wifi *dev, const char *fmt, ...);
+int sscpRequestPayload(wifi *dev, const char *buf, int len);
+int sscpCollectPayload(wifi *dev, char *buf, int count);
+int sscpGetResponse(wifi *dev, char *buf, int maxSize);
+int sscpCheckForEvent(wifi *dev, char *buf, int maxSize);
+void parseResponse(char *buf);
 
 #endif

@@ -82,8 +82,8 @@ void ICACHE_FLASH_ATTR cmds_do_poll(int argc, char *argv[])
     uint32_t mask;
     int i;
 
-    if (argc >= 1 && argc <= 2) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
+    if (argc < 1 && argc > 2) {
+        sscp_sendResponse("E,%d,0", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
 

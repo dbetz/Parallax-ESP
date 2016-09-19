@@ -39,11 +39,11 @@ int main(void)
     init_robot();
     
 //    request("SET:cmd-pause-time,5");
-    nrequest(CMD_TKN_SET, "cmd-pause-time,5");
-    waitFor(CMD_PREFIX "=S,0\r");
+    request(CMD_START CMD_SET "cmd-pause-time,5" CMD_END);
+    waitFor(CMD_START "=S,0\r");
 
     request("LISTEN:HTTP,/robot*");
-    waitFor(CMD_PREFIX "=S,^d\r", &listenHandle);
+    waitFor(CMD_START "=S,^d\r", &listenHandle);
     
     for (;;) {
         char url[128], arg[128];
@@ -52,18 +52,18 @@ int main(void)
         waitcnt(CNT + CLKFREQ/4);
 
         request("POLL");
-        waitFor(CMD_PREFIX "=^c,^i,^i\r", &type, &handle, &listener);
+        waitFor(CMD_START "=^c,^i,^i\r", &type, &handle, &listener);
         if (type != 'N')
             dprint(debug, "Got %c: handle %d, listener %d\n", type, handle, listener);
         
         switch (type) {
         case 'P':
             request("PATH:%d", handle);
-            waitFor(CMD_PREFIX "=S,^s\r", url, sizeof(url));
+            waitFor(CMD_START "=S,^s\r", url, sizeof(url));
             dprint(debug, "%d: path '%s'\n", handle, url);
             if (strcmp(url, "/robot") == 0) {
                 request("ARG:%d,gto", handle);
-                waitFor(CMD_PREFIX "=S,^s\r", arg, sizeof(arg));
+                waitFor(CMD_START "=S,^s\r", arg, sizeof(arg));
                 dprint(debug, "gto='%s'\n", arg);
                 if (process_robot_command(arg[0]) != 0)
                     dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
@@ -76,7 +76,7 @@ int main(void)
             break;
         case 'G':
             request("PATH:%d", handle);
-            waitFor(CMD_PREFIX "=S,^s\r", url, sizeof(url));
+            waitFor(CMD_START "=S,^s\r", url, sizeof(url));
             dprint(debug, "%d: path '%s'\n", handle, url);
             if (strcmp(url, "/robot-ping") == 0) {
                 sprintf(arg, "%d", ping_cm(PING_PIN));
