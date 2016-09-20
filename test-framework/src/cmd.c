@@ -4,7 +4,11 @@
 #include <ctype.h>
 #include "cmd.h"
 
+//#define DUMP_ARGS
+
 #define dbg(args...) dprint(debug, args)
+
+static int checkForQueuedEvent(wifi *dev, char *buf, int maxSize);
 
 int debug;
 int dprint(int port, const char *fmt, ...)
@@ -12,7 +16,7 @@ int dprint(int port, const char *fmt, ...)
     va_list ap;
     int len;
     va_start(ap, fmt);
-    len = vfprintf(stderr, fmt, ap);
+    len = vfprintf(stdout, fmt, ap);
     va_end(ap);
     return len;
 }
@@ -25,7 +29,7 @@ int sscpOpen(wifi *dev, const char *deviceName)
         return -1;
 
     dev->messageState = WIFI_STATE_START;
-    SerialSendBreak(dev->port);
+    SendSerialBreak(dev->port);
 
     return 0;
 }
@@ -150,15 +154,7 @@ static int checkForMessage(wifi *dev, int type, char *buf, int maxSize)
     return 0;
 }
 
-int sscpGetResponse(wifi *dev, char *buf, int maxSize)
-{
-    int ret;
-    while ((ret = checkForMessage(dev, '=', buf, maxSize)) <= 0)
-        ;
-    return ret;
-}
-
-int sscpCheckForEvent(wifi *dev, char *buf, int maxSize)
+static int checkForQueuedEvent(wifi *dev, char *buf, int maxSize)
 {
     if (dev->messageHead != dev->messageTail) {
         int i = dev->messageHead;
@@ -177,33 +173,43 @@ int sscpCheckForEvent(wifi *dev, char *buf, int maxSize)
             }   
         }
     }
-    return checkForMessage(dev, '!', buf, maxSize);
+    return -1;
 }
 
-#define DUMP_ARGS
-
-#define SSCP_MAX_ARGS   16
-
-void parseResponse(char *buf)
+int sscpGetResponse(wifi *dev, char *buf, int maxSize)
 {
-    char *argv[SSCP_MAX_ARGS + 1];
-    char *p, *next;
+    int ret;
+    while ((ret = checkForMessage(dev, '=', buf, maxSize)) == -1)
+        ;
+    return ret;
+}
+
+int sscpCheckForEvent(wifi *dev, char *buf, int maxSize)
+{
+    int ret;
+    if ((ret = checkForQueuedEvent(dev, buf, maxSize)) == -1)
+        ret = checkForMessage(dev, '!', buf, maxSize);
+    return ret;
+}
+
+int sscpParseResponse(char *buf, char *argv[], int maxArgs)
+{
+    char *next;
     int argc;
     
-    p = buf;
     argc = 0;
     
-    if (*p) {
+    if (*buf) {
     
-        while ((next = strchr(p, ',')) != NULL) {
-            if (argc < SSCP_MAX_ARGS)
-                argv[argc++] = p;
+        while ((next = strchr(buf, ',')) != NULL) {
+            if (argc < maxArgs - 1)
+                argv[argc++] = buf;
             *next++ = '\0';
-            p = next;
+            buf = next;
         }
     
-        if (argc < SSCP_MAX_ARGS)
-            argv[argc++] = p;
+        if (argc < maxArgs - 1)
+            argv[argc++] = buf;
     }
         
     argv[argc] = NULL;
@@ -213,6 +219,8 @@ void parseResponse(char *buf)
     for (i = 0; i < argc; ++i)
         printf("argv[%d] = '%s'\n", i, argv[i]);
 #endif
+
+    return argc;
 }
 
 

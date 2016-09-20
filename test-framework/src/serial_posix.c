@@ -296,7 +296,7 @@ int SetSerialBaud(SERIAL *serial, int baud)
     return 0;
 }
 
-int SerialSendBreak(SERIAL *serial)
+int SendSerialBreak(SERIAL *serial)
 {
     return tcsendbreak(serial->fd, 0);
 }

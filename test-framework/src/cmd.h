@@ -37,8 +37,11 @@
 
 #define CMD_END             "\r"
 
-#define WIFI_BUFFER_MAX 64
-#define WIFI_QUEUE_MAX  1024
+#define CMD_MAX_RESPONSE    1024
+#define CMD_MAX_ARGS        16
+
+#define WIFI_BUFFER_MAX     64
+#define WIFI_QUEUE_MAX      1024
 
 typedef enum {
     WIFI_STATE_START,
@@ -66,6 +69,6 @@ int sscpRequestPayload(wifi *dev, const char *buf, int len);
 int sscpCollectPayload(wifi *dev, char *buf, int count);
 int sscpGetResponse(wifi *dev, char *buf, int maxSize);
 int sscpCheckForEvent(wifi *dev, char *buf, int maxSize);
-void parseResponse(char *buf);
+int sscpParseResponse(char *buf, char *argv[], int maxArgs);
 
 #endif

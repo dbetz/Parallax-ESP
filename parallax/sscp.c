@@ -4,10 +4,10 @@
 #include "config.h"
 #include "cgiwifi.h"
 
-#define DUMP_CMDS
+//#define DUMP_CMDS
 //#define DUMP_ARGS
-#define DUMP_FILTER
-#define DUMP_OUTOFBAND
+//#define DUMP_FILTER
+//#define DUMP_OUTOFBAND
 
 #define SSCP_BUFFER_MAX     128
 #define SSCP_MAX_ARGS       8
@@ -627,8 +627,7 @@ static void ICACHE_FLASH_ATTR dump(char *tag, uint8_t *buf, int len)
 {
     os_printf("%s[%d]: '", tag, len);
     for (int i = 0; i < len; ++i)
-//        os_printf("%c 0x%02x ", buf[i], buf[i]);
-        os_printf("%c ", buf[i]);
+        os_printf("%c", buf[i]);
     os_printf("'\n");
 }
 #endif

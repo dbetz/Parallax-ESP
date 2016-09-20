@@ -47,7 +47,7 @@ int SerialUseResetMethod(SERIAL *serial, char *method);
 int OpenSerial(const char *port, int baud, SERIAL **pSerial);
 void CloseSerial(SERIAL *serial);
 int SetSerialBaud(SERIAL *serial, int baud);
-int SerialSendBreak(SERIAL *serial);
+int SendSerialBreak(SERIAL *serial);
 int SerialGenerateResetSignal(SERIAL *serial);
 int SendSerialData(SERIAL *serial, const void *buf, int len);
 int FlushSerialData(SERIAL *serial);
