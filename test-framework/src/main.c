@@ -6,14 +6,50 @@
 #include "serial.h"
 #include "sock.h"
 
-#define REQUEST "\
-GET /wx/setting?name=version HTTP/1.1\r\n\
-\r\n\
-"
+#ifndef TRUE
+#define TRUE    1
+#define FALSE   0
+#endif
 
-int sendRequest(SOCKADDR_IN *addr, char *req);
+int verbose = FALSE;
+
+int serialRequest(wifi *dev, const char *fmt, ...);
+int checkSerialResponse(wifi *dev, const char *fmt, ...);
+int serialWaitResponse(wifi *dev, const char *idle, const char *fmt, ...);
+
+int sendRequest(SOCKADDR_IN *addr, const char *method, const char *url, const char *body);
 int receiveResponse(uint8_t *res, int resMax, int *pResult);
 int parseBuffer(const char *buf, const char *fmt, ...);
+
+static int parseBufferV(const char *buf, const char *fmt, va_list ap);
+
+const char *testName = NULL;
+int passCount = 0;
+int failCount = 0;
+
+#define startTest(name) testName = (name)
+
+void passTest(const char *fmt, ...)
+{
+    va_list ap;
+    printf("%s: PASSED", testName);
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    va_end(ap);
+    putchar('\n');
+    ++passCount;
+}
+
+void failTest(const char *fmt, ...)
+{
+    va_list ap;
+    printf("%s: FAILED", testName);
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    va_end(ap);
+    putchar('\n');
+    ++failCount;
+}
 
 int main(int argc, char *argv[])
 {
@@ -22,7 +58,7 @@ int main(int argc, char *argv[])
     wifi dev;
     SOCKADDR_IN addr;
     char response[1024];
-    int result, listener1, listener2, connection1, connection2, count;
+    int result, listener1, listener2, connection1, count;
 
     printf("Welcome to the WX test framework!\n");
 
@@ -41,98 +77,135 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (sendRequest(&addr, REQUEST) == -1)
+    if (sendRequest(&addr, "GET", "/wx/setting?name=version", "") == -1)
         fprintf(stderr, "error: sendRequest failed\n");
     else if (receiveResponse((uint8_t *)response, sizeof(response), &result) == -1)
         fprintf(stderr, "error: receiveResponse failed\n");
     else
-        printf("response: %d\n%s", result, response);
+        printf("response: %d\n%s\n", result, response);
 
-    sscpRequest(&dev, "");
-    if (sscpGetResponse(&dev, response, sizeof(response)) >= 0) {
-        if (parseBuffer(response, "=S,0", &result) == 0)
-            printf("PASSED\n");
-        else
-            printf("FAILED: '%s'\n", response);
-    }
+    startTest("Test 1");
+    if (serialRequest(&dev, ""))
+        checkSerialResponse(&dev, "=S,0");
 
-    sscpRequest(&dev, "LISTEN:HTTP,/robot*");
-    if (sscpGetResponse(&dev, response, sizeof(response)) >= 0) {
-        if (parseBuffer(response, "=S,^i", &listener1) == 0)
-            printf("PASSED, listener %d\n", listener1);
-        else
-            printf("FAILED: '%s'\n", response);
-    }
+    startTest("Test 2");
+    if (serialRequest(&dev, "LISTEN:HTTP,/robot*"))
+        checkSerialResponse(&dev, "=S,^i", &listener1);
 
-    if (sendRequest(&addr, "\
-POST /robot?gto=f HTTP/1.1\r\n\
-\r\n\
-") == -1)
+    if (sendRequest(&addr, "POST", "/robot?gto=f", "") < 0)
         fprintf(stderr, "error: sendRequest failed\n");
 
-    for (;;) {
-        sscpRequest(&dev, "POLL");
-        if (sscpGetResponse(&dev, response, sizeof(response)) >= 0)
-            if (parseBuffer(response, "=N,0,0") != 0)
-                break;
-            printf("Waiting...\n");
-    }
-    if (parseBuffer(response, "=P,^i,^i", &connection1, &listener2) == 0)
-        printf("PASSED, connection %d, listener %d\n", connection1, listener2);
-    else
-        printf("FAILED: '%s'\n", response);
+    startTest("Test 3");
+    do {
+        serialRequest(&dev, "POLL");
+    } while (!serialWaitResponse(&dev, "=N,0,0", "=P,^i,^i", &connection1, &listener2));
 
-    sscpRequest(&dev, "PATH:%d", connection1);
-    if (sscpGetResponse(&dev, response, sizeof(response)) >= 0) {
-        if (parseBuffer(response, "=S,/robot") == 0)
-            printf("PASSED\n");
-        else
-            printf("FAILED: '%s'\n", response);
-    }
+    startTest("Test 4");
+    if (serialRequest(&dev, "PATH:%d", connection1))
+        checkSerialResponse(&dev, "=S,/robot");
 
-    sscpRequest(&dev, "ARG:%d,gto", connection1);
-    if (sscpGetResponse(&dev, response, sizeof(response)) >= 0) {
-        if (parseBuffer(response, "=S,f") == 0)
-            printf("PASSED\n");
-        else
-            printf("FAILED: '%s'\n", response);
-    }
+    startTest("Test 5");
+    if (serialRequest(&dev, "ARG:%d,gto", connection1))
+        checkSerialResponse(&dev, "=S,f");
 
-    sscpRequest(&dev, "REPLY:%d,200", connection1);
-    if (sscpGetResponse(&dev, response, sizeof(response)) >= 0) {
-        if (parseBuffer(response, "=S,^i", &count) == 0)
-            printf("PASSED, count %d\n", count);
-        else
-            printf("FAILED: '%s'\n", response);
-    }
+    startTest("Test 6");
+    if (serialRequest(&dev, "REPLY:%d,200", connection1))
+        checkSerialResponse(&dev, "=S,^i", &count);
 
     if (receiveResponse((uint8_t *)response, sizeof(response), &result) == -1)
         fprintf(stderr, "error: receiveResponse failed\n");
     else
-        printf("response: %d\n%s", result, response);
+        printf("response: %d\n%s\n", result, response);
 
     sscpClose(&dev);
+
+    printf("%d PASSED, %d FAILED\n", passCount, failCount);
 
     return 0;
 }
 
-#ifndef TRUE
-#define TRUE    1
-#define FALSE   0
-#endif
+int serialRequest(wifi *dev, const char *fmt, ...)
+{
+    va_list ap;
+    int ret;
+    
+    va_start(ap, fmt);
+    ret = sscpRequestV(dev, fmt, ap) >= 0;
+    va_end(ap);
+
+    if (!ret)
+        failTest("");
+
+    return ret;
+}
+
+int checkSerialResponse(wifi *dev, const char *fmt, ...)
+{
+    char response[1024];
+    va_list ap;
+    int ret;
+
+    if (sscpGetResponse(dev, response, sizeof(response)) < 0)
+        return FALSE;
+
+    va_start(ap, fmt);
+    ret = parseBufferV(response, fmt, ap) >= 0;
+    va_end(ap);
+
+    if (ret)
+        passTest("");
+    else
+        failTest(": '%s'", response);
+
+    return TRUE;
+}
+
+int serialWaitResponse(wifi *dev, const char *idle, const char *fmt, ...)
+{
+    char response[1024];
+    va_list ap;
+    int ret;
+
+    if (sscpGetResponse(dev, response, sizeof(response)) >= 0) {
+        if (parseBuffer(response, idle) == 0) {
+            printf("%s: waiting...\n", testName);
+            return FALSE;
+        }
+    }
+
+    va_start(ap, fmt);
+    ret = parseBufferV(response, fmt, ap) >= 0;
+    va_end(ap);
+
+    if (ret)
+        passTest("");
+    else
+        failTest(": '%s'", response);
+
+    return TRUE;
+}
 
 #define CONNECT_TIMEOUT 2000
 #define RECEIVE_TIMEOUT 10000
 
-int verbose = 1;
 SOCKET sock;
 
 static void dumpHdr(const uint8_t *buf, int size);
 static void dumpResponse(const uint8_t *buf, int size);
 
-int sendRequest(SOCKADDR_IN *addr, char *req)
+#define HDR_FMT "\
+%s %s HTTP/1.1\r\n\
+Content-Length: %d\r\n\
+\r\n\
+%s"
+
+int sendRequest(SOCKADDR_IN *addr, const char *method, const char *url, const char *body)
 {
-    int reqSize = strlen(req);
+    int bodySize, reqSize;
+    char req[1024];
+
+    bodySize = strlen(body);
+    reqSize = snprintf(req, sizeof(req), HDR_FMT, method, url, bodySize, body);
 
     if (ConnectSocketTimeout(addr, CONNECT_TIMEOUT, &sock) != 0) {
         fprintf(stderr, "error: connect failed\n");
@@ -141,7 +214,7 @@ int sendRequest(SOCKADDR_IN *addr, char *req)
     
     if (verbose) {
         printf("REQ: %d\n", reqSize);
-        dumpHdr(req, reqSize);
+        dumpHdr((uint8_t *)req, reqSize);
     }
     
     if (SendSocketData(sock, req, reqSize) != reqSize) {
@@ -246,26 +319,14 @@ static void dumpResponse(const uint8_t *buf, int size)
     if ((cnt % 16) != 0)
         putchar('\n');
 }
+
 typedef struct {
     const char *p;
-    int savedChar;
 } State;
-
-static int parseBuffer1(const char *buf, const char *fmt, va_list ap);
 
 static int nextchar(State *state)
 {
-    int ch;
-    if ((ch = state->savedChar) != EOF)
-        state->savedChar = EOF;
-    else
-        ch = *state->p ? *state->p++ : EOF;
-    return ch;
-}
-
-static void ungetchar(State *state, int ch)
-{
-    state->savedChar = ch;
+    return *state->p ? *state->p++ : EOF;
 }
 
 int parseBuffer(const char *buf, const char *fmt, ...)
@@ -274,28 +335,29 @@ int parseBuffer(const char *buf, const char *fmt, ...)
     int ret;
     
     va_start(ap, fmt);
-    ret = parseBuffer1(buf, fmt, ap);
+    ret = parseBufferV(buf, fmt, ap);
     va_end(ap);
     
     return ret;
 }
 
-static int parseBuffer1(const char *buf, const char *fmt, va_list ap)
+static int parseBufferV(const char *buf, const char *fmt, va_list ap)
 {
-    State state = { .p = buf, .savedChar = EOF };
+    State state = { .p = buf };
     const char *p = fmt;
     int ch, rch;
 
+    rch = nextchar(&state);
+        
     while ((ch = *p++) != '\0') {
     
-        rch = nextchar(&state);
-        
         if (ch == '^') {
             switch (*p++) {
             case 'c':
                 if (rch == EOF)
                     return -1;
                 *va_arg(ap, char *) = rch;
+                rch = nextchar(&state);
                 break;
             case 'i':
                 {
@@ -314,7 +376,6 @@ static int parseBuffer1(const char *buf, const char *fmt, va_list ap)
                         value = value * 10 + rch - '0';
                     } while ((rch = nextchar(&state)) != EOF && isdigit(rch));
                     *va_arg(ap, int *) = value * sign;
-                    ungetchar(&state, rch);
                 }
                 break;
             case 's':
@@ -330,12 +391,12 @@ static int parseBuffer1(const char *buf, const char *fmt, va_list ap)
                         rch = nextchar(&state);
                     }
                     *buf = '\0';
-                    ungetchar(&state, rch);
                 }
                 break;
             case '^':
                 if (rch != '^')
                     return -1;
+                rch = nextchar(&state);
                 break;
             case '\0':
                 // fall through
@@ -347,9 +408,10 @@ static int parseBuffer1(const char *buf, const char *fmt, va_list ap)
         else {
             if (rch != ch)
                 return -1;
+            rch = nextchar(&state);
        }
     }
 
-    return 0;
+    return rch == EOF ? 0 : -1;
 }
 

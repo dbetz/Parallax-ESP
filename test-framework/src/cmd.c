@@ -45,15 +45,20 @@ int sscpClose(wifi *dev)
 
 int sscpRequest(wifi *dev, const char *fmt, ...)
 {
-    char buf[100];
-    int len;
-    
+    int ret;
     va_list ap;
     va_start(ap, fmt);
-    len = vsnprintf(&buf[1], sizeof(buf) - 2, fmt, ap);
+    ret = sscpRequestV(dev, fmt, ap);
     va_end(ap);
-    
+    return ret;
+}
+
+int sscpRequestV(wifi *dev, const char *fmt, va_list ap)
+{
+    char buf[100];
+    int len;
     buf[0] = CMD_START_BYTE;
+    len = vsnprintf(&buf[1], sizeof(buf) - 2, fmt, ap);
     buf[len + 1] = CMD_END_BYTE;
     return SendSerialData(dev->port, buf, len + 2);
 }
@@ -116,7 +121,7 @@ static int checkForMessage(wifi *dev, int type, char *buf, int maxSize)
                 return -1;
             }
             if (ch == '\r') {
-#if 1
+#if 0
                 {   char tmp[128];
                     i = dev->messageStart;
                     j = 0;
@@ -168,7 +173,7 @@ static int checkForQueuedEvent(wifi *dev, char *buf, int maxSize)
             if (ch == '\r') {
                 dev->messageHead = i;
                 buf[j] = '\0';
-                dbg("Got *QUEUED* event: %s\n", &buf[1]);
+                //dbg("Got *QUEUED* event: %s\n", &buf[1]);
                 return j;
             }   
         }

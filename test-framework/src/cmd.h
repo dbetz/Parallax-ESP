@@ -2,6 +2,7 @@
 #define __CMD_H__
 
 #include <stdint.h>
+#include <stdarg.h>
 #include "serial.h"
 
 #define CMD_START_BYTE      0xFE
@@ -65,6 +66,7 @@ struct wifi {
 int sscpOpen(wifi *dev, const char *deviceName);
 int sscpClose(wifi *dev);
 int sscpRequest(wifi *dev, const char *fmt, ...);
+int sscpRequestV(wifi *dev, const char *fmt, va_list ap);
 int sscpRequestPayload(wifi *dev, const char *buf, int len);
 int sscpCollectPayload(wifi *dev, char *buf, int count);
 int sscpGetResponse(wifi *dev, char *buf, int maxSize);
