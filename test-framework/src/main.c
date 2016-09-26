@@ -35,6 +35,7 @@ int main(int argc, char *argv[])
     int i;
 
     initState(&globalState, "", NULL);
+    globalState.passwd = "";
 
     /* get the arguments */
     for (i = 1; i < argc; ++i) {

@@ -19,6 +19,13 @@ void run_tests(TestState *parent, int selectedTest)
             checkSerialResponse(&state, "=E,1");
     }
 
+    if (state.ssid) {
+        if (startTest(&state, "JOIN")) {
+            if (serialRequest(&state, "JOIN:%s,%s", state.ssid, state.passwd))
+                checkSerialResponse(&state, "=S,0");
+        }
+    }
+
     if (startTest(&state, "simple transaction")) {
         if (test_001(&state))
             passTest(&state, "");
