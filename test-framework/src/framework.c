@@ -17,11 +17,16 @@ int verbose = FALSE;
 static int parseBuffer(const char *buf, const char *fmt, ...);
 static int parseBufferV(const char *buf, const char *fmt, va_list ap);
 
-void initState(TestState *state, const char *prefix, wifi *dev)
+void initState(TestState *state, const char *prefix, TestState *parent)
 {
     memset(state, 0, sizeof(*state));
     state->prefix = prefix;
-    state->dev = dev;
+    if (parent) {
+        state->ssid = parent->ssid;
+        state->passwd = parent->passwd;
+        state->moduleAddr = parent->moduleAddr;
+        state->dev = parent->dev;
+    }
 }
 
 int startTest(TestState *state, const char *name)
@@ -29,7 +34,8 @@ int startTest(TestState *state, const char *name)
     ++state->testNumber;
     if (state->selectedTest != 0 && state->testNumber != state->selectedTest)
         return FALSE;
-    infoTest(state, name);
+    if (verbose)
+        infoTest(state, name);
     state->testName = name;
     return TRUE;
 }

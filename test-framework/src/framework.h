@@ -8,6 +8,9 @@
 extern int verbose;
 
 typedef struct {
+    const char *ssid;
+    const char *passwd;
+    SOCKADDR_IN moduleAddr;
     wifi *dev;
     const char *prefix;
     int testNumber;
@@ -20,7 +23,7 @@ typedef struct {
     int selectedTest;
 } TestState;
 
-void initState(TestState *state, const char *prefix, wifi *dev);
+void initState(TestState *state, const char *prefix, TestState *parent);
 int startTest(TestState *state, const char *name);
 void infoTest(TestState *state, const char *fmt, ...);
 void passTest(TestState *state, const char *fmt, ...);

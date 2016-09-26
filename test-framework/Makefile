@@ -68,6 +68,7 @@ $(SRCDIR)/sock.h
 
 OBJS=\
 $(OBJDIR)/main.o \
+$(OBJDIR)/tests.o \
 $(OBJDIR)/cmd.o \
 $(OBJDIR)/framework.o \
 $(OSINT)
