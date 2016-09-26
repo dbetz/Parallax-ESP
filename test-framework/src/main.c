@@ -10,7 +10,7 @@
 
 SOCKADDR_IN moduleAddr;
 
-static int test_001(wifi *dev);
+static int test_001(TestState *state);
 
 static void usage(const char *progname)
 {
@@ -30,6 +30,8 @@ int main(int argc, char *argv[])
 {
     char *serialDevice = "/dev/ttyUSB0";
     char *moduleAddress = "10.0.1.32";
+    int selectedTest = 0;
+    TestState state;
     wifi dev;
     int i;
 
@@ -82,14 +84,17 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (startTest("the empty command")) {
-        if (serialRequest(&dev, ""))
-            checkSerialResponse(&dev, "=S,0");
+    initState(&state, &dev);
+    state.selectedTest = selectedTest;
+
+    if (startTest(&state, "the empty command")) {
+        if (serialRequest(&state, ""))
+            checkSerialResponse(&state, "=S,0");
     }
 
-    if (startTest("an invalid command")) {
-        if (serialRequest(&dev, "FOO"))
-            checkSerialResponse(&dev, "=E,1");
+    if (startTest(&state, "an invalid command")) {
+        if (serialRequest(&state, "FOO"))
+            checkSerialResponse(&state, "=E,1");
     }
 
     if (GetInternetAddress(moduleAddress, 80, &moduleAddr) != 0) {
@@ -97,93 +102,107 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    test_001(&dev);
+    if (startTest(&state, "simple transaction")) {
+        if (test_001(&state))
+            passTest(&state, "");
+        else
+            failTest(&state, "");
+    }
 
-    sscpClose(&dev);
+    testResults(&state);
 
-    testResults();
+    sscpClose(state.dev);
 
     return 0;
 }
 
-static int test_001(wifi *dev)
+static int test_001(TestState *state)
 {
+    TestState state2;
     int listener1, listener2, connection1, count, result;
     char response[1024];
 
-    if (startTest("LISTEN")) {
-        if (serialRequest(dev, "LISTEN:HTTP,/robot*"))
-            checkSerialResponse(dev, "=S,^i", &listener1);
+    initState(&state2, state->dev);
+
+    if (startTest(&state2, "LISTEN")) {
+        if (serialRequest(&state2, "LISTEN:HTTP,/robot*"))
+            checkSerialResponse(&state2, "=S,^i", &listener1);
     }
 
-    beginGroup();
+    beginGroup(&state2);
 
-    if (startTest("PATH of a listener")) {
-        if (!skipTest() && serialRequest(dev, "PATH:%d", listener1))
-            checkSerialResponse(dev, "=S,/robot*");
+    if (startTest(&state2, "PATH of a listener")) {
+        if (!skipTest(&state2) && serialRequest(&state2, "PATH:%d", listener1))
+            checkSerialResponse(&state2, "=S,/robot*");
     }
 
-    if (startTest("Send request to WX module")) {
-        if (!skipTest() && sendRequest(&moduleAddr, "POST", "/robot?gto=f", "") < 0)
-            fprintf(stderr, "error: sendRequest failed\n");
-    }
-
-    if (startTest("POLL for incoming POST request")) {
-        if (!skipTest()) {
-            do {
-                if (!serialRequest(dev, "POLL"))
-                    break;
-            } while (!waitAndCheckSerialResponse(dev, "=N,0,0", "=P,^i,^i", &connection1, &listener2));
+    if (startTest(&state2, "Send request to WX module")) {
+        if (!skipTest(&state2)) {
+            if (sendRequest(&moduleAddr, "POST", "/robot?gto=f", "") >= 0)
+                passTest(&state2, "");
+            else
+                failTest(&state2, "");
         }
     }
 
-    beginGroup();
+    if (startTest(&state2, "POLL for incoming POST request")) {
+        if (!skipTest(&state2)) {
+            do {
+                if (!serialRequest(&state2, "POLL"))
+                    break;
+            } while (!waitAndCheckSerialResponse(&state2, "=N,0,0", "=P,^i,^i", &connection1, &listener2));
+        }
+    }
 
-    if (startTest("listener handle returned by POLL")) {
+    beginGroup(&state2);
+
+    if (startTest(&state2, "listener handle returned by POLL")) {
         if (listener1 == listener2)
-            passTest("");
+            passTest(&state2, "");
         else
-            failTest(": got %d", listener2);
+            failTest(&state2, ": got %d", listener2);
     }
 
-    if (startTest("PATH of a connection")) {
-        if (!skipTest() && serialRequest(dev, "PATH:%d", connection1))
-            checkSerialResponse(dev, "=S,/robot");
+    if (startTest(&state2, "PATH of a connection")) {
+        if (!skipTest(&state2) && serialRequest(&state2, "PATH:%d", connection1))
+            checkSerialResponse(&state2, "=S,/robot");
     }
 
-    if (startTest("ARG")) {
-        if (!skipTest() && serialRequest(dev, "ARG:%d,gto", connection1))
-            checkSerialResponse(dev, "=S,f");
+    if (startTest(&state2, "ARG")) {
+        if (!skipTest(&state2) && serialRequest(&state2, "ARG:%d,gto", connection1))
+            checkSerialResponse(&state2, "=S,f");
     }
 
-    if (startTest("REPLY")) {
-        if (!skipTest() && serialRequest(dev, "REPLY:%d,200", connection1))
-            checkSerialResponse(dev, "=S,^i", &count);
+    if (startTest(&state2, "REPLY")) {
+        if (!skipTest(&state2) && serialRequest(&state2, "REPLY:%d,200", connection1))
+            checkSerialResponse(&state2, "=S,^i", &count);
     }
 
-    if (startTest("POLL for send complete")) {
-        if (!skipTest()) {
+    if (startTest(&state2, "POLL for send complete")) {
+        if (!skipTest(&state2)) {
             do {
-                if (!serialRequest(dev, "POLL"))
+                if (!serialRequest(&state2, "POLL"))
                     break;
-            } while (!waitAndCheckSerialResponse(dev, "=N,0,0", "=S,^i,0", &count, &listener2));
+            } while (!waitAndCheckSerialResponse(&state2, "=N,0,0", "=S,^i,0", &count, &listener2));
         }
     }
 
-    if (startTest("Receive response from WX")) {
-        if (!skipTest()) {
-            if (receiveResponse((uint8_t *)response, sizeof(response), &result) == -1)
-                fprintf(stderr, "error: receiveResponse failed\n");
-//            else
-//                printf("response: %d\n%s\n", result, response);
+    if (startTest(&state2, "Receive response from WX")) {
+        if (!skipTest(&state2)) {
+            if (receiveResponse((uint8_t *)response, sizeof(response), &result) >= 0)
+                passTest(&state2, "");
+            else
+                failTest(&state2, "");
         }
     }
 
-    if (startTest("CLOSE")) {
-        if (!skipTest() && serialRequest(dev, "CLOSE:%d", listener1))
-            checkSerialResponse(dev, "=S,0");
+    if (startTest(&state2, "CLOSE")) {
+        if (!skipTest(&state2) && serialRequest(&state2, "CLOSE:%d", listener1))
+            checkSerialResponse(&state2, "=S,0");
     }
 
-    return 1;
+    testResults(&state2);
+
+    return state2.testPassed;
 }
 

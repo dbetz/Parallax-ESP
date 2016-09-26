@@ -12,106 +12,107 @@
 #define FALSE   0
 #endif
 
-int testNumber = 0;
-const char *testName = NULL;
-int testPassed = FALSE;
-int skipRemainingTests = FALSE;
-int passCount = 0;
-int failCount = 0;
-int skipCount = 0;
-int selectedTest = 0;
-
 int verbose = FALSE;
 
 static int parseBuffer(const char *buf, const char *fmt, ...);
 static int parseBufferV(const char *buf, const char *fmt, va_list ap);
 
-int startTest(const char *name)
+void initState(TestState *state, wifi *dev)
 {
-    ++testNumber;
-    if (selectedTest != 0 && testNumber != selectedTest)
+    memset(state, 0, sizeof(*state));
+    state->dev = dev;
+}
+
+int startTest(TestState *state, const char *name)
+{
+    ++state->testNumber;
+    if (state->selectedTest != 0 && state->testNumber != state->selectedTest)
         return FALSE;
-printf("%s\n", name);
-    testName = name;
+printf("Test %d: %s\n", state->testNumber, name);
+    state->testName = name;
     return TRUE;
 }
 
-void infoTest(const char *fmt, ...)
+void infoTest(TestState *state, const char *fmt, ...)
 {
     va_list ap;
-    printf("Test %d: ", testNumber);
+    printf("Test %d: ", state->testNumber);
     va_start(ap, fmt);
     vprintf(fmt, ap);
     va_end(ap);
     putchar('\n');
 }
 
-void passTest(const char *fmt, ...)
+void passTest(TestState *state, const char *fmt, ...)
 {
     va_list ap;
-    printf("Test %d: PASSED", testNumber);
+    printf("Test %d: PASSED", state->testNumber);
     va_start(ap, fmt);
     vprintf(fmt, ap);
     va_end(ap);
     putchar('\n');
-    testPassed = TRUE;
-    ++passCount;
+    state->testPassed = TRUE;
+    ++state->passCount;
 }
 
-void failTest(const char *fmt, ...)
+void failTest(TestState *state, const char *fmt, ...)
 {
     va_list ap;
-    printf("Test %d: FAILED", testNumber);
+    printf("Test %d: FAILED", state->testNumber);
     va_start(ap, fmt);
     vprintf(fmt, ap);
     va_end(ap);
     putchar('\n');
-    testPassed = FALSE;
-    ++failCount;
+    state->testPassed = FALSE;
+    ++state->failCount;
 }
 
-void beginGroup(void)
+void beginGroup(TestState *state)
 {
-    skipRemainingTests = testPassed;
+    state->skipRemainingTests = state->testPassed;
 }
 
-int skipTest(void)
+int skipTest(TestState *state)
 {
-    if (skipRemainingTests)
+    if (state->skipRemainingTests)
         return FALSE;
-    infoTest("SKIPPED");
-    ++skipCount;
+    infoTest(state, "SKIPPED");
+    ++state->skipCount;
     return TRUE;
 }
 
-void testResults(void)
+void testResults(TestState *state)
 {
-    printf("%d PASSED, %d FAILED, %d SKIPPED, %d TOTAL\n", passCount, failCount, skipCount, passCount + failCount + skipCount);
+    printf("%d PASSED, %d FAILED, %d SKIPPED, %d TOTAL\n",
+            state->passCount, 
+            state->failCount, 
+            state->skipCount, 
+            state->passCount + state->failCount + state->skipCount);
 }
 
-int serialRequest(wifi *dev, const char *fmt, ...)
+int serialRequest(TestState *state, const char *fmt, ...)
 {
     va_list ap;
     int ret;
     
     va_start(ap, fmt);
-    ret = sscpRequestV(dev, fmt, ap);
+    ret = sscpRequestV(state->dev, fmt, ap);
     va_end(ap);
 
     if (ret < 0)
-        failTest(": sending request");
+        failTest(state, ": sending request");
 
     return ret >= 0;
 }
 
-void checkSerialResponse(wifi *dev, const char *fmt, ...)
+void checkSerialResponse(TestState *state, const char *fmt, ...)
 {
     char response[1024];
     va_list ap;
     int ret;
 
-    if (sscpGetResponse(dev, response, sizeof(response)) < 0) {
-        failTest(": receiving response");
+    if (sscpGetResponse(state->dev, response, sizeof(response)) < 0) {
+        failTest(state, ": receiving response");
         return;
     }
 
@@ -120,24 +121,24 @@ void checkSerialResponse(wifi *dev, const char *fmt, ...)
     va_end(ap);
 
     if (ret >= 0)
-        passTest("");
+        passTest(state, "");
     else
-        failTest(": '%s'", response);
+        failTest(state, ": '%s'", response);
 }
 
-int waitAndCheckSerialResponse(wifi *dev, const char *idle, const char *fmt, ...)
+int waitAndCheckSerialResponse(TestState *state, const char *idle, const char *fmt, ...)
 {
     char response[1024];
     va_list ap;
     int ret;
 
-    if (sscpGetResponse(dev, response, sizeof(response)) < 0) {
-        failTest(": receiving response");
+    if (sscpGetResponse(state->dev, response, sizeof(response)) < 0) {
+        failTest(state, ": receiving response");
         return TRUE;
     }
     
     if (parseBuffer(response, idle) == 0) {
-        infoTest("waiting...");
+        infoTest(state, "waiting...");
         return FALSE;
     }
 
@@ -146,9 +147,9 @@ int waitAndCheckSerialResponse(wifi *dev, const char *idle, const char *fmt, ...
     va_end(ap);
 
     if (ret >= 0)
-        passTest("");
+        passTest(state, "");
     else
-        failTest(": '%s'", response);
+        failTest(state, ": '%s'", response);
 
     return TRUE;
 }
