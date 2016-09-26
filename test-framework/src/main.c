@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    initState(&state, &dev);
+    initState(&state, "Test", &dev);
     state.selectedTest = selectedTest;
 
     if (startTest(&state, "the empty command")) {
@@ -122,7 +122,7 @@ static int test_001(TestState *state)
     int listener1, listener2, connection1, count, result;
     char response[1024];
 
-    initState(&state2, state->dev);
+    initState(&state2, "  Subtest", state->dev);
 
     if (startTest(&state2, "LISTEN")) {
         if (serialRequest(&state2, "LISTEN:HTTP,/robot*"))

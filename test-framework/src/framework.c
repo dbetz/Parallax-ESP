@@ -17,9 +17,10 @@ int verbose = FALSE;
 static int parseBuffer(const char *buf, const char *fmt, ...);
 static int parseBufferV(const char *buf, const char *fmt, va_list ap);
 
-void initState(TestState *state, wifi *dev)
+void initState(TestState *state, const char *prefix, wifi *dev)
 {
     memset(state, 0, sizeof(*state));
+    state->prefix = prefix;
     state->dev = dev;
 }
 
@@ -28,7 +29,7 @@ int startTest(TestState *state, const char *name)
     ++state->testNumber;
     if (state->selectedTest != 0 && state->testNumber != state->selectedTest)
         return FALSE;
-printf("Test %d: %s\n", state->testNumber, name);
+    infoTest(state, name);
     state->testName = name;
     return TRUE;
 }
@@ -36,7 +37,7 @@ printf("Test %d: %s\n", state->testNumber, name);
 void infoTest(TestState *state, const char *fmt, ...)
 {
     va_list ap;
-    printf("Test %d: ", state->testNumber);
+    printf("%s %d: ", state->prefix, state->testNumber);
     va_start(ap, fmt);
     vprintf(fmt, ap);
     va_end(ap);
@@ -46,7 +47,7 @@ void infoTest(TestState *state, const char *fmt, ...)
 void passTest(TestState *state, const char *fmt, ...)
 {
     va_list ap;
-    printf("Test %d: PASSED", state->testNumber);
+    printf("%s %d: PASSED", state->prefix, state->testNumber);
     va_start(ap, fmt);
     vprintf(fmt, ap);
     va_end(ap);
@@ -58,7 +59,7 @@ void passTest(TestState *state, const char *fmt, ...)
 void failTest(TestState *state, const char *fmt, ...)
 {
     va_list ap;
-    printf("Test %d: FAILED", state->testNumber);
+    printf("%s %d: FAILED", state->prefix, state->testNumber);
     va_start(ap, fmt);
     vprintf(fmt, ap);
     va_end(ap);
@@ -83,7 +84,8 @@ int skipTest(TestState *state)
 
 void testResults(TestState *state)
 {
-    printf("%d PASSED, %d FAILED, %d SKIPPED, %d TOTAL\n",
+    printf("%s results: %d PASSED, %d FAILED, %d SKIPPED, %d TOTAL\n",
+            state->prefix,
             state->passCount, 
             state->failCount, 
             state->skipCount, 

@@ -9,6 +9,7 @@ extern int verbose;
 
 typedef struct {
     wifi *dev;
+    const char *prefix;
     int testNumber;
     const char *testName;
     int testPassed;
@@ -19,7 +20,7 @@ typedef struct {
     int selectedTest;
 } TestState;
 
-void initState(TestState *state, wifi *dev);
+void initState(TestState *state, const char *prefix, wifi *dev);
 int startTest(TestState *state, const char *name);
 void infoTest(TestState *state, const char *fmt, ...);
 void passTest(TestState *state, const char *fmt, ...);
