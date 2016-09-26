@@ -67,8 +67,9 @@ $(SRCDIR)/serial.h \
 $(SRCDIR)/sock.h
 
 OBJS=\
-$(OBJDIR)/cmd.o \
 $(OBJDIR)/main.o \
+$(OBJDIR)/cmd.o \
+$(OBJDIR)/framework.o \
 $(OSINT)
 
 CFLAGS+=-I$(OBJDIR)

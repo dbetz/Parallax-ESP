@@ -25,9 +25,15 @@ void ICACHE_FLASH_ATTR cmds_do_join(int argc, char *argv[])
         sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
 }
 
+static void ICACHE_FLASH_ATTR path_handler(sscp_hdr *hdr)
+{
+    sscp_listener *listener = (sscp_listener *)hdr;
+    sscp_sendResponse("S,%s", listener->path);
+}
+
 static sscp_dispatch listenerDispatch = {
     .checkForEvents = NULL,
-    .path = NULL,
+    .path = path_handler,
     .send = NULL,
     .recv = NULL,
     .close = NULL
