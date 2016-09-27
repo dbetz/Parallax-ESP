@@ -9,6 +9,11 @@
 #include "serial.h"
 #include "sock.h"
 
+#ifndef TRUE
+#define TRUE    1
+#define FALSE   0
+#endif
+
 static void usage(const char *progname)
 {
 printf("\
@@ -19,6 +24,7 @@ options:\n\
     -p <port>       serial port connected to DI/DO on the Wi-Fi module\n\
     -s <ssid>       specify an AP SSID\n\
     -t <number>     select a specific test\n\
+    -v              enable verbose output\n\
     -x <passwd>     specify an AP password\n\
     -?              display a usage message and exit\n\
 ", progname);
@@ -27,8 +33,12 @@ options:\n\
 
 int main(int argc, char *argv[])
 {
+#ifdef MINGW
+    char *serialDevice = "COM1";
+#else
     char *serialDevice = "/dev/ttyUSB0";
-    char *moduleAddress = "10.0.1.32";
+#endif
+    char *moduleAddress = "0.0.0.0";
     TestState globalState;
     int selectedTest = 0;
     wifi dev;
@@ -74,6 +84,9 @@ int main(int argc, char *argv[])
                     selectedTest = atoi(argv[i]);
                 else
                     usage(argv[0]);
+                break;
+            case 'v':
+                verbose = TRUE;
                 break;
             case 'x':   // specify an AP password
                 if (argv[i][2])

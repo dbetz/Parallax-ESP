@@ -6,7 +6,7 @@ ifeq ($(CROSS),)
   PREFIX=
 else
   ifeq ($(CROSS),win32)
-    PREFIX=i586-mingw32msvc-
+    PREFIX=x86_64-w64-mingw32-
     OS=msys
   else
     ifeq ($(CROSS),rpi)

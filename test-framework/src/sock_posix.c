@@ -77,7 +77,7 @@ int OpenBroadcastSocket(short port, SOCKET *pSocket)
     
 #ifdef __MINGW32__
     if (InitWinSock() != 0)
-        return INVALID_SOCKET;
+        return -1;
 #endif
 
     /* create the socket */
@@ -114,7 +114,7 @@ int ConnectSocket(SOCKADDR_IN *addr, SOCKET *pSocket)
     
 #ifdef __MINGW32__
     if (InitWinSock() != 0)
-        return INVALID_SOCKET;
+        return -1;
 #endif
 
     /* create the socket */
@@ -143,7 +143,7 @@ int ConnectSocketTimeout(SOCKADDR_IN *addr, int timeout, SOCKET *pSocket)
     
 #ifdef __MINGW32__
     if (InitWinSock() != 0)
-        return INVALID_SOCKET;
+        return -1;
 #endif
 
     /* create the socket */
@@ -211,7 +211,7 @@ int BindSocket(short port, SOCKET *pSocket)
     
 #ifdef __MINGW32__
     if (InitWinSock() != 0)
-        return INVALID_SOCKET;
+        return -1;
 #endif
 
     /* create the socket */

@@ -57,7 +57,7 @@ struct SERIAL {
     int fd;
 };
 
-static void msleep(int ms)
+void msleep(int ms)
 {
     usleep(ms * 1000);
 }

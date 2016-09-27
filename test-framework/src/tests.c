@@ -23,6 +23,23 @@ void run_tests(TestState *parent, int selectedTest)
         if (startTest(&state, "JOIN")) {
             if (serialRequest(&state, "JOIN:%s,%s", state.ssid, state.passwd))
                 checkSerialResponse(&state, "=S,0");
+            if (state.testPassed)
+                msleep(1000); // wait for WX to disconnect. It has a .5 second delay
+        }
+        beginGroup(&state);
+        if (startTest(&state, "CHECK:station-ipaddr")) {
+            if (!skipTest(&state)) {
+                char ipaddr[32];
+                do {
+                    if (!serialRequest(&state, "CHECK:station-ipaddr"))
+                        break;
+                } while (!waitAndCheckSerialResponse(&state, "=S,0.0.0.0", "=S,^s", ipaddr, sizeof(ipaddr)));
+                if (state.testPassed) {
+                    infoTest(&state, "got '%s'\n", ipaddr);
+                    if (GetInternetAddress(ipaddr, 80, &state.moduleAddr) != 0)
+                        infoTest(&state, "error: failed to parse IP address '%s'", ipaddr);
+                }
+            }
         }
     }
 

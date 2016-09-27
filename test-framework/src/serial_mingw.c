@@ -355,6 +355,11 @@ void SerialTerminal(SERIAL *serial, int check_for_exit, int pst_mode)
     }
 }
 
+void msleep(int ms)
+{
+    Sleep(ms);
+}
+
 #if 0
 
 HANDLE hComm;

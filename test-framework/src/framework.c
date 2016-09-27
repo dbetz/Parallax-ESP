@@ -34,8 +34,7 @@ int startTest(TestState *state, const char *name)
     ++state->testNumber;
     if (state->selectedTest != 0 && state->testNumber != state->selectedTest)
         return FALSE;
-    if (verbose)
-        infoTest(state, name);
+    infoTest(state, "starting '%s'", name);
     state->testName = name;
     return TRUE;
 }
