@@ -1,13 +1,7 @@
 build/
-firmware/
-espfs/mkespfsimage/*.o
-espfs/mkespfsimage/mkespfsimage
-webpages.espfs
-espfs/espfstest/*.o
-espfs/espfstest/espfstest
-*.DS_Store
-html_compressed/
-ldscript_memspecific.ld
-eagle.app.sym
+release/release
+*.zip
+*.bin
 *.elf
 *~
+test-framework-*
