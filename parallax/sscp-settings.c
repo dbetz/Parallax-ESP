@@ -74,10 +74,8 @@ static int setWiFiMode(void *data, char *value)
         return -1;
     }
 
-    if (mode != wifi_get_opmode()) {
+    if (mode != wifi_get_opmode())
         wifi_set_opmode(mode);
-        system_restart();
-    }
     
     return 0;
 }
@@ -182,18 +180,6 @@ static int setPauseChars(void *data, char *value)
         return -1;
     os_strcpy(flashConfig.sscp_need_pause, value);
     flashConfig.sscp_need_pause_cnt = os_strlen(value);
-    return 0;
-}
-
-static int setSSCPEvents(void *data, char *value)
-{
-    sscp_events(atoi(value));
-    return 0;
-}
-
-static int setSSCPEnable(void *data, char *value)
-{
-    sscp_enable(atoi(value));
     return 0;
 }
 
@@ -329,6 +315,20 @@ static int int8SetHandler(void *data, char *value)
     return 0;
 }
 
+static int uint8SetHandler(void *data, char *value)
+{
+    uint8_t *pValue = (uint8_t *)data;
+    *pValue = atoi(value);
+    return 0;
+}
+
+static int uint8GetHandler(void *data, char *value)
+{
+    uint8_t *pValue = (uint8_t *)data;
+    os_sprintf(value, "%d", *pValue);
+    return 0;
+}
+
 typedef struct {
     char *name;
     int (*getHandler)(void *data, char *value);
@@ -345,11 +345,11 @@ static cmd_def vars[] = {
 {   "station-macaddr",  getMACAddress,      setMACAddress,      (void *)STATION_IF              },
 {   "softap-ipaddr",    getIPAddress,       setIPAddress,       (void *)SOFTAP_IF               },
 {   "softap-macaddr",   getMACAddress,      setMACAddress,      (void *)SOFTAP_IF               },
-{   "cmd-start-char",   intGetHandler,      intSetHandler,      &sscp_start                     },
+{   "cmd-start-char",   uint8GetHandler,    uint8SetHandler,    &flashConfig.sscp_start         },
 {   "cmd-pause-time",   intGetHandler,      intSetHandler,      &flashConfig.sscp_pause_time_ms },
 {   "cmd-pause-chars",  getPauseChars,      setPauseChars,      NULL                            },
-{   "cmd-events",       intGetHandler,      setSSCPEvents,      &sscp_sendEvents                },
-{   "cmd-enable",       int8GetHandler,     setSSCPEnable,      &flashConfig.sscp_enable        },
+{   "cmd-events",       int8GetHandler,     int8SetHandler,     &flashConfig.sscp_events        },
+{   "cmd-enable",       int8GetHandler,     int8SetHandler,     &flashConfig.sscp_enable        },
 {   "loader-baud-rate", intGetHandler,      setLoaderBaudrate,  &flashConfig.loader_baud_rate   },
 {   "baud-rate",        intGetHandler,      setBaudrate,        &flashConfig.baud_rate          },
 {   "stop-bits",        int8GetHandler,     setStopBits,        &flashConfig.stop_bits          },

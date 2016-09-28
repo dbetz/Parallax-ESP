@@ -1,5 +1,6 @@
 #include "esp8266.h"
 #include "sscp.h"
+#include "config.h"
 
 static void dns_cb(const char *name, ip_addr_t *ipaddr, void *arg);
 static void tcp_connect_cb(void *arg);
@@ -143,7 +144,7 @@ static void ICACHE_FLASH_ATTR tcp_recv_cb(void *arg, char *data, unsigned short 
         c->rxCount = len;
         c->rxIndex = 0;
         c->flags |= CONNECTION_RXFULL;
-        if (sscp_sendEvents)
+        if (flashConfig.sscp_events)
             send_data_event(c, '!');
     }
 }

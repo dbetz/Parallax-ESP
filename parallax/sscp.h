@@ -147,16 +147,11 @@ struct sscp_connection {
     int txIndex;
 };
 
-extern int sscp_start;
-extern int sscp_sendEvents;
 extern sscp_listener sscp_listeners[];
 extern sscp_connection sscp_connections[];
 
 void sscp_init(void);
 void sscp_reset(void);
-void sscp_events(int enable);
-void sscp_enable(int enable);
-int sscp_isEnabled(void);
 void sscp_capturePayload(char *buf, int length, void (*cb)(void *data, int count), void *data);
 void sscp_filter(char *buf, short len, void (*outOfBand)(void *data, char *buf, short len), void *data);
 

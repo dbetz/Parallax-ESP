@@ -7,6 +7,7 @@
 #include "espfs.h"
 #include "crc16.h"
 #include "uart.h"
+#include "sscp.h"
 
 #define MCU_RESET_PIN       12
 #define LED_CONN_PIN        5
@@ -15,7 +16,7 @@
 
 // magic number to recognize thet these are our flash settings as opposed to some random stuff
 #define FLASH_MAGIC         0x55aa
-#define FLASH_VERSION       6
+#define FLASH_VERSION       7
 
 // size of the setting sector
 #define FLASH_SECT          4096
@@ -37,9 +38,11 @@ FlashConfig flashDefault = {
   .module_descr 	    = "",
   .rx_pullup	        = 0,
   .sscp_enable          = 0,
+  .sscp_start           = SSCP_TKN_START,
   .sscp_need_pause      = ":,",
   .sscp_need_pause_cnt  = 2,
-  .sscp_pause_time_ms   = 0
+  .sscp_pause_time_ms   = 0,
+  .sscp_events          = 0
 };
 
 typedef union {

@@ -145,7 +145,8 @@ int waitAndCheckSerialResponse(TestState *state, const char *idle, const char *f
     }
     
     if (parseBuffer(response, idle) == 0) {
-        infoTest(state, "waiting...");
+        if (verbose)
+            infoTest(state, "waiting...");
         return FALSE;
     }
 

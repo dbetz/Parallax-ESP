@@ -28,8 +28,6 @@ static int sscp_separator;
 static uint8_t sscp_buffer[SSCP_BUFFER_MAX + 16]; // add some extra space for os_sprintf of numeric tokens
 static int sscp_length;
 
-int sscp_start = SSCP_TKN_START;
-int sscp_sendEvents;
 static int sscp_processing;
 static char *sscp_payload;
 static int sscp_payload_length;
@@ -74,8 +72,6 @@ void ICACHE_FLASH_ATTR sscp_reset(void)
     for (i = 0; i < SSCP_CONNECTION_MAX; ++i)
         sscp_close_connection(&sscp_connections[i]);
         
-    sscp_start = SSCP_TKN_START;
-    sscp_sendEvents = 0;
     sscp_processing = 0;
     sscp_state = STATE_IDLE;
     sscp_separator = -1;
@@ -83,21 +79,6 @@ void ICACHE_FLASH_ATTR sscp_reset(void)
     sscp_payload = NULL;
     sscp_payload_length = 0;
     sscp_payload_remaining = 0;
-}
-
-void ICACHE_FLASH_ATTR sscp_events(int enable)
-{
-    sscp_sendEvents = enable;
-}
-
-void ICACHE_FLASH_ATTR sscp_enable(int enable)
-{
-    flashConfig.sscp_enable = enable;
-}
-
-int ICACHE_FLASH_ATTR sscp_isEnabled(void)
-{
-    return flashConfig.sscp_enable;
 }
 
 void ICACHE_FLASH_ATTR sscp_capturePayload(char *buf, int length, void (*cb)(void *data, int count), void *data)
@@ -224,7 +205,7 @@ static void ICACHE_FLASH_ATTR sendToMCU(int prefix, char *fmt, va_list ap)
     int cnt;
 
     // insert the header
-    buf[0] = sscp_start;
+    buf[0] = flashConfig.sscp_start;
     buf[1] = prefix;
 
     // insert the formatted response
@@ -399,7 +380,7 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
     while (--len >= 0) {
         switch (sscp_state) {
         case STATE_IDLE:
-            if (*p == sscp_start) {
+            if (*p == flashConfig.sscp_start) {
                 if (sscp_processing) {
                     sscp_log("SSCP: busy processing a command");
                     ++p;

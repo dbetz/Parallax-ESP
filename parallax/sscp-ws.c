@@ -1,5 +1,6 @@
 #include "esp8266.h"
 #include "sscp.h"
+#include "config.h"
 
 static void send_connect_event(sscp_connection *connection, int prefix);
 static void send_disconnect_event(sscp_connection *connection, int prefix);
@@ -28,7 +29,7 @@ static void ICACHE_FLASH_ATTR websocketRecvCb(Websock *ws, char *data, int len, 
         connection->rxCount = len;
         connection->rxIndex = 0;
         connection->flags |= CONNECTION_RXFULL;
-        if (sscp_sendEvents)
+        if (flashConfig.sscp_events)
             send_data_event(connection, '!');
     }
 }

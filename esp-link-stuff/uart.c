@@ -21,6 +21,7 @@
 #include "task.h"
 #include "uart.h"
 #include "sscp.h"
+#include "config.h"
 
 #define DEF_STOP_BITS   ONE_STOP_BIT
 //#define DEF_STOP_BITS   TWO_STOP_BITS
@@ -238,7 +239,7 @@ uart_recvTask(os_event_t *events)
     WRITE_PERI_REG(UART_INT_CLR(UART0), UART_BRK_DET_INT_CLR);
     os_printf("UART break detected. Switching on SSCP command parsing.\n");
     sscp_reset();
-    sscp_enable(1);
+    flashConfig.sscp_enable = 1;
   }
 
   while (READ_PERI_REG(UART_STATUS(UART0)) & (UART_RXFIFO_CNT << UART_RXFIFO_CNT_S)) {

@@ -23,6 +23,8 @@ typedef struct {
   char     sscp_need_pause[16];
   int8_t   sscp_need_pause_cnt;
   int32_t  sscp_pause_time_ms;
+  uint8_t  sscp_start;
+  int8_t   sscp_events;
 } FlashConfig;
 
 extern FlashConfig flashConfig;

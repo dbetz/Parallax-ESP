@@ -118,6 +118,15 @@
             <td>Command Pause After Characters:</td>
             <td><input id="pause-chars" type="text"></td>
           </tr>
+          <tr>
+            <td>Command Events:</td>
+            <td>
+              <select id="enable-events">
+                <option value="0">Disabled</option>
+                <option value="1">Enabled</option>
+              </select>
+            </td>
+          </tr>
         </table>
         <h2>Save Settings</h2>
         <p>
@@ -160,6 +169,7 @@
   var startCharCtl;
   var pauseTimeCtl;
   var pauseCharsCtl;
+  var eventsCtl;
 
   function init()
   {
@@ -173,6 +183,7 @@
     startCharCtl = document.getElementById('start-char');
     pauseTimeCtl = document.getElementById('pause-time');
     pauseCharsCtl = document.getElementById('pause-chars');
+    enableEventsCtl = document.getElementById('enable-events');
     loadSettings();
   }
 
@@ -214,6 +225,11 @@
 
     pauseTimeCtl.value = getSetting('cmd-pause-time');
     pauseCharsCtl.value = getSetting('cmd-pause-chars');
+
+    if (getSetting('cmd-events') == "0")
+      enableEventsCtl.selectedIndex = 0;
+    else
+      enableEventsCtl.selectedIndex = 1;
   }
 
   function on_save() {
@@ -228,6 +244,7 @@
     setSetting('cmd-start-char', startCharCtl.value);
     setSetting('cmd-pause-time', pauseTimeCtl.value);
     setSetting('cmd-pause-chars', pauseCharsCtl.value);
+    setSetting('cmd-events', enableEventsCtl.value);
     setMessage("Settings saved");
   }
 

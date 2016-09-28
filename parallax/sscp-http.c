@@ -1,5 +1,6 @@
 #include "esp8266.h"
 #include "sscp.h"
+#include "config.h"
 #include "httpd.h"
 
 static void send_connect_event(sscp_connection *connection, int prefix);
@@ -42,14 +43,14 @@ int ICACHE_FLASH_ATTR cgiSSCPHandleRequest(HttpdConnData *connData)
             if (connData->cgiReason == CGI_CB_DISCONNECT) {
 sscp_log("sscp: disconnecting %d", connection->hdr.handle);
                 connection->flags |= CONNECTION_TERM;
-                if (sscp_sendEvents)
+                if (flashConfig.sscp_events)
                     send_disconnect_event(connection, '!');
             }
             else {
 sscp_log("sscp: disconnecting after failure %d", connection->hdr.handle);
                 connection->flags |= CONNECTION_FAIL;
                 connection->error = connData->cgiValue;
-                if (sscp_sendEvents)
+                if (flashConfig.sscp_events)
                     send_reconnect_event(connection, '!');
             }
         }
@@ -71,7 +72,7 @@ sscp_log("REPLY complete");
             ret = HTTPD_CGI_DONE;
         }
 
-        if (sscp_sendEvents)
+        if (flashConfig.sscp_events)
             send_txdone_event(connection, '!');
 
         return ret;
@@ -94,7 +95,7 @@ os_printf("sscp: no connections available for %s request\n", connData->url);
     connection->d.http.conn = connData;
 
 sscp_log("sscp: %d handling %s request", connection->hdr.handle, connData->url);
-    if (sscp_sendEvents)
+    if (flashConfig.sscp_events)
         send_connect_event(connection, '!');
         
     return HTTPD_CGI_MORE;

@@ -156,7 +156,7 @@ static int checkForMessage(wifi *dev, int type, char *buf, int maxSize)
         }
     }
 
-    return 0;
+    return -1;
 }
 
 static int checkForQueuedEvent(wifi *dev, char *buf, int maxSize)

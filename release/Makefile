@@ -14,10 +14,9 @@ CP=cp
 all:	clean
 	$(MAKE) build
 	$(MAKE) zip
-	cp esp-httpd.zip ~/$(ZIP)
 
 zip:	staged-files
-	cd release; zip -r ../esp-httpd *
+	cd release; zip -r ../$(ZIP) *
 
 build:
 	$(MAKE) -C .. STA_SSID= STA_PASS= clean

@@ -1,5 +1,11 @@
 #include "tests.h"
 
+#define DO_BLINK_TEST
+
+#ifdef DO_BLINK_TEST
+static int test_blink(TestState *state);
+#endif
+
 static int test_001(TestState *state);
 
 void run_tests(TestState *parent, int selectedTest)
@@ -19,12 +25,25 @@ void run_tests(TestState *parent, int selectedTest)
             checkSerialResponse(&state, "=E,1");
     }
 
+#ifdef DO_BLINK_TEST
+    if (startTest(&state, "Blink LEDs on GPIO13 and GPIO15")) {
+        if (test_blink(&state))
+            passTest(&state, "");
+        else
+            failTest(&state, "");
+    }
+#endif
+
     if (state.ssid) {
+        if (startTest(&state, "switch to STA+AP mode")) {
+            if (serialRequest(&state, "SET:wifi-mode,3"))
+                checkSerialResponse(&state, "=S,0");
+        }
         if (startTest(&state, "JOIN")) {
             if (serialRequest(&state, "JOIN:%s,%s", state.ssid, state.passwd))
                 checkSerialResponse(&state, "=S,0");
             if (state.testPassed)
-                msleep(1000); // wait for WX to disconnect. It has a .5 second delay
+                msleep(10000); // wait for WX to disconnect. It has a .5 second delay
         }
         beginGroup(&state);
         if (startTest(&state, "CHECK:station-ipaddr")) {
@@ -35,7 +54,7 @@ void run_tests(TestState *parent, int selectedTest)
                         break;
                 } while (!waitAndCheckSerialResponse(&state, "=S,0.0.0.0", "=S,^s", ipaddr, sizeof(ipaddr)));
                 if (state.testPassed) {
-                    infoTest(&state, "got '%s'\n", ipaddr);
+                    infoTest(&state, "got '%s'", ipaddr);
                     if (GetInternetAddress(ipaddr, 80, &state.moduleAddr) != 0)
                         infoTest(&state, "error: failed to parse IP address '%s'", ipaddr);
                 }
@@ -52,6 +71,42 @@ void run_tests(TestState *parent, int selectedTest)
 
     testResults(&state);
 }
+
+#ifdef DO_BLINK_TEST
+static int test_blink(TestState *state)
+{
+    TestState state2;
+    int phase = 0;
+    int count = 4;
+
+    initState(&state2, "  Subtest", state);
+
+    while (--count >= 0) {
+        if (startTest(&state2, "SET:pin-gpio13")) {
+            if (serialRequest(&state2, "SET:pin-gpio13,%d", phase))
+                checkSerialResponse(&state2, "=S,0");
+        }
+        if (startTest(&state2, "SET:pin-gpio15")) {
+            if (serialRequest(&state2, "SET:pin-gpio15,%d", !phase))
+                checkSerialResponse(&state2, "=S,0");
+        }
+        phase = !phase;
+        msleep(500);
+    }
+    if (startTest(&state2, "SET:pin-gpio13")) {
+        if (serialRequest(&state2, "SET:pin-gpio13,0"))
+            checkSerialResponse(&state2, "=S,0");
+    }
+    if (startTest(&state2, "SET:pin-gpio15")) {
+        if (serialRequest(&state2, "SET:pin-gpio15,0"))
+            checkSerialResponse(&state2, "=S,0");
+    }
+
+    testResults(&state2);
+
+    return state2.testPassed;
+}
+#endif
 
 static int test_001(TestState *state)
 {
@@ -81,6 +136,8 @@ static int test_001(TestState *state)
                 failTest(&state2, "");
         }
     }
+
+    beginGroup(&state2);
 
     if (startTest(&state2, "POLL for incoming POST request")) {
         if (!skipTest(&state2)) {

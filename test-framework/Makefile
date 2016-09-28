@@ -90,7 +90,7 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp $(HDRS)
 	$(CPP) $(CPPFLAGS) -c $< -o $@
 
 run:	$(BINDIR)/$(APP)$(EXT)
-	$(BINDIR)/$(APP)$(EXT)
+	$(BINDIR)/$(APP)$(EXT) -i 10.0.1.32
 
 clean:
 	$(RM) $(BUILD)

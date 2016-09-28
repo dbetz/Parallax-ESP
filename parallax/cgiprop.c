@@ -213,7 +213,7 @@ int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
     connection->connData = connData;
 
     // turn off SSCP during loading
-    sscp_enable(0);
+    flashConfig.sscp_enable = 0;
 
     os_timer_setfn(&connection->timer, timerCallback, connection);
     
@@ -238,7 +238,7 @@ static void ICACHE_FLASH_ATTR startLoading(PropellerConnection *connection, cons
     connection->imageSize = imageSize;
     
     // turn off SSCP during loading
-    sscp_enable(0);
+    flashConfig.sscp_enable = 0;
 
     uart0_config(connection->baudRate, ONE_STOP_BIT);
 

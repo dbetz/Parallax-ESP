@@ -219,8 +219,6 @@ int ReceiveSerialData(SERIAL *serial, void *buf, int len)
 {
     DWORD dwBytes = 0;
     FlushFileBuffers(serial->hSerial);
-    serial->timeouts.ReadTotalTimeoutConstant = 0;
-    SetCommTimeouts(serial->hSerial, &serial->timeouts);
     if (!ReadFile(serial->hSerial, buf, len, &dwBytes, NULL)) {
         printf("Error reading port\n");
         ShowLastError();
