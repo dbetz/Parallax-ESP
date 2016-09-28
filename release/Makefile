@@ -22,8 +22,11 @@ build:
 	$(MAKE) -C .. STA_SSID= STA_PASS= clean
 	$(MAKE) -C .. STA_SSID= STA_PASS=
 
-staged-files:	release release/tests release/samples $(IMAGES)
+staged-files:	release release/release-notes.txt release/tests release/samples $(IMAGES)
 	$(CP) flash.sh clear.sh clear-ffs.sh release
+
+release/release-notes.txt:	release-notes.txt
+	$(CP) release-notes.txt release
 
 release/boot_v1.5.bin:	../../esp_iot_sdk_v1.5.2/bin/boot_v1.5.bin patch
 	./patch $< $@

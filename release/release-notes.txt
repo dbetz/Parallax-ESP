@@ -1,0 +1,4 @@
+September 28, 2016
+
+Added a setting for enabling command events.
+Made the command start character setting persistent.
