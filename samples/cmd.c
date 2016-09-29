@@ -143,7 +143,7 @@ static int checkForMessage(wifi *dev, int type, char *buf, int maxSize)
                 return -1;
             }
             if (ch == '\r') {
-#if 1
+#if 0
                 {   char tmp[128];
                     i = dev->messageStart;
                     j = 0;
