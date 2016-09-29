@@ -2,7 +2,7 @@ $(info HOME $(HOME))
 
 TARGET=robot.elf
 
-all:	robot.elf
+all:	robot.elf blink.elf
 
 CFLAGS=-mcmm -Os -Wall -m32bit-doubles -I $(HOME)/simple/include -L $(HOME)/simple/lib
 

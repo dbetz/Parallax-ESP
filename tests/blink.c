@@ -18,6 +18,13 @@ int main(void)
     
     cmd_init(WIFI_RX, WIFI_TX, 31, 30);
 
+    pause(500);
+    
+    int value;
+    request("CHECK:pin-gpio15");
+    waitFor(CMD_START "=S,^i\r", &value); 
+    dprint(debug, "value = %d\n", value); 
+    
     for (;;) {
         waitcnt(CNT + CLKFREQ/2);
         request("SET:pin-gpio15,%d", blink);

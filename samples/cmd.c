@@ -46,11 +46,20 @@ int wifi_init(wifi *dev, int wifi_rx, int wifi_tx)
     return 0;
 }
 
+int wifi_getInteger(wifi *dev, const char *name, int *pValue)
+{
+    char result;
+    request(dev, "CHECK:%s", name);
+    if (parseResponse(dev, CMD_PREFIX "=^c,^i\r", &result, pValue) != 0 || result != 'S')
+        return -1;
+    return 0;
+}
+
 int wifi_setInteger(wifi *dev, const char *name, int value)
 {
     char result;
     int arg;
-    request(dev, "SET:cmd-events,%d", value);
+    request(dev, "SET:%s,%d", name, value);
     if (parseResponse(dev, CMD_PREFIX "=^c,^i\r", &result, &arg) != 0 || result != 'S')
         return -1;
     return 0;

@@ -84,6 +84,7 @@ struct wifi_request {
 
 wifi *wifi_open(int wifi_rx, int wifi_tx);
 int wifi_init(wifi *dev, int wifi_rx, int wifi_tx);
+int wifi_getInteger(wifi *dev, const char *name, int *pValue);
 int wifi_setInteger(wifi *dev, const char *name, int value);
 int wifi_listen(wifi *dev, char *protocol, const char *path, int *pHandle);
 int wifi_path(wifi *dev, int handle, char *path, int maxSize);
