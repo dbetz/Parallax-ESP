@@ -40,10 +40,10 @@ int main(void)
     init_robot();
 
     request("SET:cmd-pause-time,5");
-    waitFor(CMD_PREFIX "=S,0\r");
+    waitFor(CMD_START "=S,0\r");
 
     request("LISTEN:WS,/ws/robot");
-    waitFor(CMD_PREFIX "=S,^d\r", &handle);
+    waitFor(CMD_START "=S,^d\r", &handle);
     
     for (;;) {
         char url[128], arg[128];
@@ -53,20 +53,20 @@ int main(void)
         waitcnt(CNT + CLKFREQ/4);
 
         request("POLL");
-        waitFor(CMD_PREFIX "=^c,^i,^i\r", &type, &handle, &listener);
+        waitFor(CMD_START "=^c,^i,^i\r", &type, &handle, &listener);
         if (type != 'N')
             dprint(debug, "Got %c: handle %d, listener %d\n", type, handle, listener);
         
         switch (type) {
         case 'W':
             request("PATH:%d", handle);
-            waitFor(CMD_PREFIX "=S,^s\r", url, sizeof(url));
+            waitFor(CMD_START "=S,^s\r", url, sizeof(url));
             dprint(debug, "%d: path '%s'\n", handle, url);
             pingHandle = handle;
             break;
         case 'D':
             request("RECV:%d,%d", handle, sizeof(arg));
-            waitFor(CMD_PREFIX "=S,^i\r", &count);
+            waitFor(CMD_START "=S,^i\r", &count);
             collectPayload(arg, sizeof(arg), count);
             dprint(debug, "%d: PAYLOAD %d\n", pingHandle, count);
             if (process_robot_command(arg[0]) != 0)
@@ -87,7 +87,7 @@ int main(void)
                 sprintf(buf, "%d", pingDistance);
                 request("SEND:%d,%d", pingHandle, strlen(buf));
                 requestPayload(buf, strlen(buf));
-                waitFor(CMD_PREFIX "=^c,^i\r", &result, &count);
+                waitFor(CMD_START "=^c,^i\r", &result, &count);
                 dprint(debug, " got %c %d\n", result, count);
             }
         }
