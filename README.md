@@ -1,3 +1,27 @@
+# Parallax-ESP README #
+
+This project contains firmware for the Parallax WX Wi-Fi module. The code is based on
+the esp-httpd project by by Jeroen Domburg with some features added from the esp-link
+project by Thorsten von Eicken.
+
+It includes the following features:
+
+A simple web server that can serve a fixed set of files from an embedded flash filesystem
+as well as files from a user-writable flash filesystem.
+
+A transparent bridge to an attached microcontroller.
+
+A simple serial command protocol that allows an attached microcontroller to respond to
+HTTP requests and to initiate TCP and WebSockets requests.
+
+A loader for the Parallax Propeller.
+
+Detailed documentation on these features is available on the Parallax web site.
+
+The main code is based on the esp-httpd demonstration project whose README file is below.
+
+The Parallax additions to esp-httpd and esp-link are released under the MIT license.
+
 # esp-httpd README #
 
 This is the demonstration project for the small but powerful libesphttpd webserver 
