@@ -10,8 +10,7 @@ OUTPUT_TYPE=ota
 # version is MM-mm-pp
 # MM is the major version number (change when protocol changes)
 # mm is the minor version number
-MAJOR_VERSION=v01-00
-VERSION=$(MAJOR_VERSION)_$(shell date "+%Y-%m-%d_%H:%M")
+VERSION=$(shell git describe master)+$(shell date "+%Y-%m-%d_%H:%M:%S")
 $(info VERSION $(VERSION))
 
 #SPI flash size, in K
