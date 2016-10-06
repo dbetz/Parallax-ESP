@@ -1,3 +1,10 @@
+/*
+    sscp-ws.c - Simple Serial Command Protocol WebSockets support
+
+	Copyright (c) 2016 Parallax Inc.
+    See the file LICENSE.txt for licensing information.
+*/
+
 #include "esp8266.h"
 #include "sscp.h"
 #include "config.h"

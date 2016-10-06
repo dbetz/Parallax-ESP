@@ -1,3 +1,10 @@
+/*
+    propimage.h - definitions for the Parallax Propeller binary images
+
+	Copyright (c) 2016 Parallax Inc.
+    See the file LICENSE.txt for licensing information.
+*/
+
 #ifndef PROPIMAGE_H
 #define PROPIMAGE_H
 

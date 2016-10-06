@@ -1,3 +1,10 @@
+/*
+    proploader.h - definitions for the Parallax Propeller binary image loader
+
+	Copyright (c) 2016 Parallax Inc.
+    See the file LICENSE.txt for licensing information.
+*/
+
 #ifndef PROPLOADER_H
 #define PROPLOADER_H
 

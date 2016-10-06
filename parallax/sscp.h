@@ -1,3 +1,10 @@
+/*
+    sscp.h - Simple Serial Command Protocol definitions
+
+	Copyright (c) 2016 Parallax Inc.
+    See the file LICENSE.txt for licensing information.
+*/
+
 #ifndef __SSCP_H__
 #define __SSCP_H__
 

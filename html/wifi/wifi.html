@@ -10,6 +10,7 @@
     var xhr=j();
     var currAp=getSetting("wifi-ssid");
     var wifiModeCtl;
+    var scanTimer=null;
 
     function createInputForAp(ap) {
       if (ap.essid=="" && ap.rssi==0) return;
@@ -61,9 +62,9 @@
               if (data.result.APs[i].essid=="" && data.result.APs[i].rssi==0) continue;
               $("#aps").appendChild(createInputForAp(data.result.APs[i]));
             }
-            window.setTimeout(scanAPs, 20000);
+            scanTimer = window.setTimeout(scanAPs, 20000);
           } else {
-            window.setTimeout(scanAPs, 1000);
+            scanTimer = window.setTimeout(scanAPs, 1000);
           }
         }
       }
@@ -85,7 +86,7 @@
       patchSetting("station-macaddr");
       patchSetting("softap-ipaddr");
       patchSetting("softap-macaddr");
-      scanAPs();
+      updateNetworkList(wifiMode);
     };
 
   function getSetting(name) {
@@ -108,16 +109,31 @@
     element.innerHTML = getSetting(name);
   }
 
+  function updateNetworkList(mode) {
+    if (scanTimer) {
+      clearTimeout(scanTimer);
+      scanTimer = null;
+    }
+    if (mode == "STA+AP") {
+      $("#aps-prompt").innerHTML = "Select a network from the list, enter password (if needed) in field below and click connect.";
+      $("#aps").innerHTML = "Scanning...";
+      $("#aps-passwd").style.display = "block";
+      scanAPs();
+    }
+    else {
+      $("#aps-prompt").innerHTML = "Select Wi-Fi Mode \"STA+AP\" above to scan for networks.";
+      $("#aps").innerHTML = "";
+      $("#aps-passwd").style.display = "none";
+    }
+  }
+
   function on_wifiModeChanged() {
     var newMode = wifiModeCtl[wifiModeCtl.selectedIndex].value;
     var req = new XMLHttpRequest();
     var url = '/wifi/setmode.cgi?mode=' + encodeURIComponent(newMode);
     req.open('GET', url, false);
     req.send();
-    if (newMode == "STA")
-      $("#aps").innerHTML = "";
-    else
-      $("#aps").innerHTML = "Scanning...";
+    updateNetworkList(newMode);
   }
 
   </script>
@@ -162,14 +178,13 @@
           </td>
         </tr>
       </table>
-      <p>Note: Select Wi-Fi Mode "STA+AP" above when scanning for networks.</p>
       <form name="wifiform" action="connect.cgi" method="post">
-        <p>
-          Select a network from the list, enter password (if needed) in field below and click connect.<br>
-        <div id="aps">Scanning...</div><br>
-        Wi-Fi password(if needed):<br>
-        <input type="text" name="passwd"><br>
-        <input type="submit" name="connect" value="Connect!">
+        <p id="aps-prompt"></p>
+        <p id="aps"></p>
+        <p id="aps-passwd">
+          Wi-Fi password(if needed):<br>
+          <input type="text" name="passwd"><br>
+          <input type="submit" name="connect" value="Connect!">
         </p>
       </form>
     </div>

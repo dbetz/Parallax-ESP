@@ -1,4 +1,9 @@
 /*
+	Copyright (c) 2016 Parallax Inc.
+    See the file LICENSE.txt for licensing information.
+
+Derived from:
+
 Connector to let httpd use the espfs filesystem to serve the files in it.
 */
 

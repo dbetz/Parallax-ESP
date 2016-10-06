@@ -1,3 +1,10 @@
+/*
+    cgiprop.c - support for HTTP requests related to the Parallax Propeller
+
+	Copyright (c) 2016 Parallax Inc.
+    See the file LICENSE.txt for licensing information.
+*/
+
 #include <esp8266.h>
 #include <osapi.h>
 #include "config.h"

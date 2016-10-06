@@ -1,3 +1,10 @@
+/*
+    propimage.c - support for the Parallax Propeller binary images
+
+	Copyright (c) 2016 Parallax Inc.
+    See the file LICENSE.txt for licensing information.
+*/
+
 #include "propimage.h"
 
 #define OFFSET_OF(_s, _f) ((int)&((_s *)0)->_f)

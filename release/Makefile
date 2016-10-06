@@ -23,7 +23,7 @@ build:
 	$(MAKE) -C .. STA_SSID= STA_PASS=
 
 staged-files:	release release/release-notes.txt release/tests release/samples $(IMAGES)
-	$(CP) flash.sh clear.sh clear-ffs.sh release
+	$(CP) flash.sh clear.sh clear-ffs.sh clear-all.sh release
 
 release/release-notes.txt:	release-notes.txt
 	$(CP) release-notes.txt release

@@ -1,3 +1,10 @@
+/*
+    proploader.c - Parallax Propeller binary image loader
+
+	Copyright (c) 2016 Parallax Inc.
+    See the file LICENSE.txt for licensing information.
+*/
+
 #include <string.h>
 #include <esp8266.h>
 #include "proploader.h"

@@ -1,3 +1,10 @@
+/*
+    cgiprop.h - definitions for HTTP requests related to the Parallax Propeller
+
+	Copyright (c) 2016 Parallax Inc.
+    See the file LICENSE.txt for licensing information.
+*/
+
 #ifndef CGIPROP_H
 #define CGIPROP_H
 

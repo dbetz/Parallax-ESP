@@ -1,3 +1,10 @@
+/*
+    sscp.c - Simple Serial Command Protocol
+
+	Copyright (c) 2016 Parallax Inc.
+    See the file LICENSE.txt for licensing information.
+*/
+
 #include "esp8266.h"
 #include "sscp.h"
 #include "uart.h"

@@ -1,3 +1,10 @@
+/*
+    discovery.c - support for the Parallax WX module discovery protocol
+
+	Copyright (c) 2016 Parallax Inc.
+    See the file LICENSE.txt for licensing information.
+*/
+
 #include <esp8266.h>
 #include "config.h"
 #include "discovery.h"
