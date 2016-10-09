@@ -18,11 +18,9 @@ some pictures of cats.
 #include <at_custom.h>
 #endif
 #include "httpd.h"
-#include "io.h"
 #include "httpdespfs.h"
 #include "cgiwifi.h"
 #include "cgiflash.h"
-#include "stdout.h"
 #include "auth.h"
 #include "espfs.h"
 #include "captdns.h"
@@ -45,6 +43,7 @@ some pictures of cats.
 
 //The example can print out the heap use every 3 seconds. You can use this to catch memory leaks.
 //#define SHOW_HEAP_USE
+#define SHOW_HEAP_INTERVAL  3000
 
 //Test WebSockets broadcast messages
 //#define TEST_BROADCAST
@@ -143,7 +142,6 @@ should be placed above the URLs they protect.
 HttpdBuiltInUrl builtInUrls[]={
 	{"*", cgiRedirectApClientToHostname, "esp8266.nonet"},
 	{"/", cgiRedirect, "/index.html"},
-	{"/index.html", cgiEspFsTemplate, tplSettings},
 #ifdef INCLUDE_FLASH_FNS
 	{"/flash/next", cgiGetFirmwareNext, &uploadParams},
 	{"/flash/upload", cgiUploadFirmware, &uploadParams},
@@ -203,13 +201,8 @@ void ICACHE_FLASH_ATTR user_init(void) {
     if (!(restoreOk = configRestore()))
         configSave();
 
-	//stdoutInit();
-	ioInit();
 	captdnsInit();
 
-#ifdef USE_AT
-    at_init();
-#else
     // init UART
     uart_init(flashConfig.baud_rate, 115200);
 
@@ -220,8 +213,6 @@ void ICACHE_FLASH_ATTR user_init(void) {
     // init the wifi-serial transparent bridge (port 23)
     serbridgeInit(23);
     uart_add_recv_cb(&serbridgeUartCb);
-
-#endif
 
 #ifdef PROPLOADER
     initDiscovery();
@@ -240,7 +231,7 @@ void ICACHE_FLASH_ATTR user_init(void) {
 #ifdef SHOW_HEAP_USE
 	os_timer_disarm(&prHeapTimer);
 	os_timer_setfn(&prHeapTimer, prHeapTimerCb, NULL);
-	os_timer_arm(&prHeapTimer, 3000, 1);
+	os_timer_arm(&prHeapTimer, SHOW_HEAP_INTERVAL, 1);
 #endif
 #ifdef TEST_BROADCAST
 	os_timer_disarm(&websockTimer);

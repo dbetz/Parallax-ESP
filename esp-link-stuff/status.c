@@ -10,6 +10,8 @@
 #include "mqtt_client.h"
 extern MQTT_Client mqttClient;
 
+//#define STATUS_LED_ACTIVE_LOW
+
 //===== MQTT Status update
 
 // Every minute...
@@ -58,12 +60,21 @@ static ETSTimer ledTimer;
 static void ICACHE_FLASH_ATTR setLed(int on) {
   int8_t pin = flashConfig.conn_led_pin;
   if (pin < 0) return; // disabled
+#ifdef STATUS_LED_ACTIVE_LOW
   // LED is active-low
   if (on) {
     gpio_output_set(0, (1<<pin), (1<<pin), 0);
   } else {
     gpio_output_set((1<<pin), 0, (1<<pin), 0);
   }
+#else
+  // LED is active-high
+  if (on) {
+    gpio_output_set((1<<pin), 0, (1<<pin), 0);
+  } else {
+    gpio_output_set(0, (1<<pin), (1<<pin), 0);
+  }
+#endif
 }
 
 static uint8_t ledState = 0;

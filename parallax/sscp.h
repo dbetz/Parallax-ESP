@@ -194,7 +194,6 @@ int cgiPropSetting(HttpdConnData *connData);
 int cgiPropSaveSettings(HttpdConnData *connData);
 int cgiPropRestoreSettings(HttpdConnData *connData);
 int cgiPropRestoreDefaultSettings(HttpdConnData *connData);
-int tplSettings(HttpdConnData *connData, char *token, void **arg);
 
 // from sscp-http.c
 void http_do_listen(int argc, char *argv[]);

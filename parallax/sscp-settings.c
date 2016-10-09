@@ -457,10 +457,13 @@ int ICACHE_FLASH_ATTR cgiPropSetting(HttpdConnData *connData)
 
     // check for GET
     if (connData->requestType == HTTPD_METHOD_GET) {
+        os_printf("GET '%s'", def->name);
         if ((*def->getHandler)(def->data, value) != 0) {
+            os_printf(" --> ERROR\n");
             httpdSendResponse(connData, 400, "Get setting failed\r\n", -1);
             return HTTPD_CGI_DONE;
         }
+        os_printf(" --> '%s'\n", value);
     }
 
     // only other option is POST
@@ -469,10 +472,13 @@ int ICACHE_FLASH_ATTR cgiPropSetting(HttpdConnData *connData)
             httpdSendResponse(connData, 400, "Missing value argument\r\n", -1);
             return HTTPD_CGI_DONE;
         }
+        os_printf("SET '%s' to '%s'", def->name, value);
         if ((*def->setHandler)(def->data, value) != 0) {
+            os_printf(" --> ERROR\n");
             httpdSendResponse(connData, 400, "Set setting failed\r\n", -1);
             return HTTPD_CGI_DONE;
         }
+        os_printf(" --> OK\n");
         os_strcpy(value, "");
     }
 
@@ -511,32 +517,5 @@ int ICACHE_FLASH_ATTR cgiPropRestoreDefaultSettings(HttpdConnData *connData)
     httpdEndHeaders(connData);
     httpdSend(connData, "", -1);
     return HTTPD_CGI_DONE;
-}
-
-int ICACHE_FLASH_ATTR tplSettings(HttpdConnData *connData, char *token, void **arg)
-{
-	char value[128];
-	int i;
-	
-	if (token == NULL) return HTTPD_CGI_DONE;
-
-    for (i = 0; vars[i].name != NULL; ++i) {
-        if (os_strcmp(token, vars[i].name) == 0) {
-            int (*handler)(void *, char *) = vars[i].getHandler;
-            if (handler) {
-                if ((*handler)(vars[i].data, value) != 0)
-                    os_strcpy(value, "(error)");
-            }
-            else
-                os_strcpy(value, "(unimplemented)");
-            break;
-        }
-    }
-    
-    if (!vars[i].name)
-        os_strcpy(value, "(unknown)");
-
-	httpdSend(connData, value, -1);
-	return HTTPD_CGI_DONE;
 }
 

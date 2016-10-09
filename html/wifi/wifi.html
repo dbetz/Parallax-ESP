@@ -129,10 +129,11 @@
 
   function on_wifiModeChanged() {
     var newMode = wifiModeCtl[wifiModeCtl.selectedIndex].value;
-    var req = new XMLHttpRequest();
-    var url = '/wifi/setmode.cgi?mode=' + encodeURIComponent(newMode);
-    req.open('GET', url, false);
-    req.send();
+    setSetting("wifi-mode", newMode);
+//    var req = new XMLHttpRequest();
+//    var url = '/wifi/setmode.cgi?mode=' + encodeURIComponent(newMode);
+//    req.open('GET', url, false);
+//    req.send();
     updateNetworkList(newMode);
   }
 
