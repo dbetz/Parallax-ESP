@@ -50,7 +50,7 @@ Check out the submodules of Parallax-ESP:
     git submodule init
     git submodule update
 
-Build the firmware:
+Build the firmware (from the Parallax-ESP directory):
 
     make
 
