@@ -560,7 +560,7 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
                         value |= *(uint8_t *)&sscp_buffer[sscp_length - 2] << 16;
                         value |= *(uint8_t *)&sscp_buffer[sscp_length - 3] << 8;
                         value |= *(uint8_t *)&sscp_buffer[sscp_length - 4];
-                        os_sprintf((char *)&sscp_buffer[sscp_length - 4], "%ld", value);
+                        os_sprintf((char *)&sscp_buffer[sscp_length - 4], "%d", (int)value);
                     }
                     break;
                 case SSCP_TKN_UINT32:
@@ -569,7 +569,7 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
                         value |= *(uint8_t *)&sscp_buffer[sscp_length - 2] << 16;
                         value |= *(uint8_t *)&sscp_buffer[sscp_length - 3] << 8;
                         value |= *(uint8_t *)&sscp_buffer[sscp_length - 4];
-                        os_sprintf((char *)&sscp_buffer[sscp_length - 4], "%lu", value);
+                        os_sprintf((char *)&sscp_buffer[sscp_length - 4], "%u", (unsigned int)value);
                     }
                     break;
                 default:

@@ -1,3 +1,5 @@
+# flash the firmware
+
 PORT=/dev/ttyUSB0
 if [ ! -z $1 ]
 then
@@ -12,11 +14,8 @@ FLASH_BLOCK_SIZE=1024
 FLASH_SPEED=80
 FLASH_INTERFACE=qio
 
-#use for 1MB flash
-#WIFI_SETTINGS=0xFE000
-
-#use for 4MB flash
-WIFI_SETTINGS=0x3FE000
+BOOT_LOADER=0x000000
+USER1_IMAGE=0x001000
 
 esptool \
 -cp $PORT \
@@ -25,5 +24,5 @@ esptool \
 -bz $FLASH_SIZE \
 -bf $FLASH_SPEED \
 -bm $FLASH_INTERFACE \
--ca 0x00000 -cf boot_v1.5.bin \
--ca 0x01000 -cf httpd.user1.bin
+-ca $BOOT_LOADER -cf boot_v1.6.bin \
+-ca $USER1_IMAGE -cf httpd.user1.bin

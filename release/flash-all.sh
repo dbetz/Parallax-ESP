@@ -1,4 +1,5 @@
-# clear out all settings and the user flash filesystem
+# flash the firmware
+# and clear out all settings and the user flash filesystem
 
 PORT=/dev/ttyUSB0
 if [ ! -z $1 ]
@@ -13,6 +14,9 @@ FLASH_SIZE=4M
 FLASH_BLOCK_SIZE=1024
 FLASH_SPEED=80
 FLASH_INTERFACE=qio
+
+BOOT_LOADER=0x000000
+USER1_IMAGE=0x001000
 
 USER_SETTINGS1=0x07E000
 USER_SETTINGS2=0x07F000
@@ -37,6 +41,8 @@ esptool \
 -bz $FLASH_SIZE \
 -bf $FLASH_SPEED \
 -bm $FLASH_INTERFACE \
+-ca $BOOT_LOADER -cf boot_v1.6.bin \
+-ca $USER1_IMAGE -cf httpd.user1.bin \
 -ca $USER_SETTINGS1 -cf blank.bin \
 -ca $USER_SETTINGS2 -cf blank.bin \
 -ca $WIFI_SETTINGS1 -cf esp_init_data_default.bin \

@@ -1,3 +1,5 @@
+# clear out the user flash filesystem
+
 PORT=/dev/ttyUSB0
 if [ ! -z $1 ]
 then
@@ -11,12 +13,6 @@ FLASH_SIZE=4M
 FLASH_BLOCK_SIZE=1024
 FLASH_SPEED=80
 FLASH_INTERFACE=qio
-
-#use for 1MB flash
-#WIFI_SETTINGS=0xFE000
-
-#use for 4MB flash
-WIFI_SETTINGS=0x3FE000
 
 #flash filesystem base
 FFS_BASE=0x100000

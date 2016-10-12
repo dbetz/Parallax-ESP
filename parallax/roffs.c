@@ -107,13 +107,13 @@ os_printf("open: filesystem not mounted\n");
 
 		// read the next file header
 		if (readFlash(p, &h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK) {
-os_printf("open: %08lx error reading file header\n", p);
+os_printf("open: %08x error reading file header\n", (int)p);
             return NULL;
         }
 
         // check the magic number
 		if (h.magic != ROFS_MAGIC) {
-os_printf("open: %08lx bad magic number\n", p);
+os_printf("open: %08x bad magic number\n", (int)p);
             return NULL;
         }
 
@@ -132,11 +132,11 @@ os_printf("open: terminate on a leftover pending file\n");
 
             // get the name of the file
 		    if (readFlash(p + sizeof(RoFsHeader), namebuf, sizeof(namebuf)) != SPI_FLASH_RESULT_OK) {
-os_printf("open: %08lx error reading file name\n", p);
+os_printf("open: %08x error reading file name\n", (int)p);
                 return NULL;
             }
 
-os_printf("open: %08lx checking '%s'\n", p, namebuf);
+os_printf("open: %08x checking '%s'\n", p, namebuf);
 		    // check to see if this is the file we're looking for
             if (os_strcmp(namebuf, fileName) == 0) {
                 if (!(file = (ROFFS_FILE *)os_malloc(sizeof(ROFFS_FILE))))
@@ -152,7 +152,7 @@ os_printf("open: %08lx checking '%s'\n", p, namebuf);
 
         // deleted file
         else {
-os_printf("open: %08lx skipping deleted file\n", p);
+os_printf("open: %08x skipping deleted file\n", (int)p);
         }
 
 		// skip over the file data
@@ -256,19 +256,19 @@ os_printf("find: filesystem not mounted\n");
 
 		// read the next file header
 		if (readFlash(p, &h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK) {
-os_printf("find: %08lx error reading file header\n", p);
+os_printf("find: %08x error reading file header\n", p);
             return -1;
         }
 
         // check the magic number
 		if (h.magic != ROFS_MAGIC) {
-os_printf("find: %08lx bad magic number\n", p);
+os_printf("find: %08x bad magic number\n", p);
             return -1;
         }
 
 		// check for the end of image marker
         if (h.flags & FLAG_LASTFILE) {
-os_printf("find: %08lx insertion point\n", p);
+os_printf("find: %08x insertion point\n", p);
             *pInsertionOffset = p;
             return 0;
         }
@@ -306,11 +306,11 @@ os_printf("find: error writing terminator\n");
 
             // get the name of the file
 		    if (readFlash(p + sizeof(RoFsHeader), namebuf, sizeof(namebuf)) != SPI_FLASH_RESULT_OK) {
-os_printf("find: %08lx error reading file name\n", p);
+os_printf("find: %08x error reading file name\n", p);
                 return -1;
             }
 
-os_printf("find: %08lx checking '%s'\n", p, namebuf);
+os_printf("find: %08x checking '%s'\n", p, namebuf);
 		    // check to see if this is the file we're looking for
             if (os_strcmp(namebuf, fileName) == 0)
                 *pFileOffset = p;
@@ -318,7 +318,7 @@ os_printf("find: %08lx checking '%s'\n", p, namebuf);
         
         // deleted file
         else {
-os_printf("find: %08lx skipping deleted file\n", p);
+os_printf("find: %08x skipping deleted file\n", p);
         }
 
 		// skip over the file data
@@ -414,11 +414,11 @@ static int ICACHE_FLASH_ATTR writeFlash(uint32_t addr, void *buf, int size)
     uint32_t sectorMask = SPI_FLASH_SEC_SIZE - 1;
     uint32_t sectorAddr = addr & ~sectorMask;
     uint8_t *p = buf;
-os_printf("writeFlash: %08lx %d\n", addr, size);
+os_printf("writeFlash: %08x %d\n", addr, size);
 
     // erase the sector if the write begins on a sector boundary
     if (addr == sectorAddr) {
-os_printf("writeFlash: erase %08lx\n", sectorAddr);
+os_printf("writeFlash: erase %08x\n", sectorAddr);
         if (spi_flash_erase_sector(sectorAddr / SPI_FLASH_SEC_SIZE) != SPI_FLASH_RESULT_OK) {
 os_printf("writeFlash: erase failed\n");
             return SPI_FLASH_RESULT_ERR;
@@ -430,7 +430,7 @@ os_printf("writeFlash: erase failed\n");
         int writeSize = sectorAddr + SPI_FLASH_SEC_SIZE - addr;
         
         // write the next sector or partial sector
-os_printf("writeFlash: write %08lx %d\n", addr, writeSize);
+os_printf("writeFlash: write %08x %d\n", addr, writeSize);
         if (spi_flash_write(addr, (uint32 *)p, writeSize) != SPI_FLASH_RESULT_OK) {
 os_printf("writeFlash: write failed\n");
             return SPI_FLASH_RESULT_ERR;
@@ -443,7 +443,7 @@ os_printf("writeFlash: write failed\n");
         
         // erase the next sector
         sectorAddr = addr & ~sectorMask;
-os_printf("writeFlash: erase %08lx\n", sectorAddr);
+os_printf("writeFlash: erase %08x\n", sectorAddr);
         if (spi_flash_erase_sector(sectorAddr / SPI_FLASH_SEC_SIZE) != SPI_FLASH_RESULT_OK) {
 os_printf("writeFlash: erase failed\n");
             return SPI_FLASH_RESULT_ERR;
@@ -452,7 +452,7 @@ os_printf("writeFlash: erase failed\n");
     
     // write the last partial sector
     if (size > 0) {
-os_printf("writeFlash: write %08lx %d\n", addr, size);
+os_printf("writeFlash: write %08x %d\n", addr, size);
         if (spi_flash_write(addr, (uint32 *)p, size) != SPI_FLASH_RESULT_OK) {
 os_printf("writeFlash: write failed\n");
             return SPI_FLASH_RESULT_ERR;
@@ -464,7 +464,7 @@ os_printf("writeFlash: write failed\n");
 
 static int ICACHE_FLASH_ATTR updateFlash(uint32_t addr, void *buf, int size)
 {
-os_printf("updateFlash: %08lx %d\n", addr, size);
+os_printf("updateFlash: %08x %d\n", addr, size);
     if (spi_flash_write(addr, (uint32 *)buf, size) != SPI_FLASH_RESULT_OK) {
 os_printf("updateFlash: failed\n");
         return SPI_FLASH_RESULT_ERR;

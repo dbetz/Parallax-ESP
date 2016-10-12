@@ -1,3 +1,6 @@
+October 11, 2016
+Switched from SDK 1.5.2 to 2.0.0.p1
+
 September 28, 2016
 
 Added a setting for enabling command events.
