@@ -22,6 +22,40 @@ The main code is based on the esp-httpd demonstration project whose README file 
 
 The Parallax additions to esp-httpd and esp-link are released under the MIT license.
 
+# Building
+
+As a first step, clone and follow the build instructions for esp-open-sdk:
+
+    https://github.com/pfalcon/esp-open-sdk repository.
+
+Download the ESP8266 SDK v2.0.0 and the patch from:
+
+    https://espressif.com/en/support/download/sdks-demos
+
+The files to download are:
+
+    ESP8266 NONOS SDK V2.0.0 20160810
+    ESP8266 NONOS SDK V2.0.0 patch 20160809
+
+Apply the patch to the files in the lib directory of the SDK.
+
+Next, setup the paths to the ESP toolchain and the SDK:
+
+    export XTENSA_TOOLS_ROOT=/path/to/esp-open-sdk/xtensa-lx106-elf/bin/
+    export SDK_BASE=/path/to/esp/sdk-v2.0.0.p1
+
+Check out the submodules of Parallax-ESP:
+
+    cd Parallax-ESP
+    git submodule init
+    git submodule update
+
+Build the firmware:
+
+    make
+
+##########################################################################################
+
 # esp-httpd README #
 
 This is the demonstration project for the small but powerful libesphttpd webserver 
