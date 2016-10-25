@@ -25,8 +25,8 @@ BLANKPOS="$$(printf "0x%X" $$(($(ESP_SPI_FLASH_SIZE_K)*512-0x2000)))"
 INITDATAPOS="$$(printf "0x%X" $$(($(ESP_SPI_FLASH_SIZE_K)*512-0x4000)))"
 
 #Convert SPI size into arg for appgen. Format: no=size
-FLASH_MAP_CONV:=0:512 2:1024 5:2048 6:4096
-ESP_FLASH_SIZE_IX:=$(maplookup $(ESP_SPI_IMAGE_SIZE_K),,$(FLASH_MAP_CONV))
+FLASH_MAP_CONV:=512:0 1024:2 2048:5 4096:6
+ESP_FLASH_SIZE_IX:=$(call maplookup,$(ESP_SPI_IMAGE_SIZE_K),$(FLASH_MAP_CONV))
 
 CFLAGS += -DOTA_TAGNAME=\"$(TAGNAME)\"
 
