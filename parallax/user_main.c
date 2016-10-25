@@ -201,7 +201,7 @@ void ICACHE_FLASH_ATTR user_init(void) {
     if (!(restoreOk = configRestore()))
         configSave();
 
-	captdnsInit();
+    captdnsInit();
 
     // init UART
     uart_init(flashConfig.baud_rate, 115200);

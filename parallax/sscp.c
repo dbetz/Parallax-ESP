@@ -229,20 +229,32 @@ static void ICACHE_FLASH_ATTR sendToMCU(int prefix, char *fmt, va_list ap)
     buf[2 + cnt] = '\r';
     cnt += 3;
 
+    // handle inserting pauses after certain characters
     if (flashConfig.sscp_pause_time_ms > 0) {
         char *p = buf;
         while (--cnt >= 0) {
+            int needPause = 0;
             int byte = *p++;
-            int i;
             uart_tx_one_char(UART0, byte);
-            for (i = 0; i < flashConfig.sscp_need_pause_cnt; ++i) {
-                if (byte == flashConfig.sscp_need_pause[i]) {
-                    uart_drain_tx_buffer(UART0);
-                    os_delay_us(flashConfig.sscp_pause_time_ms * 1000);
+            if (byte == '\r')
+                needPause = 1;
+            else {
+                int i;
+                for (i = 0; i < flashConfig.sscp_need_pause_cnt; ++i) {
+                    if (byte == flashConfig.sscp_need_pause[i]) {
+                        needPause = 1;
+                        break;
+                    }
                 }
+            }
+            if (needPause) {
+                uart_drain_tx_buffer(UART0);
+                os_delay_us(flashConfig.sscp_pause_time_ms * 1000);
             }
         }
     }
+
+    // no pauses after characters needed
     else {
         uart_tx_buffer(UART0, buf, cnt);
     }

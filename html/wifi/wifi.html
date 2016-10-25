@@ -71,9 +71,15 @@
       xhr.send();
     }
 
-    window.onload=function(e) {
-      patchSetting("module-name");
+    function refreshData() {
+      patchSetting("station-ipaddr");
+      patchSetting("station-macaddr");
+      patchSetting("softap-ipaddr");
+      patchSetting("softap-macaddr");
+    };
 
+    window.onload = function (e) {
+      patchSetting("module-name");
       wifiModeCtl = document.getElementById("wifi-mode");
       var wifiMode = getSetting("wifi-mode");
       for (var i = 0; i < wifiModeCtl.length; ++i)
@@ -81,13 +87,9 @@
           wifiModeCtl.selectedIndex = i;
           break;
         }
-
-      patchSetting("station-ipaddr");
-      patchSetting("station-macaddr");
-      patchSetting("softap-ipaddr");
-      patchSetting("softap-macaddr");
+      refreshData();
       updateNetworkList(wifiMode);
-    };
+    }
 
   function getSetting(name) {
     var req = new XMLHttpRequest();
@@ -129,11 +131,11 @@
 
   function on_wifiModeChanged() {
     var newMode = wifiModeCtl[wifiModeCtl.selectedIndex].value;
-    setSetting("wifi-mode", newMode);
-//    var req = new XMLHttpRequest();
-//    var url = '/wifi/setmode.cgi?mode=' + encodeURIComponent(newMode);
-//    req.open('GET', url, false);
-//    req.send();
+    var req = new XMLHttpRequest();
+    var url = '/wifi/setmode.cgi?mode=' + encodeURIComponent(newMode);
+    req.open('POST', url, false);
+    req.send();
+    refreshData();
     updateNetworkList(newMode);
   }
 
