@@ -22,14 +22,13 @@ Connector to let httpd use the espfs filesystem to serve the files in it.
 
 #include <esp8266.h>
 
-#define FLASH_FILESYSTEM_BASE   0x100000
-
 /* must match definitions in roffsformat.h */
 #define ROFFS_FLAG_GZIP (1<<1)
 
 #include "roffsformat.h"
 typedef struct ROFFS_FILE_STRUCT ROFFS_FILE;
 
+uint32_t roffs_base_address(void);
 int roffs_mount(uint32_t flashAddress);
 int roffs_format(uint32_t flashAddress);
 ROFFS_FILE *roffs_open(const char *fileName);

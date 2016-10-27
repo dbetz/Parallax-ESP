@@ -29,6 +29,9 @@ Connector to let httpd use the espfs filesystem to serve the files in it.
 
 #include "roffsformat.h"
 
+// default filesystem base address in flash
+#define FLASH_FILESYSTEM_BASE   0x100000
+
 // open file structure
 struct ROFFS_FILE_STRUCT {
     uint32_t header;
@@ -47,6 +50,11 @@ static uint32_t fsData = BAD_FILESYSTEM_BASE;
 static int readFlash(uint32_t addr, void *buf, int size);
 static int writeFlash(uint32_t addr, void *buf, int size);
 static int updateFlash(uint32_t addr, void *buf, int size);
+
+uint32_t roffs_base_address(void)
+{
+    return FLASH_FILESYSTEM_BASE;
+}
 
 int ICACHE_FLASH_ATTR roffs_mount(uint32_t flashAddress)
 {

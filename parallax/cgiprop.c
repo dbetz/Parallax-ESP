@@ -83,15 +83,15 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     os_timer_arm(&resetButtonTimer, RESET_BUTTON_SAMPLE_INTERVAL, 1);
 
     int ret;
-    if ((ret = roffs_mount(FLASH_FILESYSTEM_BASE)) != 0) {
+    if ((ret = roffs_mount(roffs_base_address())) != 0) {
         os_printf("Mounting flash filesystem failed: %d\n", ret);
         os_printf("Attempting to format...");
-        if ((ret = roffs_format(FLASH_FILESYSTEM_BASE)) != 0) {
+        if ((ret = roffs_format(roffs_base_address())) != 0) {
             os_printf("Error formatting filesystem: %d\n", ret);
             return -1;
         }
         os_printf("Flash filesystem formatted.\n");
-        if ((ret = roffs_mount(FLASH_FILESYSTEM_BASE)) != 0) {
+        if ((ret = roffs_mount(roffs_base_address())) != 0) {
             os_printf("Mounting newly formatted flash filesystem failed: %d\n", ret);
             return -1;
         }
