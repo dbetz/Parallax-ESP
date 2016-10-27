@@ -207,6 +207,8 @@ void ICACHE_FLASH_ATTR user_init(void) {
     uart_init(flashConfig.baud_rate, 115200);
 
     os_printf("Flash config restore %s\n", restoreOk ? "ok" : "*FAILED*");
+    os_printf("Reset Pin: %d\n", flashConfig.reset_pin);
+    os_printf("RX Pullup: %d\n", flashConfig.rx_pullup);
 
     statusInit();
 
