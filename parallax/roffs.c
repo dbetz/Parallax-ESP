@@ -30,7 +30,7 @@ Connector to let httpd use the espfs filesystem to serve the files in it.
 #include "roffsformat.h"
 
 // default filesystem base address in flash
-#define FLASH_FILESYSTEM_BASE_1M    (1024*1024 - 128*1024)
+#define FLASH_FILESYSTEM_BASE_1M    (512*1024 - 128*1024)
 #define FLASH_FILESYSTEM_BASE_2M    (1024*1024)
 
 // open file structure
@@ -74,8 +74,8 @@ int ICACHE_FLASH_ATTR roffs_mount(uint32_t flashAddress)
 {
 	RoFsHeader testHeader;
 
-	// base address must be aligned to 4 bytes
-	if ((flashAddress & 3) != 0)
+	// base address must be non-zero and aligned to 4 bytes
+	if (flashAddress == 0 || (flashAddress & 3) != 0)
 		return -1;
 
     // get and display the flash ID
@@ -90,6 +90,7 @@ int ICACHE_FLASH_ATTR roffs_mount(uint32_t flashAddress)
 		return -3;
 
 	// filesystem is mounted successfully
+    os_printf("mount: flash filesystem mounted at %08x\n", flashAddress);
     fsData = flashAddress;
     return 0;
 }
