@@ -9,7 +9,7 @@ echo Using port $PORT
 
 BAUD=115200
 BOARD=none # none, ck, nodemcu, wifio
-FLASH_SIZE=4M
+FLASH_SIZE=2M
 FLASH_BLOCK_SIZE=1024
 FLASH_SPEED=80
 FLASH_INTERFACE=qio

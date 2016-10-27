@@ -35,7 +35,7 @@ release/release-notes.txt:	release-notes.txt
 	$(CP) release-notes.txt release
 
 release/boot_v1.%.bin:	$(SDK)/bin/boot_v1.%.bin patch
-	./patch $< $@
+	./patch $< $@ 2M
 
 release/%:	../build/%
 	$(CP) $< $@

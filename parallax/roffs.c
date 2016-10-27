@@ -56,6 +56,9 @@ int ICACHE_FLASH_ATTR roffs_mount(uint32_t flashAddress)
 	if ((flashAddress & 3) != 0)
 		return -1;
 
+    // get and display the flash ID
+    os_printf("mount: flash ID %08x\n", spi_flash_get_id());
+    
 	// read the filesystem header (first file header)
 	if (readFlash(flashAddress, &testHeader, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK)
         return -2;

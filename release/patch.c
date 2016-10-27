@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define MODE_QIO        0x00
 #define MODE_QOUT       0x01
@@ -19,13 +20,28 @@
 
 int main(int argc, char *argv[])
 {
+    int flashSize, size;
     FILE *ifp, *ofp;
     char *image;
-    int size;
 
-    if (argc != 3) {
-        printf("usage: patch in-file out-file\n");
+    if (argc < 3 || argc > 4) {
+        printf("usage: patch in-file out-file [1M|2M|4M]\n");
         return 1;
+    }
+
+    if (argc < 4)
+        flashSize = SIZE_16M;
+    else {
+        if (strcmp(argv[3], "1M") == 0)
+            flashSize = SIZE_8M;
+        else if (strcmp(argv[3], "2M") == 0)
+            flashSize = SIZE_16M;
+        else if (strcmp(argv[3], "4M") == 0)
+            flashSize = SIZE_32M;
+        else {
+            printf("error: unsupported flash size '%s'\n", argv[3]);
+            return 1;
+        }
     }
 
     if (!(ifp = fopen(argv[1], "rb"))) {
@@ -50,7 +66,7 @@ int main(int argc, char *argv[])
     fclose(ifp);
 
     image[2] = MODE_QIO;
-    image[3] = SIZE_32M | FREQ_80M;
+    image[3] = flashSize | FREQ_80M;
 
     if (!(ofp = fopen(argv[2], "wb"))) {
         printf("error: can't create %s\n", argv[3]);

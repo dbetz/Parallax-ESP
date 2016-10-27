@@ -7,16 +7,30 @@
 #OUTPUT_TYPE=combined
 OUTPUT_TYPE=ota
 
-# version is MM-mm-pp
-# MM is the major version number (change when protocol changes)
-# mm is the minor version number
-VERSION=$(shell git describe master)+$(shell date "+%Y-%m-%d_%H:%M:%S")
+# version is MAJOR.minor-commit (date hash)
+# if there has not been a commit since the last tag, commit and hash are left out
+# MAJOR is the major version number (change when protocol changes)
+# minor is the minor version number
+# commit is the number of commits since the last tag
+# date is the date of the build
+# hash is a unique substring of the hash of the last commit
+GITDESC=$(shell git describe master)
+GITDESC_WORDS=$(subst -, ,$(GITDESC))
+GIT_VERSION=$(word 1,$(GITDESC_WORDS))
+GIT_BUILD=$(word 2,$(GITDESC_WORDS))
+GIT_HASH=$(word 3,$(GITDESC_WORDS))
+ifeq ($(GIT_BUILD),)
+  GIT_BUILD_SUFFIX=
+  GIT_HASH_SUFFIX=
+else
+  GIT_BUILD_SUFFIX=-$(GIT_BUILD)
+  GIT_HASH_SUFFIX=$(subst -, ,-$(GIT_HASH))
+endif
+VERSION=$(GIT_VERSION)$(GIT_BUILD_SUFFIX) ($(shell date "+%Y-%m-%d %H:%M:%S")$(GIT_HASH_SUFFIX))
 $(info VERSION $(VERSION))
 
 #SPI flash size, in K
 ESP_SPI_FLASH_SIZE_K=4096
-#pretend we only have 1MB of flash so we can use the rest as a flash filesystem
-#ESP_SPI_FLASH_SIZE_K=1024
 #Amount of the flash to use for the image(s)
 ESP_SPI_IMAGE_SIZE_K=1024
 #0: QIO, 1: QOUT, 2: DIO, 3: DOUT
@@ -80,7 +94,7 @@ endif
 # compiler flags using during compilation of source files
 CFLAGS		= -Os -ggdb -std=gnu99 -Werror -Wpointer-arith -Wundef -Wall -Wl,-EL -fno-inline-functions \
 		-nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH \
-		-Wno-address -DVERSION=\"$(VERSION)\"
+		-Wno-address -DVERSION=\""$(VERSION)"\"
 
 ifeq ("$(USE_AT)","yes")
 CFLAGS += -DUSE_AT
