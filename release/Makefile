@@ -7,7 +7,7 @@ $(info ZIP $(ZIP))
 IMAGES=\
 release/httpd.user1.bin \
 release/httpd.user2.bin \
-release/Parallax-ESP-v010.ota \
+release/Parallax-ESP.ota \
 release/blank.bin \
 release/esp_init_data_default.bin
 
@@ -28,7 +28,7 @@ build:
 	$(MAKE) -C .. STA_SSID= STA_PASS= clean
 	$(MAKE) -C .. STA_SSID= STA_PASS=
 
-staged-files:	release release/release-notes.txt release/tests release/samples $(IMAGES)
+staged-files:	release release/release-notes.txt $(IMAGES)
 	$(CP) flash-all.sh update-fw.sh clear.sh clear-ffs.sh release
 
 release/release-notes.txt:	release-notes.txt
@@ -40,7 +40,7 @@ release/boot_v1.%.bin:	$(SDK)/bin/boot_v1.%.bin patch
 release/%:	../build/%
 	$(CP) $< $@
 
-release/Parallax-ESP-v010.ota:	../build/httpd.ota
+release/Parallax-ESP.ota:	../build/httpd.ota
 	$(CP) $< $@
 
 release/blank.bin:	$(SDK)/bin/blank.bin
@@ -51,20 +51,6 @@ release/esp_init_data_default.bin:	$(SDK)/bin/esp_init_data_default.bin
 
 release:
 	mkdir -p release
-
-release/tests:
-	mkdir -p release/tests
-	cp ../tests/*.[ch] release/tests
-	cp ../tests/*.html release/tests
-	cp ../tests/*.side release/tests
-	cp ../tests/Makefile release/tests
-
-release/samples:
-	mkdir -p release/samples
-	cp ../samples/*.[ch] release/samples
-	cp ../samples/*.html release/samples
-	cp ../samples/*.side release/samples
-	cp ../samples/Makefile release/samples
 
 patch:	patch.c
 	cc -o $@ $<
