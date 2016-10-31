@@ -39,7 +39,7 @@ int main(void)
     init_robot();
     
 //    request("SET:cmd-pause-time,5");
-    request(CMD_START CMD_SET "cmd-pause-time,5" CMD_END);
+    request(CMD_SET "cmd-pause-time,5" CMD_END);
     waitFor(CMD_START "=S,0\r");
 
     request("LISTEN:HTTP,/robot*");
@@ -89,6 +89,9 @@ int main(void)
                 dprint(debug, "Unknown GET URL\n");
                 reply(handle, 404, "unknown");
             }
+            break;
+        case 'S':
+            dprint(debug, "Send completed\n");
             break;
         case 'N':
             break;

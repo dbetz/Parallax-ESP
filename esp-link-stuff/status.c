@@ -77,39 +77,95 @@ static void ICACHE_FLASH_ATTR setLed(int on) {
 #endif
 }
 
-static uint8_t ledState = 0;
+/*
+
+Five States of Wireless System
+
+In the description, bold is the wireless mode, small text indicates connectivity or lack
+thereof, and after hyphen (-) indicates LED behavior and the timing I used in the video
+below.
+
+STA (no IP address)               [Not wirelessly accessible]  - OFF constantly
+STA (has IP address)              [Wirelessly accessible]      - OFF 4000 ms, ON 25 ms
+AP (has IP address)               [Wirelessly accessible]*     - ON constantly
+STA+AP (no IP on STA, IP on AP)   [Wirelessly accessible]*     - OFF 2000 ms, ON 2000 ms
+STA+AP (has IP on STA and AP)     [Wirelessly accessible]*     - OFF 2000 ms, ON 25 ms, 
+                                                                 OFF 150 ms, ON 2000 ms
+
+*In AP mode, there is always an IP address associated with the module because it itself 
+is serving as the gateway.
+
+*/
+
+static uint8_t ledPhase = 0;
 
 // Timer callback to update the LED
 static void ICACHE_FLASH_ATTR ledTimerCb(void *v) {
-  int time = 1000;
+    int state = 0;
+    int time = 1000;
 
-  if (wifiState == wifiGotIP) {
-    // connected, all is good, solid light with a short dark blip every 3 seconds
-    ledState = 1-ledState;
-    time = ledState ? 2900 : 100;
-  } else if (wifiState == wifiIsConnected) {
-    // waiting for DHCP, go on/off every second
-    ledState = 1 - ledState;
-    time = 1000;
-  } else {
-    // not connected
     switch (wifi_get_opmode()) {
-    case 1: // STA
-      ledState = 0;
-      break;
-    case 2: // AP
-      ledState = 1-ledState;
-      time = ledState ? 50 : 1950;
-      break;
-    case 3: // STA+AP
-      ledState = 1-ledState;
-      time = ledState ? 50 : 950;
-      break;
+    case STATION_MODE:
+        switch (ledPhase) {
+        case 0:
+        case 2:
+            state = 0;
+            time = 4000;
+            break;
+        case 1:
+        case 3:
+            if (wifiState == wifiGotIP)
+                state = 1;
+            else
+                state = 0;
+            time = 25;
+            break;
+        }
+        break;
+    case SOFTAP_MODE:
+        state = 1;
+        time = 2000;
+        break;
+    case STATIONAP_MODE:
+        if (wifiState == wifiGotIP) {
+            switch (ledPhase) {
+            case 0:
+                state = 0;
+                time = 2000;
+                break;
+            case 1:
+                state = 1;
+                time = 25;
+                break;
+            case 2:
+                state = 0;
+                time = 150;
+                break;
+            case 3:
+                state = 1;
+                time = 2000;
+                break;
+            }
+        }
+        else {
+            switch (ledPhase) {
+            case 0:
+            case 2:
+                state = 0;
+                break;
+            case 1:
+            case 3:
+                state = 1;
+                break;
+            }
+            time = 2000;
+        }
+        break;
     }
-  }
 
-  setLed(ledState);
-  os_timer_arm(&ledTimer, time, 0);
+    setLed(state);
+    ledPhase = (ledPhase + 1) % 4;
+    os_timer_arm(&ledTimer, time, 0);
 }
 
 // change the wifi state indication

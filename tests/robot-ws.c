@@ -72,6 +72,9 @@ int main(void)
             if (process_robot_command(arg[0]) != 0)
                 dprint(debug, "Unknown robot command: '%c'\n", arg[0]);
             break;
+        case 'S':
+            dprint(debug, "Send completed\n");
+            break;
         case 'N':
             break;
         default:
