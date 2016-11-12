@@ -7,6 +7,9 @@
 #OUTPUT_TYPE=combined
 OUTPUT_TYPE=ota
 
+# tag each release with "git tag -a vM.m" where M is the major version number
+# and m is the minor version number
+
 # version is MAJOR.minor-commit (date hash)
 # if there has not been a commit since the last tag, commit and hash are left out
 # MAJOR is the major version number (change when protocol changes)
@@ -17,16 +20,14 @@ OUTPUT_TYPE=ota
 GITDESC=$(shell git describe master)
 GITDESC_WORDS=$(subst -, ,$(GITDESC))
 GIT_VERSION=$(word 1,$(GITDESC_WORDS))
-GIT_BUILD=$(word 2,$(GITDESC_WORDS))
+GIT_COMMIT=$(word 2,$(GITDESC_WORDS))
 GIT_HASH=$(word 3,$(GITDESC_WORDS))
-ifeq ($(GIT_BUILD),)
-  GIT_BUILD_SUFFIX=
-  GIT_HASH_SUFFIX=
+ifeq ($(GIT_COMMIT),)
+  GIT_COMMIT_HASH_SUFFIX=
 else
-  GIT_BUILD_SUFFIX=-$(GIT_BUILD)
-  GIT_HASH_SUFFIX=$(subst -, ,-$(GIT_HASH))
+  GIT_COMMIT_HASH_SUFFIX=$(subst -, ,-$(GIT_COMMIT))-$(GIT_HASH)
 endif
-VERSION=$(GIT_VERSION)$(GIT_BUILD_SUFFIX) ($(shell date "+%Y-%m-%d %H:%M:%S")$(GIT_HASH_SUFFIX))
+VERSION=$(GIT_VERSION) ($(shell date "+%Y-%m-%d %H:%M:%S")$(GIT_COMMIT_HASH_SUFFIX))
 $(info VERSION $(VERSION))
 
 #SPI flash size, in K
@@ -57,7 +58,7 @@ XTENSA_TOOLS_ROOT ?=
 # base directory of the ESP8266 SDK package, absolute
 #SDK_BASE	?= /opt/Espressif/ESP8266_SDK
 #SDK_BASE	?= $(abspath ../esp_iot_sdk_v1.5.2)
-SDK_BASE	?= $(abspath ../esp_iot_sdk_v2.0.0.p1)
+SDK_BASE	?= $(abspath ./esp_iot_sdk_v2.0.0.p1)
 
 # Opensdk patches stdint.h when compiled with an internal SDK. If you run into compile problems pertaining to
 # redefinition of int types, try setting this to 'yes'.
