@@ -1,5 +1,5 @@
 #SDK=../../esp_iot_sdk_v1.5.2
-SDK=../../esp_iot_sdk_v2.0.0.p1
+SDK=../esp_iot_sdk_v2.0.0.p1
 
 ZIP=parallax-esp-$(shell date "+%Y-%m-%d-%H%M").zip
 $(info ZIP $(ZIP))
