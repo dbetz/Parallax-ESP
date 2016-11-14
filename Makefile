@@ -62,7 +62,8 @@ SDK_BASE	?= $(abspath ./esp_iot_sdk_v2.0.0.p1)
 
 # Opensdk patches stdint.h when compiled with an internal SDK. If you run into compile problems pertaining to
 # redefinition of int types, try setting this to 'yes'.
-USE_OPENSDK?=no
+#USE_OPENSDK?=no
+USE_OPENSDK?=yes
 
 USE_AT?=no
 
