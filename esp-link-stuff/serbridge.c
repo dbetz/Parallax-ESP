@@ -8,6 +8,8 @@
 #include "sscp.h"
 #include "gpio-helpers.h"
 
+//#define SERBR_DBG
+
 static struct espconn serbridgeConn; // plain bridging port
 static esp_tcp serbridgeTcp;
 static int8_t mcu_reset_pin;
@@ -168,6 +170,9 @@ serbridgeDisconCb(void *arg)
 {
   serbridgeConnData *conn = ((struct espconn*)arg)->reverse;
   if (conn == NULL) return;
+#ifdef SERBR_DBG
+  os_printf("serbridge: disconnect\n");
+#endif
   // Free buffers
   if (conn->sentbuffer != NULL) os_free(conn->sentbuffer);
   conn->sentbuffer = NULL;

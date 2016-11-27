@@ -23,6 +23,7 @@ static int setModuleName(void *data, char *value)
     os_memcpy(flashConfig.module_name, value, sizeof(flashConfig.module_name));
     flashConfig.module_name[sizeof(flashConfig.module_name) - 1] = '\0';
     softap_set_ssid(flashConfig.module_name, os_strlen(flashConfig.module_name));
+    wifi_station_set_hostname(flashConfig.module_name);
     return 0;
 }
 
