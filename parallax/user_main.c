@@ -201,6 +201,8 @@ void ICACHE_FLASH_ATTR user_init(void) {
     if (!(restoreOk = configRestore()))
         configSave();
 
+    wifi_station_set_hostname(flashConfig.module_name);
+
     captdnsInit();
 
     // init UART
