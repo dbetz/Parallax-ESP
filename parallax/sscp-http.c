@@ -375,7 +375,7 @@ static void ICACHE_FLASH_ATTR recv_handler(sscp_hdr *hdr, int size)
 
     sscp_sendResponse("S,%d", size);
     if (size > 0) {
-        sscp_sendPayload(connection->rxBuffer + connection->rxIndex, size);
+        sscp_sendPayload(connData->post->buff + connection->rxIndex, size);
         connection->rxIndex += size;
     }
 }
