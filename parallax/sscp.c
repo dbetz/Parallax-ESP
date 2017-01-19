@@ -319,6 +319,8 @@ static cmd_def cmds[] = {
 {   "ARG",              http_do_arg         },
 {   "REPLY",            http_do_reply       },
 {   "CONNECT",          tcp_do_connect      },
+{   "APSCAN",           wifi_do_apscan      },
+{   "APGET",            wifi_do_apget       },
 {   NULL,               NULL                }
 };
 

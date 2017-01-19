@@ -209,4 +209,10 @@ void sscp_websocketConnect(Websock *ws);
 // from sscp-tcp.c
 void tcp_do_connect(int argc, char *argv[]);
 
+// from sscp-wifi.c
+void wifi_do_apscan(int argc, char *argv[]);
+void wifi_do_apget(int argc, char *argv[]);
+int wifi_check_for_events(void);
+
+
 #endif

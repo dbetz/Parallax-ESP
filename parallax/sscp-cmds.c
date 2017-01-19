@@ -111,6 +111,9 @@ void ICACHE_FLASH_ATTR cmds_do_poll(int argc, char *argv[])
             }
         }
     }
+
+    if (wifi_check_for_events())
+        return;
     
     sscp_sendResponse("N,0,0");
 }
