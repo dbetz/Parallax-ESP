@@ -14,6 +14,7 @@
 #include "sscp.h"
 #include "uart.h"
 #include "roffs.h"
+#include "gpio-helpers.h"
 
 //#define STATE_DEBUG
 
@@ -81,6 +82,9 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     gpio_output_set(0, 0, 0, 1 << RESET_BUTTON_PIN);
     os_timer_setfn(&resetButtonTimer, resetButtonTimerCallback, 0);
     os_timer_arm(&resetButtonTimer, RESET_BUTTON_SAMPLE_INTERVAL, 1);
+
+    makeGpio(flashConfig.reset_pin);
+    GPIO_OUTPUT_SET(flashConfig.reset_pin, 1);
 
     int ret;
     if ((ret = roffs_mount(roffs_base_address())) != 0) {
@@ -231,6 +235,7 @@ int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
 
     connection->image = NULL;
 
+    makeGpio(connection->resetPin);
     GPIO_OUTPUT_SET(connection->resetPin, 0);
     connection->state = stReset;
     
@@ -249,6 +254,7 @@ static void ICACHE_FLASH_ATTR startLoading(PropellerConnection *connection, cons
 
     uart0_config(connection->baudRate, ONE_STOP_BIT);
 
+    makeGpio(connection->resetPin);
     GPIO_OUTPUT_SET(connection->resetPin, 0);
     armTimer(connection, RESET_DELAY_1);
     connection->state = stReset;
