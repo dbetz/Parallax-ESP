@@ -16,7 +16,7 @@
 
 // magic number to recognize thet these are our flash settings as opposed to some random stuff
 #define FLASH_MAGIC         0x55aa
-#define FLASH_VERSION       7
+#define FLASH_VERSION       8
 
 // size of the setting sector
 #define FLASH_SECT          4096
@@ -42,7 +42,8 @@ FlashConfig flashDefault = {
   .sscp_need_pause      = ":,",
   .sscp_need_pause_cnt  = 2,
   .sscp_pause_time_ms   = 0,
-  .sscp_events          = 0
+  .sscp_events          = 0,
+  .dbg_enable           = 0     // should probably be zero
 };
 
 typedef union {

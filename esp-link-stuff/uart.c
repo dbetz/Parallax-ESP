@@ -320,6 +320,26 @@ static void ICACHE_FLASH_ATTR write_char(int ch)
     uart_tx_one_char(UART1, ch);
 }
 
+static void ICACHE_FLASH_ATTR bit_bucket(int ch)
+{
+}
+
+/******************************************************************************
+ * FunctionName : uart_enable_debug
+ * Description  : enable or disable debug output
+ * Parameters   : int enable
+ * Returns      : NONE
+*******************************************************************************/
+void ICACHE_FLASH_ATTR
+uart_enable_debug(int enable)
+{
+  // install uart1 putc callback
+  if (enable)
+    os_install_putc1((void *)write_char);
+  else
+    os_install_putc1((void *)bit_bucket);
+}
+
 /******************************************************************************
  * FunctionName : uart_init
  * Description  : user interface for init uart
@@ -342,7 +362,7 @@ uart_init(UartBaudRate uart0_br, UartBaudRate uart1_br)
   ETS_UART_INTR_ENABLE();
 
   // install uart1 putc callback
-  os_install_putc1((void *)write_char);
+  os_install_putc1((void *)bit_bucket);
 
   uart_recvTaskNum = register_usr_task(uart_recvTask);
 }

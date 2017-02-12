@@ -26,4 +26,8 @@ uint16_t uart0_rx_poll(char *buff, uint16_t nchars, uint32_t timeout_us);
 void uart0_config(int baudRate, int stopBits);
 void uart1_config(int baudRate, int stopBits);
 
+// Enable or disable debug output
+void uart_enable_debug(int enable);
+
+
 #endif /* __UART_H__ */

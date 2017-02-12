@@ -93,6 +93,15 @@
             </td>
           </tr>
           <tr>
+            <td>Debug output:</td>
+            <td>
+              <select id="enable-debug">
+                <option value="0">Disabled</option>
+                <option value="1">Enabled</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
             <td>Serial Commands (aka CMD):</td>
             <td>
               <select id="enable-serial-protocol">
@@ -165,6 +174,7 @@
   var stopBitsCtl;
   var dbgBaudRateCtl;
   var dbgStopBitsCtl;
+  var dbgEnableCtl;
   var enableSerialProtocolCtl;
   var startCharCtl;
   var pauseTimeCtl;
@@ -179,6 +189,7 @@
     stopBitsCtl = document.getElementById('stop-bits');
     dbgBaudRateCtl = document.getElementById('dbg-baud-rate');
     dbgStopBitsCtl = document.getElementById('dbg-stop-bits');
+    dbgEnableCtl = document.getElementById('enable-debug');
     enableSerialProtocolCtl = document.getElementById('enable-serial-protocol');
     startCharCtl = document.getElementById('start-char');
     pauseTimeCtl = document.getElementById('pause-time');
@@ -213,6 +224,10 @@
         break;
       }
     dbgStopBitsCtl.selectedIndex = getSetting('debug-stop-bits') - 1;
+    if (getSetting('dbg-enable') == "0")
+      dbgEnableCtl.selectedIndex = 0;
+    else
+      dbgEnableCtl.selectedIndex = 1;
 
     if (getSetting('cmd-enable') == "0")
       enableSerialProtocolCtl.selectedIndex = 0;
@@ -239,7 +254,8 @@
     setSetting('baud-rate', baudRateCtl.value);
     setSetting('stop-bits', stopBitsCtl.value);
     setSetting('dbg-baud-rate', dbgBaudRateCtl.value);
-    setSetting('dbug-stop-bits', dbgStopBitsCtl.value);
+    setSetting('dbg-stop-bits', dbgStopBitsCtl.value);
+    setSetting('dbg-enable', dbgEnableCtl.value);
     setSetting('cmd-enable', enableSerialProtocolCtl.value);
     setSetting('cmd-start-char', startCharCtl.value);
     setSetting('cmd-pause-time', pauseTimeCtl.value);
