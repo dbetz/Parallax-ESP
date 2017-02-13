@@ -162,10 +162,11 @@ static int setDbgStopBits(void *data, char *value)
     return 0;
 }
 
-static int setDbgEnable(void *data, char *value)
+static int setResetPin(void *data, char *value)
 {
-    flashConfig.dbg_enable = atoi(value);
-    uart_enable_debug(flashConfig.dbg_enable);
+    flashConfig.reset_pin = atoi(value);
+    makeGpio(flashConfig.reset_pin);
+    GPIO_OUTPUT_SET(flashConfig.reset_pin, 1);
     return 0;
 }
 
@@ -363,8 +364,8 @@ static cmd_def vars[] = {
 {   "stop-bits",        int8GetHandler,     setStopBits,        &flashConfig.stop_bits          },
 {   "dbg-baud-rate",    intGetHandler,      setDbgBaudrate,     &flashConfig.dbg_baud_rate      },
 {   "dbg-stop-bits",    int8GetHandler,     setDbgStopBits,     &flashConfig.dbg_stop_bits      },
-{   "dbg-enable",       int8GetHandler,     setDbgEnable,       &flashConfig.dbg_enable         },
-{   "reset-pin",        int8GetHandler,     int8SetHandler,     &flashConfig.reset_pin          },
+{   "dbg-enable",       int8GetHandler,     int8SetHandler,     &flashConfig.dbg_enable         },
+{   "reset-pin",        int8GetHandler,     setResetPin,        &flashConfig.reset_pin          },
 {   "connect-led-pin",  int8GetHandler,     int8SetHandler,     &flashConfig.conn_led_pin       },
 {   "rx-pullup",        int8GetHandler,     int8SetHandler,     &flashConfig.rx_pullup          },
 {   "pin-gpio0",        getPinHandler,      setPinHandler,      (void *)PIN_GPIO0               },

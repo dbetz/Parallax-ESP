@@ -37,6 +37,15 @@
             </td>
           </tr>
           <tr>
+            <td>Reset Pin:</td>
+            <td>
+              <select id="reset-pin">
+                <option value="12">DTR</option>
+                <option value="15">RTS</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
             <td>Communications Baud Rate:</td>
             <td>
               <select id="baud-rate">
@@ -93,7 +102,7 @@
             </td>
           </tr>
           <tr>
-            <td>Debug output:</td>
+            <td>Debug Output:</td>
             <td>
               <select id="enable-debug">
                 <option value="0">Disabled</option>
@@ -155,6 +164,7 @@
         <li><a href="update-ffs.html">Files</a></li>
         <li><a href="settings.html">Settings</a></li>
         <li><a href="flash/index.html">Firmware</a></li>
+        <li><a href="log.html">Debug Log</a></li>
       </ul>
     </nav>
   </div>
@@ -171,6 +181,7 @@
   var moduleNameCtl;
   var loaderBaudRateCtl;
   var baudRateCtl;
+  var resetPinCtl;
   var stopBitsCtl;
   var dbgBaudRateCtl;
   var dbgStopBitsCtl;
@@ -185,6 +196,7 @@
   {
     moduleNameCtl = document.getElementById('module-name');
     loaderBaudRateCtl = document.getElementById('loader-baud-rate');
+    resetPinCtl = document.getElementById('reset-pin');
     baudRateCtl = document.getElementById('baud-rate');
     stopBitsCtl = document.getElementById('stop-bits');
     dbgBaudRateCtl = document.getElementById('dbg-baud-rate');
@@ -199,13 +211,21 @@
   }
 
   function loadSettings() {
-    var loaderBaudRate, baudRate, dbgBaudRate;
+    var loaderBaudRate, resetPin, baudRate, dbgBaudRate;
 
     moduleNameCtl.value = getSetting('module-name');
+
     loaderBaudRate = getSetting('loader-baud-rate');
     for (var i = 0; i < loaderBaudRateCtl.length; ++i)
       if (loaderBaudRate == loaderBaudRateCtl[i].value) {
         loaderBaudRateCtl.selectedIndex = i;
+        break;
+      }
+
+    resetPin = getSetting('reset-pin');
+    for (var i = 0; i < resetPinCtl.length; ++i)
+      if (resetPin == resetPinCtl[i].value) {
+        resetPinCtl.selectedIndex = i;
         break;
       }
 
@@ -251,6 +271,7 @@
     setMessage("Saving...");
     setSetting('module-name', moduleNameCtl.value);
     setSetting('loader-baud-rate', loaderBaudRateCtl.value);
+    setSetting('reset-pin', resetPinCtl.value);
     setSetting('baud-rate', baudRateCtl.value);
     setSetting('stop-bits', stopBitsCtl.value);
     setSetting('dbg-baud-rate', dbgBaudRateCtl.value);
