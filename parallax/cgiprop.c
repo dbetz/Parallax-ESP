@@ -138,7 +138,7 @@ int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
         connection->baudRate = flashConfig.loader_baud_rate;
     if (!getIntArg(connData, "final-baud-rate", &connection->finalBaudRate))
         connection->finalBaudRate = flashConfig.baud_rate;
-    if (!getIntArg(connData, "reset-pin", &connection->resetPin))
+//    if (!getIntArg(connData, "reset-pin", &connection->resetPin))
         connection->resetPin = flashConfig.reset_pin;
     if (!getIntArg(connData, "response-size", &connection->responseSize))
         connection->responseSize = 0;
@@ -196,7 +196,7 @@ int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
         connection->baudRate = flashConfig.loader_baud_rate;
     if (!getIntArg(connData, "final-baud-rate", &connection->finalBaudRate))
         connection->finalBaudRate = flashConfig.baud_rate;
-    if (!getIntArg(connData, "reset-pin", &connection->resetPin))
+//    if (!getIntArg(connData, "reset-pin", &connection->resetPin))
         connection->resetPin = flashConfig.reset_pin;
     
     DBG("load-file: file %s, size %d, baud-rate %d, final-baud-rate %d, reset-pin %d\n", fileName, fileSize, connection->baudRate, connection->finalBaudRate, connection->resetPin);
@@ -228,7 +228,7 @@ int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
 
     os_timer_setfn(&connection->timer, timerCallback, connection);
     
-    if (!getIntArg(connData, "reset-pin", &connection->resetPin))
+//    if (!getIntArg(connData, "reset-pin", &connection->resetPin))
         connection->resetPin = flashConfig.reset_pin;
 
     DBG("reset: reset-pin %d\n", connection->resetPin);
