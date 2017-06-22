@@ -83,8 +83,10 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     os_timer_setfn(&resetButtonTimer, resetButtonTimerCallback, 0);
     os_timer_arm(&resetButtonTimer, RESET_BUTTON_SAMPLE_INTERVAL, 1);
 
+    os_printf("Using pin %d for reset\n", flashConfig.reset_pin);
     makeGpio(flashConfig.reset_pin);
-    GPIO_OUTPUT_SET(flashConfig.reset_pin, 1);
+//    GPIO_OUTPUT_SET(flashConfig.reset_pin, 1);
+    GPIO_DIS_OUTPUT(flashConfig.reset_pin);
 
     int ret;
     if ((ret = roffs_mount(roffs_base_address())) != 0) {
@@ -235,10 +237,9 @@ int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
 
     connection->image = NULL;
 
-    makeGpio(connection->resetPin);
+//    makeGpio(connection->resetPin);
     GPIO_OUTPUT_SET(connection->resetPin, 0);
     connection->state = stReset;
-    
     armTimer(connection, RESET_DELAY_1);
 
     return HTTPD_CGI_MORE;
@@ -254,7 +255,7 @@ static void ICACHE_FLASH_ATTR startLoading(PropellerConnection *connection, cons
 
     uart0_config(connection->baudRate, ONE_STOP_BIT);
 
-    makeGpio(connection->resetPin);
+//    makeGpio(connection->resetPin);
     GPIO_OUTPUT_SET(connection->resetPin, 0);
     armTimer(connection, RESET_DELAY_1);
     connection->state = stReset;
@@ -325,7 +326,8 @@ static void ICACHE_FLASH_ATTR timerCallback(void *data)
         // shouldn't happen
         break;
     case stReset:
-        GPIO_OUTPUT_SET(connection->resetPin, 1);
+//        GPIO_OUTPUT_SET(connection->resetPin, 1);
+        GPIO_DIS_OUTPUT(connection->resetPin);
         armTimer(connection, RESET_DELAY_2);
         if (connection->image || connection->file) {
             connection->state = stTxHandshake;
@@ -421,7 +423,17 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
             switch (connection->state) {
             case stRxHandshakeStart:
             case stRxHandshake:        
-                if (ploadVerifyHandshakeResponse(connection, &version) == 0) {
+                if (ploadVerifyHandshakeResponse(connection, &version) != 0) {
+                    httpdSendResponse(connection->connData, 400, "RX handshake failed\r\n", -1);
+                    abortLoading(connection);
+                }
+                else if (version != 1) {
+                    char buf[128];
+                    os_sprintf(buf, "Wrong Propeller version: got %d, expected 1\r\n", version);
+                    httpdSendResponse(connection->connData, 400, buf, -1);
+                    abortLoading(connection);
+                }
+                else {
                     if (ploadLoadImage(connection, ltDownloadAndRun, &finished) == 0) {
                         if (finished) {
                             armTimer(connection, connection->retryDelay);
@@ -436,10 +448,6 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
                         httpdSendResponse(connection->connData, 400, "Load image failed\r\n", -1);
                         abortLoading(connection);
                     }
-                }
-                else {
-                    httpdSendResponse(connection->connData, 400, "RX handshake failed\r\n", -1);
-                    abortLoading(connection);
                 }
                 break;
             case stStartAck:

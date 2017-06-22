@@ -1,5 +1,6 @@
 build/
 release/release
+release/patch
 *.zip
 *.bin
 *.elf
