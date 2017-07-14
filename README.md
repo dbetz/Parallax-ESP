@@ -42,6 +42,40 @@ Build the firmware (from the Parallax-ESP directory):
 
     make
 
+Here is a description of the discovery protocol used by the WX module:
+
+1) PropLoader broadcasts a UDP packet to port 32420. The packet contains a single 32 bit
+zero value. This is a flag indicating that it is a discovery request. This allows PropLoader
+to ignore it since it will receive the broadcast packet just like the WX modules.
+
+2) PropLoader waits for responses from each WX module. Each response has the following
+JSON code. Note that this will result in the first 32 bit value in the packet being
+non-zero.
+
+            {
+              "name": <module-name>,
+              "description”:<description>,
+              "reset pin": <pin-number>,
+              "rx pullup": enabled | disabled,
+              "mac address": <mac-address>
+             }
+
+3) PropLoader collects these responses and then sends more discovery requests, this time
+including the IP addresses of all modules from which it has already received responses.
+These are 32 bit numbers that follow the initial 32 bit zero value. PropLoader does this
+tree times in attempt to find modules whose responses might have collided with other
+network traffic.
+
+4) If a WX module receives a discovery request that includes its own IP address in the
+payload, it ignores it.
+
+5) Before a WX module sends a discovery response it first waits a random interval between
+10 and 60 milliseconds. This is an attempt to prevent discovery responses from colliding.
+
+6) The WX modules send their discovery replies to port 32420.
+
+7) All 32 bit numbers are sent in little-endian byte order.
+
 Below this line is the original ESP-HTTPD README file. This is included for reference purposes.
 You should noet try to follow the instructions below.
 ##########################################################################################
