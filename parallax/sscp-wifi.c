@@ -67,7 +67,7 @@ void ICACHE_FLASH_ATTR wifi_do_apget(int argc, char *argv[])
     else {
         ApData *entry = cgiWiFiScanResult(index);
         if (entry)
-            sscp_sendResponse("S,%d,%s", entry->enc, entry->ssid);
+            sscp_sendResponse("S,%d,%s,%d", entry->enc, entry->ssid, entry->rssi);
         else
             sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
     }

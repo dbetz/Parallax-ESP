@@ -52,6 +52,8 @@ enum {
     SSCP_TKN_ARG                = 0xE6,
     SSCP_TKN_REPLY              = 0xE5,
     SSCP_TKN_CONNECT            = 0xE4,
+    SSCP_TKN_APSCAN             = 0xE3,
+    SSCP_TKN_APGET              = 0xE2,
     
     SSCP_MIN_TOKEN              = 0x80
 };

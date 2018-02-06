@@ -473,6 +473,8 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
             case SSCP_TKN_ARG:
             case SSCP_TKN_REPLY:
             case SSCP_TKN_CONNECT:
+            case SSCP_TKN_APSCAN:
+            case SSCP_TKN_APGET:
             case SSCP_TKN_HTTP:
             case SSCP_TKN_WS:
             case SSCP_TKN_TCP:
@@ -495,6 +497,8 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
                     case SSCP_TKN_ARG:      name = "ARG";     sep = ':'; break;
                     case SSCP_TKN_REPLY:    name = "REPLY";   sep = ':'; break;
                     case SSCP_TKN_CONNECT:  name = "CONNECT"; sep = ':'; break;
+                    case SSCP_TKN_APSCAN:   name = "APSCAN";  sep = ':'; break;
+                    case SSCP_TKN_APGET:    name = "APGET";   sep = ':'; break;
                     case SSCP_TKN_HTTP:     name = "HTTP";    sep = ','; break;
                     case SSCP_TKN_WS:       name = "WS";      sep = ','; break;
                     case SSCP_TKN_TCP:      name = "TCP";     sep = ','; break;

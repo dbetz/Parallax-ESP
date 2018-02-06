@@ -1,7 +1,10 @@
+February 6, 2018
+Added tokens for APSCAN and APGET.
+Made APGET return the RSSI.
+
 October 11, 2016
 Switched from SDK 1.5.2 to 2.0.0.p1
 
 September 28, 2016
-
 Added a setting for enabling command events.
 Made the command start character setting persistent.
