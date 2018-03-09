@@ -158,7 +158,7 @@ int ICACHE_FLASH_ATTR ploadInitiateHandshake(PropellerConnection *connection)
     return 0;
 }
 
-int ICACHE_FLASH_ATTR ploadVerifyHandshakeResponse(PropellerConnection *connection, int *pVersion)
+int ICACHE_FLASH_ATTR ploadVerifyHandshakeResponse(PropellerConnection *connection)
 {
     uint8_t *buf = connection->buffer;
     int version, i;
@@ -171,7 +171,7 @@ int ICACHE_FLASH_ATTR ploadVerifyHandshakeResponse(PropellerConnection *connecti
     version = 0;
     for (i = sizeof(rxHandshake); i < sizeof(rxHandshake) + 4; ++i)
         version = ((version >> 2) & 0x3F) | ((buf[i] & 0x01) << 6) | ((buf[i] & 0x20) << 2);
-    *pVersion = version;
+    connection->version = version;
 
     return 0;
 }
@@ -291,8 +291,10 @@ static int ICACHE_FLASH_ATTR encodeBuffer(PropellerConnection *connection, const
     }
 #else
     uint32_t *p = (uint32_t *)buffer;
-    while ((size -= sizeof(uint32_t)) >= 0)
+    while ((size -= sizeof(uint32_t)) >= 0) {
         txLong(*p++);
+        connection->encodedSize += sizeof(uint32_t);
+    }
 #endif
 
     return 0;

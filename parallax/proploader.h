@@ -40,7 +40,24 @@ typedef enum {
            stMAX
 } LoadState;
 
-typedef struct {
+typedef enum {
+    lsOK,
+    lsAckResponse,
+    lsFirstError,
+    lsBusy = lsFirstError,
+    lsFileNotFound,
+    lsRXHandshakeTimeout,
+    lsChecksumTimeout,
+    lsStartAckTImeout,
+    lsRXHandshakeFailed,
+    lsWrongPropellerVersion,
+    lsLoadImageFailed,
+    lsChecksumError
+} LoadStatus;
+
+typedef struct PropellerConnection PropellerConnection;
+
+struct PropellerConnection {
     HttpdConnData *connData;
     ETSTimer timer;
     int resetPin;
@@ -59,7 +76,9 @@ typedef struct {
     uint8_t buffer[125 + 4]; // sizeof(rxHandshake) + 4
     int bytesReceived;
     int bytesRemaining;
-} PropellerConnection;
+    int version;
+    void (*completionCB)(PropellerConnection *connection, LoadStatus status);
+};
 
 #define RESET_BUTTON_PIN                0
 #define RESET_BUTTON_SAMPLE_INTERVAL    5
@@ -78,8 +97,11 @@ typedef struct {
 #define EEPROM_PROGRAM_TIMEOUT          5000
 #define EEPROM_VERIFY_TIMEOUT           2000
 
+LoadStatus loadBuffer(const uint8_t *image, int imageSize);
+LoadStatus loadFile(char *fileName);
+
 int ploadInitiateHandshake(PropellerConnection *connection);
-int ploadVerifyHandshakeResponse(PropellerConnection *connection, int *pVersion);
+int ploadVerifyHandshakeResponse(PropellerConnection *connection);
 int ploadLoadImage(PropellerConnection *connection, LoadType loadType, int *pFinished);
 int ploadLoadImageContinue(PropellerConnection *connection, LoadType loadType, int *pFinished);
 

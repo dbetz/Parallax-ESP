@@ -97,7 +97,7 @@ endif
 # compiler flags using during compilation of source files
 CFLAGS		= -Os -ggdb -std=gnu99 -Werror -Wpointer-arith -Wundef -Wall -Wl,-EL -fno-inline-functions \
 		-nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH \
-		-Wno-address -DVERSION=\""$(VERSION)"\"
+		-Wno-address -DVERSION=\""$(VERSION)"\" $(EXTRA_CFLAGS)
 
 ifeq ("$(USE_AT)","yes")
 CFLAGS += -DUSE_AT

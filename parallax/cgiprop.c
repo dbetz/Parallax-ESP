@@ -18,6 +18,8 @@
 
 //#define STATE_DEBUG
 
+#define AUTO_LOAD_PIN    14
+
 #define MAX_SENDBUFF_LEN 2600
 
 void ICACHE_FLASH_ATTR httpdSendResponse(HttpdConnData *connData, int code, char *message, int len)
@@ -35,9 +37,11 @@ static ETSTimer resetButtonTimer;
 static int resetButtonState;
 static int resetButtonCount;
 
+static void wifiLoadCompletionCB(PropellerConnection *connection, LoadStatus status);
+static void loadCompletionCB(PropellerConnection *connection, LoadStatus status);
 static void startLoading(PropellerConnection *connection, const uint8_t *image, int imageSize);
-static void finishLoading(PropellerConnection *connection);
-static void abortLoading(PropellerConnection *connection);
+static void finishLoading(PropellerConnection *connection, LoadStatus status);
+static void abortLoading(PropellerConnection *connection, LoadStatus status);
 static void resetButtonTimerCallback(void *data);
 static void armTimer(PropellerConnection *connection, int delay);
 static void timerCallback(void *data);
@@ -82,6 +86,12 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     gpio_output_set(0, 0, 0, 1 << RESET_BUTTON_PIN);
     os_timer_setfn(&resetButtonTimer, resetButtonTimerCallback, 0);
     os_timer_arm(&resetButtonTimer, RESET_BUTTON_SAMPLE_INTERVAL, 1);
+    
+#ifdef WIFI_BADGE
+    makeGpio(AUTO_LOAD_PIN);
+    GPIO_DIS_OUTPUT(AUTO_LOAD_PIN);
+    gpio_output_set(0, 0, 0, 1 << AUTO_LOAD_PIN);
+#endif
 
     os_printf("Using pin %d for reset\n", flashConfig.reset_pin);
     makeGpio(flashConfig.reset_pin);
@@ -103,6 +113,17 @@ int ICACHE_FLASH_ATTR cgiPropInit()
         }
     }
     os_printf("Flash filesystem mounted!\n");
+    
+#ifdef WIFI_BADGE
+    if (GetAutoLoadPin() == 1) {
+        int sts;
+        os_printf("Autoloading 'autorun.bin'\n");
+        if ((sts = loadFile("autorun.bin")) == lsOK)
+            os_printf("Autoload started\n");
+        else
+            os_printf("Autoload failed: %d\n", sts);
+    }
+#endif
 
     return 0;
 }
@@ -121,14 +142,16 @@ int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
         httpdSendResponse(connData, 400, buf, -1);
         return HTTPD_CGI_DONE;
     }
-    connData->cgiData = connection;
-    connection->connData = connData;
 
-    os_timer_setfn(&connection->timer, timerCallback, connection);
+#ifdef WIFI_BADGE
+    if (GetAutoLoadPin() == 1) {
+        httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
+        return HTTPD_CGI_DONE;
+    }
+#endif
     
     if (connData->post->len == 0) {
         httpdSendResponse(connData, 400, "No data\r\n", -1);
-        abortLoading(connection);
         return HTTPD_CGI_DONE;
     }
     else if (connData->post->buffLen != connData->post->len) {
@@ -136,6 +159,9 @@ int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
         return HTTPD_CGI_DONE;
     }
     
+    connData->cgiData = connection;
+    connection->connData = connData;
+
     if (!getIntArg(connData, "baud-rate", &connection->baudRate))
         connection->baudRate = flashConfig.loader_baud_rate;
     if (!getIntArg(connData, "final-baud-rate", &connection->finalBaudRate))
@@ -152,6 +178,7 @@ int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
         DBG("  responseSize %d, responseTimeout %d\n", connection->responseSize, connection->responseTimeout);
 
     connection->file = NULL;
+    connection->completionCB = wifiLoadCompletionCB;
     startLoading(connection, (uint8_t *)connData->post->buff, connData->post->buffLen);
 
     return HTTPD_CGI_MORE;
@@ -178,10 +205,16 @@ int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
         httpdSendResponse(connData, 400, buf, -1);
         return HTTPD_CGI_DONE;
     }
+    
+#ifdef WIFI_BADGE
+    if (GetAutoLoadPin() == 1) {
+        httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
+        return HTTPD_CGI_DONE;
+    }
+#endif
+    
     connData->cgiData = connection;
     connection->connData = connData;
-    
-    os_timer_setfn(&connection->timer, timerCallback, connection);
     
     if (httpdFindArg(connData->getArgs, "file", fileName, sizeof(fileName)) < 0) {
         httpdSendResponse(connData, 400, "Missing file argument\r\n", -1);
@@ -203,6 +236,7 @@ int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
     
     DBG("load-file: file %s, size %d, baud-rate %d, final-baud-rate %d, reset-pin %d\n", fileName, fileSize, connection->baudRate, connection->finalBaudRate, connection->resetPin);
 
+    connection->completionCB = wifiLoadCompletionCB;
     startLoading(connection, NULL, fileSize);
 
     return HTTPD_CGI_MORE;
@@ -222,6 +256,14 @@ int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
         httpdSendResponse(connData, 400, buf, -1);
         return HTTPD_CGI_DONE;
     }
+
+#ifdef WIFI_BADGE
+    if (GetAutoLoadPin() == 1) {
+        httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
+        return HTTPD_CGI_DONE;
+    }
+#endif
+    
     connData->cgiData = connection;
     connection->connData = connData;
 
@@ -245,6 +287,107 @@ int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
     return HTTPD_CGI_MORE;
 }
 
+static void ICACHE_FLASH_ATTR wifiLoadCompletionCB(PropellerConnection *connection, LoadStatus status)
+{
+    char *msg = NULL;
+    char buf[128];
+
+    switch (status) {
+    case lsOK:
+        msg = "OK\r\n";
+        break;
+    case lsAckResponse:
+        httpdSendResponse(connection->connData, 200, (char *)connection->buffer, connection->bytesReceived);
+        break;
+    case lsBusy:
+        os_sprintf(buf, "Transfer already in progress: state %s\r\n", stateName(connection->state));
+        msg = buf;
+        break;
+    case lsRXHandshakeTimeout:
+        msg = "RX handshake timeout\r\n";
+        break;
+    case lsChecksumTimeout:
+        msg = "Checksum timeout\r\n";
+        break;
+    case lsStartAckTImeout:
+        msg = "StartAck timeout\r\n";
+        break;
+    case lsRXHandshakeFailed:
+        msg = "RX handshake failed\r\n";
+        break;
+    case lsWrongPropellerVersion:
+        os_sprintf(buf, "Wrong Propeller version: got %d, expected 1\r\n", connection->version);
+        msg = buf;
+        break;
+    case lsLoadImageFailed:
+        msg = "Load image failed\r\n";
+        break;
+    case lsChecksumError:
+        msg = "Checksum error\r\n";
+        break;
+    default:
+        msg = "Internal error\r\n";
+        break;
+    }
+    
+    if (msg) {
+        httpdSendResponse(connection->connData, status < lsFirstError ? 200 : 400, msg, -1);
+    }
+}
+
+LoadStatus ICACHE_FLASH_ATTR loadBuffer(const uint8_t *image, int imageSize)
+{
+    PropellerConnection *connection = &myConnection;
+
+    if (connection->state != stIdle) {
+        return lsBusy;
+    }
+    
+    connection->baudRate = flashConfig.loader_baud_rate;
+    connection->finalBaudRate = flashConfig.baud_rate;
+    connection->resetPin = flashConfig.reset_pin;
+    connection->responseSize = 0;
+    
+    connection->file = NULL;
+    connection->completionCB = loadCompletionCB;
+    startLoading(connection, image, imageSize);
+    
+    return lsOK;
+}
+
+LoadStatus ICACHE_FLASH_ATTR loadFile(char *fileName)
+{
+    PropellerConnection *connection = &myConnection;
+    int fileSize = 0;
+
+    if (connection->state != stIdle) {
+        return lsBusy;
+    }
+
+    if (!(connection->file = roffs_open(fileName))) {
+        return lsFileNotFound;
+    }
+    fileSize = roffs_file_size(connection->file);
+
+    connection->baudRate = flashConfig.loader_baud_rate;
+    connection->finalBaudRate = flashConfig.baud_rate;
+    connection->resetPin = flashConfig.reset_pin;
+    connection->responseSize = 0;
+    
+    connection->completionCB = loadCompletionCB;
+    startLoading(connection, NULL, fileSize);
+    
+    return lsOK;
+}
+
+static void ICACHE_FLASH_ATTR loadCompletionCB(PropellerConnection *connection, LoadStatus status)
+{
+    if (status < lsFirstError)
+        os_printf("Load completed successfully\n");
+    else
+        os_printf("Load failed: %d\n", status);
+}
+
 static void ICACHE_FLASH_ATTR startLoading(PropellerConnection *connection, const uint8_t *image, int imageSize)
 {
     connection->image = image;
@@ -252,6 +395,8 @@ static void ICACHE_FLASH_ATTR startLoading(PropellerConnection *connection, cons
     
     // turn off SSCP during loading
     flashConfig.sscp_enable = 0;
+
+    os_timer_setfn(&connection->timer, timerCallback, connection);
 
     uart0_config(connection->baudRate, ONE_STOP_BIT);
 
@@ -261,49 +406,22 @@ static void ICACHE_FLASH_ATTR startLoading(PropellerConnection *connection, cons
     connection->state = stReset;
 }
 
-static void ICACHE_FLASH_ATTR finishLoading(PropellerConnection *connection)
+static void ICACHE_FLASH_ATTR finishLoading(PropellerConnection *connection, LoadStatus status)
 {
     if (connection->finalBaudRate != connection->baudRate);
         uart0_config(connection->finalBaudRate, flashConfig.stop_bits);
+    if (connection->completionCB)
+        (*connection->completionCB)(connection, status);
     programmingCB = NULL;
-    myConnection.state = stIdle;
+    connection->state = stIdle;
 }
 
-static void ICACHE_FLASH_ATTR abortLoading(PropellerConnection *connection)
+static void ICACHE_FLASH_ATTR abortLoading(PropellerConnection *connection, LoadStatus status)
 {
+    if (connection->completionCB)
+        (*connection->completionCB)(connection, status);
     programmingCB = NULL;
-    myConnection.state = stIdle;
-}
-
-static void ICACHE_FLASH_ATTR resetButtonTimerCallback(void *data)
-{
-    static int previousState = 1;
-    static int matchingSampleCount = 0;
-    static int buttonPressCount = 0;
-    static uint32_t lastButtonTime;
-    int newState = GPIO_INPUT_GET(RESET_BUTTON_PIN);
-    if (newState != previousState)
-        matchingSampleCount = 0;
-    else if (matchingSampleCount < RESET_BUTTON_THRESHOLD) {
-        if (++matchingSampleCount == RESET_BUTTON_THRESHOLD) {
-            if (newState != resetButtonState) {
-                resetButtonState = newState;
-                if (resetButtonState == 0) {
-                    uint32_t buttonTime = system_get_time() / 1000;
-                    //os_printf("Reset button press: count %d, last %u, this %u\n", buttonPressCount, (unsigned)lastButtonTime, (unsigned)buttonTime);
-                    if (buttonPressCount == 0 || buttonTime - lastButtonTime > RESET_BUTTON_PRESS_DELTA)
-                        buttonPressCount = 1;
-                    else if (++buttonPressCount == RESET_BUTTON_PRESS_COUNT) {
-                        os_printf("Entering STA+AP mode\n");
-                        wifi_set_opmode(STATIONAP_MODE);
-                        buttonPressCount = 0;
-                    }
-                    lastButtonTime = buttonTime;
-                }
-            }
-        }
-    }
-    previousState = newState;
+    connection->state = stIdle;
 }
 
 static void ICACHE_FLASH_ATTR armTimer(PropellerConnection *connection, int delay)
@@ -345,8 +463,7 @@ static void ICACHE_FLASH_ATTR timerCallback(void *data)
         break;
     case stRxHandshakeStart:
     case stRxHandshake:
-        httpdSendResponse(connection->connData, 400, "RX handshake timeout\r\n", -1);
-        abortLoading(connection);
+        abortLoading(connection, lsRXHandshakeTimeout);
         break;
     case stLoadContinue:
         if (ploadLoadImageContinue(connection, ltDownloadAndRun, &finished) == 0) {
@@ -367,13 +484,11 @@ static void ICACHE_FLASH_ATTR timerCallback(void *data)
             --connection->retriesRemaining;
         }
         else {
-            httpdSendResponse(connection->connData, 400, "Checksum timeout\r\n", -1);
-            abortLoading(connection);
+            abortLoading(connection, lsChecksumTimeout);
         }
         break;
     case stStartAck:
-        httpdSendResponse(connection->connData, 400, "StartAck timeout\r\n", -1);
-        abortLoading(connection);
+        abortLoading(connection, lsStartAckTImeout);
         break;
     default:
         break;
@@ -387,7 +502,7 @@ static void ICACHE_FLASH_ATTR timerCallback(void *data)
 static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
 {
     PropellerConnection *connection = &myConnection;
-    int cnt, version, finished;
+    int cnt, finished;
     
 #ifdef STATE_DEBUG
     DBG("READ: length %d, state %s", length, stateName(connection->state));
@@ -423,15 +538,11 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
             switch (connection->state) {
             case stRxHandshakeStart:
             case stRxHandshake:        
-                if (ploadVerifyHandshakeResponse(connection, &version) != 0) {
-                    httpdSendResponse(connection->connData, 400, "RX handshake failed\r\n", -1);
-                    abortLoading(connection);
+                if (ploadVerifyHandshakeResponse(connection) != 0) {
+                    abortLoading(connection, lsRXHandshakeFailed);
                 }
-                else if (version != 1) {
-                    char buf[128];
-                    os_sprintf(buf, "Wrong Propeller version: got %d, expected 1\r\n", version);
-                    httpdSendResponse(connection->connData, 400, buf, -1);
-                    abortLoading(connection);
+                else if (connection->version != 1) {
+                    abortLoading(connection, lsWrongPropellerVersion);
                 }
                 else {
                     if (ploadLoadImage(connection, ltDownloadAndRun, &finished) == 0) {
@@ -445,14 +556,12 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
                         }
                     }
                     else {
-                        httpdSendResponse(connection->connData, 400, "Load image failed\r\n", -1);
-                        abortLoading(connection);
+                        abortLoading(connection, lsLoadImageFailed);
                     }
                 }
                 break;
             case stStartAck:
-                httpdSendResponse(connection->connData, 200, (char *)connection->buffer, connection->bytesReceived);
-                finishLoading(connection);
+                finishLoading(connection, lsAckResponse);
                 break;
             default:
                 break;
@@ -467,13 +576,11 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
                 connection->state = stStartAck;
             }
             else {
-                httpdSendResponse(connection->connData, 200, "", -1);
-                finishLoading(connection);
+                finishLoading(connection, lsOK);
             }
         }
         else {
-            httpdSendResponse(connection->connData, 400, "Checksum error\r\n", -1);
-            abortLoading(connection);
+            abortLoading(connection, lsChecksumError);
         }
         break;
     default:
@@ -483,4 +590,42 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
 #ifdef STATE_DEBUG
     DBG(" -> %s\n", stateName(connection->state));
 #endif
+}
+
+#ifdef WIFI_BADGE
+int ICACHE_FLASH_ATTR GetAutoLoadPin(void)
+{
+    return GPIO_INPUT_GET(AUTO_LOAD_PIN);
+}
+#endif
+
+static void ICACHE_FLASH_ATTR resetButtonTimerCallback(void *data)
+{
+    static int previousState = 1;
+    static int matchingSampleCount = 0;
+    static int buttonPressCount = 0;
+    static uint32_t lastButtonTime;
+    int newState = GPIO_INPUT_GET(RESET_BUTTON_PIN);
+    if (newState != previousState)
+        matchingSampleCount = 0;
+    else if (matchingSampleCount < RESET_BUTTON_THRESHOLD) {
+        if (++matchingSampleCount == RESET_BUTTON_THRESHOLD) {
+            if (newState != resetButtonState) {
+                resetButtonState = newState;
+                if (resetButtonState == 0) {
+                    uint32_t buttonTime = system_get_time() / 1000;
+                    //os_printf("Reset button press: count %d, last %u, this %u\n", buttonPressCount, (unsigned)lastButtonTime, (unsigned)buttonTime);
+                    if (buttonPressCount == 0 || buttonTime - lastButtonTime > RESET_BUTTON_PRESS_DELTA)
+                        buttonPressCount = 1;
+                    else if (++buttonPressCount == RESET_BUTTON_PRESS_COUNT) {
+                        os_printf("Entering STA+AP mode\n");
+                        wifi_set_opmode(STATIONAP_MODE);
+                        buttonPressCount = 0;
+                    }
+                    lastButtonTime = buttonTime;
+                }
+            }
+        }
+    }
+    previousState = newState;
 }
