@@ -18,9 +18,10 @@
 
 //#define STATE_DEBUG
 
-#define AUTO_LOAD_PIN    14
+#define AUTO_LOAD_PIN       14
+#define AUTO_LOAD_PIN_STATE 0
 
-#define MAX_SENDBUFF_LEN 2600
+#define MAX_SENDBUFF_LEN    2600
 
 void ICACHE_FLASH_ATTR httpdSendResponse(HttpdConnData *connData, int code, char *message, int len)
 {
@@ -89,6 +90,7 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     
 #ifdef WIFI_BADGE
     makeGpio(AUTO_LOAD_PIN);
+    PIN_PULLUP_EN(PERIPHS_IO_MUX_MTMS_U);
     GPIO_DIS_OUTPUT(AUTO_LOAD_PIN);
     gpio_output_set(0, 0, 0, 1 << AUTO_LOAD_PIN);
 #endif
@@ -115,7 +117,7 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     os_printf("Flash filesystem mounted!\n");
     
 #ifdef WIFI_BADGE
-    if (GetAutoLoadPin() == 1) {
+    if (IsAutoLoadEnabled()) {
         int sts;
         os_printf("Autoloading 'autorun.bin'\n");
         if ((sts = loadFile("autorun.bin")) == lsOK)
@@ -144,7 +146,7 @@ int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
     }
 
 #ifdef WIFI_BADGE
-    if (GetAutoLoadPin() == 1) {
+    if (IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;
     }
@@ -207,7 +209,7 @@ int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
     }
     
 #ifdef WIFI_BADGE
-    if (GetAutoLoadPin() == 1) {
+    if (IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;
     }
@@ -258,7 +260,7 @@ int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
     }
 
 #ifdef WIFI_BADGE
-    if (GetAutoLoadPin() == 1) {
+    if (IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;
     }
@@ -593,9 +595,9 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
 }
 
 #ifdef WIFI_BADGE
-int ICACHE_FLASH_ATTR GetAutoLoadPin(void)
+int ICACHE_FLASH_ATTR IsAutoLoadEnabled(void)
 {
-    return GPIO_INPUT_GET(AUTO_LOAD_PIN);
+    return GPIO_INPUT_GET(AUTO_LOAD_PIN) == AUTO_LOAD_PIN_STATE;
 }
 #endif
 

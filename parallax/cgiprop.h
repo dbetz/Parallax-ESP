@@ -18,7 +18,7 @@ int cgiPropReset(HttpdConnData *connData);
 
 void httpdSendResponse(HttpdConnData *connData, int code, char *message, int len);
 
-int GetAutoLoadPin(void);
+int IsAutoLoadEnabled(void);
 
 #endif
 
