@@ -54,6 +54,9 @@ enum {
     SSCP_TKN_CONNECT            = 0xE4,
     SSCP_TKN_APSCAN             = 0xE3,
     SSCP_TKN_APGET              = 0xE2,
+    SSCP_TKN_FINFO              = 0xE1,
+    SSCP_TKN_FCOUNT             = 0xE0,
+    SSCP_TKN_FRUN               = 0xDF,
     
     SSCP_MIN_TOKEN              = 0x80
 };
@@ -215,6 +218,12 @@ void tcp_do_connect(int argc, char *argv[]);
 void wifi_do_apscan(int argc, char *argv[]);
 void wifi_do_apget(int argc, char *argv[]);
 int wifi_check_for_events(void);
+
+// from sscp-fs.c
+void fs_do_finfo(int argc, char *argv[]);
+void fs_do_fcount(int argc, char *argv[]);
+void fs_do_frun(int argc, char *argv[]);
+
 
 
 #endif

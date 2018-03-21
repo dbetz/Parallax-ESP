@@ -19,6 +19,7 @@ Connector to let httpd use the espfs filesystem to serve the files in it.
  */
 #include <esp8266.h>
 #include "roffs.h"
+#include "proploader.h"
 
 // WARNING!!
 // This code assumes that buffers passed in for reading/writing are long aligned.
@@ -79,7 +80,7 @@ int ICACHE_FLASH_ATTR roffs_mount(uint32_t flashAddress)
 		return -1;
 
     // get and display the flash ID
-    os_printf("mount: flash ID %08x\n", spi_flash_get_id());
+    DBG("mount: flash ID %08x\n", spi_flash_get_id());
     
 	// read the filesystem header (first file header)
 	if (readFlash(flashAddress, &testHeader, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK)
@@ -90,7 +91,7 @@ int ICACHE_FLASH_ATTR roffs_mount(uint32_t flashAddress)
 		return -3;
 
 	// filesystem is mounted successfully
-    os_printf("mount: flash filesystem mounted at %08x\n", flashAddress);
+    DBG("mount: flash filesystem mounted at %08x\n", flashAddress);
     fsData = flashAddress;
     return 0;
 }
@@ -101,10 +102,148 @@ int ICACHE_FLASH_ATTR roffs_format(uint32_t flashAddress)
     os_memset(&h, 0xff, sizeof(RoFsHeader));
     h.magic = ROFS_MAGIC;
     if (writeFlash(flashAddress, (uint32 *)&h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK) {
-os_printf("format: error writing terminator\n");
+DBG("format: error writing terminator\n");
         return -1;
     }
     return 0;
+}
+
+int ICACHE_FLASH_ATTR roffs_filecount(int *pCount)
+{
+    uint32_t p = fsData;
+	int count = 0;
+	RoFsHeader h;
+
+	// make sure there is a filesystem mounted
+    if (fsData == BAD_FILESYSTEM_BASE) {
+DBG("open: filesystem not mounted\n");
+		return -1;
+	}
+
+	// find the directory entry
+	for (;;) {
+
+		// read the next file header
+		if (readFlash(p, &h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK)
+            return -1;
+
+		// read the next file header
+		if (readFlash(p, &h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK) {
+DBG("open: %08x error reading file header\n", (int)p);
+            return -1;
+        }
+
+        // check the magic number
+		if (h.magic != ROFS_MAGIC) {
+DBG("open: %08x bad magic number\n", (int)p);
+            return -1;
+        }
+
+		// check for the end of image marker
+        if (h.flags & FLAG_LASTFILE)
+            return -1;
+
+		// terminate on a leftover pending file
+		else if (h.flags & FLAG_PENDING) {
+DBG("open: terminate on a leftover pending file\n");
+            return -1;
+        }
+        
+		// only check active files
+        else if (h.flags & FLAG_ACTIVE) {
+            ++count;
+        }
+
+        // deleted file
+        else {
+DBG("open: %08x skipping deleted file\n", (int)p);
+        }
+
+		// skip over the file data
+		p += sizeof(RoFsHeader) + h.nameLen + h.fileLenComp;
+
+		// align to next 32 bit offset
+        p = (p + 3) & ~3;
+	}
+
+    // return the number of files
+    *pCount = count;
+    return 0;
+}
+
+int ICACHE_FLASH_ATTR roffs_fileinfo(int index, char *fileName, int *pFileSize)
+{
+    uint32_t p = fsData;
+	char namebuf[256];
+	RoFsHeader h;
+
+	// make sure there is a filesystem mounted
+    if (fsData == BAD_FILESYSTEM_BASE) {
+DBG("open: filesystem not mounted\n");
+		return -1;
+	}
+
+	// find the directory entry
+	for (;;) {
+
+		// read the next file header
+		if (readFlash(p, &h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK)
+            return -1;
+
+		// read the next file header
+		if (readFlash(p, &h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK) {
+DBG("open: %08x error reading file header\n", (int)p);
+            return -1;
+        }
+
+        // check the magic number
+		if (h.magic != ROFS_MAGIC) {
+DBG("open: %08x bad magic number\n", (int)p);
+            return -1;
+        }
+
+		// check for the end of image marker
+        if (h.flags & FLAG_LASTFILE)
+            return -1;
+
+		// terminate on a leftover pending file
+		else if (h.flags & FLAG_PENDING) {
+DBG("open: terminate on a leftover pending file\n");
+            return -1;
+        }
+        
+		// only check active files
+        else if (h.flags & FLAG_ACTIVE) {
+
+            // get the name of the file
+		    if (readFlash(p + sizeof(RoFsHeader), namebuf, sizeof(namebuf)) != SPI_FLASH_RESULT_OK) {
+DBG("open: %08x error reading file name\n", (int)p);
+                return -1;
+            }
+
+DBG("open: %08x checking '%s'\n", p, namebuf);
+		    // check to see if this is the file we're looking for
+            if (--index < 0) {
+                os_strcpy(fileName, namebuf);
+                *pFileSize = h.fileLenComp;
+			    return 0;
+		    }
+        }
+
+        // deleted file
+        else {
+DBG("open: %08x skipping deleted file\n", (int)p);
+        }
+
+		// skip over the file data
+		p += sizeof(RoFsHeader) + h.nameLen + h.fileLenComp;
+
+		// align to next 32 bit offset
+        p = (p + 3) & ~3;
+	}
+
+    // directory entry not found
+    return -1;
 }
 
 ROFFS_FILE ICACHE_FLASH_ATTR *roffs_open(const char *fileName)
@@ -116,7 +255,7 @@ ROFFS_FILE ICACHE_FLASH_ATTR *roffs_open(const char *fileName)
 
 	// make sure there is a filesystem mounted
     if (fsData == BAD_FILESYSTEM_BASE) {
-os_printf("open: filesystem not mounted\n");
+DBG("open: filesystem not mounted\n");
 		return NULL;
 	}
 
@@ -133,13 +272,13 @@ os_printf("open: filesystem not mounted\n");
 
 		// read the next file header
 		if (readFlash(p, &h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK) {
-os_printf("open: %08x error reading file header\n", (int)p);
+DBG("open: %08x error reading file header\n", (int)p);
             return NULL;
         }
 
         // check the magic number
 		if (h.magic != ROFS_MAGIC) {
-os_printf("open: %08x bad magic number\n", (int)p);
+DBG("open: %08x bad magic number\n", (int)p);
             return NULL;
         }
 
@@ -149,7 +288,7 @@ os_printf("open: %08x bad magic number\n", (int)p);
 
 		// terminate on a leftover pending file
 		else if (h.flags & FLAG_PENDING) {
-os_printf("open: terminate on a leftover pending file\n");
+DBG("open: terminate on a leftover pending file\n");
             return NULL;
         }
         
@@ -158,11 +297,11 @@ os_printf("open: terminate on a leftover pending file\n");
 
             // get the name of the file
 		    if (readFlash(p + sizeof(RoFsHeader), namebuf, sizeof(namebuf)) != SPI_FLASH_RESULT_OK) {
-os_printf("open: %08x error reading file name\n", (int)p);
+DBG("open: %08x error reading file name\n", (int)p);
                 return NULL;
             }
 
-os_printf("open: %08x checking '%s'\n", p, namebuf);
+DBG("open: %08x checking '%s'\n", p, namebuf);
 		    // check to see if this is the file we're looking for
             if (os_strcmp(namebuf, fileName) == 0) {
                 if (!(file = (ROFFS_FILE *)os_malloc(sizeof(ROFFS_FILE))))
@@ -178,7 +317,7 @@ os_printf("open: %08x checking '%s'\n", p, namebuf);
 
         // deleted file
         else {
-os_printf("open: %08x skipping deleted file\n", (int)p);
+DBG("open: %08x skipping deleted file\n", (int)p);
         }
 
 		// skip over the file data
@@ -201,14 +340,14 @@ int ICACHE_FLASH_ATTR roffs_close(ROFFS_FILE *file)
 	    RoFsHeader h;
 	    
         if (readFlash(file->header, (uint32 *)&h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK) {
-os_printf("close: error reading new file header\n");
+DBG("close: error reading new file header\n");
             return -1;
         }
         h.flags &= ~FLAG_PENDING;
 	    h.fileLenComp = file->size;
 	    h.fileLenDecomp = file->size;
 	    if (updateFlash(file->header, (uint32 *)&h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK) {
-os_printf("close: error updating new file header\n");
+DBG("close: error updating new file header\n");
             return -1;
         }
 
@@ -216,7 +355,7 @@ os_printf("close: error updating new file header\n");
 	    h.magic = ROFS_MAGIC;
         file->offset = (file->offset + 3) & ~3;
 	    if (writeFlash(file->start + file->offset, (uint32 *)&h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK) {
-os_printf("close: error writing new terminator\n");
+DBG("close: error writing new terminator\n");
             return -1;
         }
     }
@@ -269,7 +408,7 @@ static int ICACHE_FLASH_ATTR find_file_and_insertion_point(const char *fileName,
 
 	// make sure there is a filesystem mounted
     if (fsData == BAD_FILESYSTEM_BASE) {
-os_printf("find: filesystem not mounted\n");
+DBG("find: filesystem not mounted\n");
 		return -1;
 	}
 
@@ -282,19 +421,19 @@ os_printf("find: filesystem not mounted\n");
 
 		// read the next file header
 		if (readFlash(p, &h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK) {
-os_printf("find: %08x error reading file header\n", p);
+DBG("find: %08x error reading file header\n", p);
             return -1;
         }
 
         // check the magic number
 		if (h.magic != ROFS_MAGIC) {
-os_printf("find: %08x bad magic number\n", p);
+DBG("find: %08x bad magic number\n", p);
             return -1;
         }
 
 		// check for the end of image marker
         if (h.flags & FLAG_LASTFILE) {
-os_printf("find: %08x insertion point\n", p);
+DBG("find: %08x insertion point\n", p);
             *pInsertionOffset = p;
             return 0;
         }
@@ -302,7 +441,7 @@ os_printf("find: %08x insertion point\n", p);
 		// remove a leftover pending file
 		else if (h.flags & FLAG_PENDING) {
 		    uint32_t pending = p;
-os_printf("find: remove a leftover pending file\n");
+DBG("find: remove a leftover pending file\n");
 		    
 		    // move ahead to next sector boundary
 		    p = (p + SPI_FLASH_SEC_SIZE - 1) & (SPI_FLASH_SEC_SIZE - 1);
@@ -312,7 +451,7 @@ os_printf("find: remove a leftover pending file\n");
 		    h.nameLen = 0;
 		    h.fileLenComp = p - pending - sizeof(RoFsHeader);
 		    if (updateFlash(pending, (uint32_t *)&h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK) {
-os_printf("find: error updating pending file header\n");
+DBG("find: error updating pending file header\n");
                 return -1;
 		    }
 		    
@@ -320,7 +459,7 @@ os_printf("find: error updating pending file header\n");
 		    memset(&h, 0xff, sizeof(RoFsHeader));
 		    h.magic = ROFS_MAGIC;
 		    if (writeFlash(p, (uint32_t *)&h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK) {
-os_printf("find: error writing terminator\n");
+DBG("find: error writing terminator\n");
 		    }
 		    
 		    *pInsertionOffset = p;
@@ -332,11 +471,11 @@ os_printf("find: error writing terminator\n");
 
             // get the name of the file
 		    if (readFlash(p + sizeof(RoFsHeader), namebuf, sizeof(namebuf)) != SPI_FLASH_RESULT_OK) {
-os_printf("find: %08x error reading file name\n", p);
+DBG("find: %08x error reading file name\n", p);
                 return -1;
             }
 
-os_printf("find: %08x checking '%s'\n", p, namebuf);
+DBG("find: %08x checking '%s'\n", p, namebuf);
 		    // check to see if this is the file we're looking for
             if (os_strcmp(namebuf, fileName) == 0)
                 *pFileOffset = p;
@@ -344,7 +483,7 @@ os_printf("find: %08x checking '%s'\n", p, namebuf);
         
         // deleted file
         else {
-os_printf("find: %08x skipping deleted file\n", p);
+DBG("find: %08x skipping deleted file\n", p);
         }
 
 		// skip over the file data
@@ -355,7 +494,7 @@ os_printf("find: %08x skipping deleted file\n", p);
 	}
 
     // never reached
-os_printf("find: internal error\n");
+DBG("find: internal error\n");
     return -1;
 }
 
@@ -366,25 +505,25 @@ ROFFS_FILE ICACHE_FLASH_ATTR *roffs_create(const char *fileName)
 	RoFsHeader h;
 
     if (find_file_and_insertion_point(fileName, &fileOffset, &insertionOffset) != 0) {
-os_printf("create: can't find insertion point\n");
+DBG("create: can't find insertion point\n");
         return NULL;
-}
+    }
 
     if (!(file = (ROFFS_FILE *)os_malloc(sizeof(ROFFS_FILE)))) {
-os_printf("create: insufficient memory\n");
+DBG("create: insufficient memory\n");
         return NULL;
-}
+    }
 
 	// delete the old version of the file if one was found
     if (fileOffset != NOT_FOUND) {
         if (readFlash(fileOffset, (uint32 *)&h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK) {
-os_printf("create: error reading old file header\n");
+DBG("create: error reading old file header\n");
             os_free(file);
             return NULL;
         }
         h.flags &= ~FLAG_ACTIVE;
 	    if (updateFlash(fileOffset, (uint32 *)&h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK) {
-os_printf("create: error writing old file header\n");
+DBG("create: error writing old file header\n");
             os_free(file);
             return NULL;
         }
@@ -404,12 +543,12 @@ os_printf("create: error writing old file header\n");
     file->flags = FLAG_LASTFILE;
 
 	if (writeFlash(insertionOffset, (uint32 *)&h, sizeof(RoFsHeader)) != SPI_FLASH_RESULT_OK) {
-os_printf("create: error writing new file header\n");
+DBG("create: error writing new file header\n");
         os_free(file);
         return NULL;
     }
 	if (writeFlash(insertionOffset + sizeof(RoFsHeader), (uint32 *)fileName, h.nameLen) != SPI_FLASH_RESULT_OK) {
-os_printf("create: error reading new file name\n");
+DBG("create: error reading new file name\n");
         os_free(file);
         return NULL;
     }
@@ -421,7 +560,7 @@ int ICACHE_FLASH_ATTR roffs_write(ROFFS_FILE *file, char *buf, int len)
 {
     int roundedLen = (len + 3) & ~3;
     if (writeFlash(file->start + file->size, (uint32 *)buf, roundedLen) != SPI_FLASH_RESULT_OK) {
-os_printf("write: error writing to file\n");
+DBG("write: error writing to file\n");
         return -1;
     }
     file->offset += len;
@@ -440,13 +579,13 @@ static int ICACHE_FLASH_ATTR writeFlash(uint32_t addr, void *buf, int size)
     uint32_t sectorMask = SPI_FLASH_SEC_SIZE - 1;
     uint32_t sectorAddr = addr & ~sectorMask;
     uint8_t *p = buf;
-os_printf("writeFlash: %08x %d\n", addr, size);
+DBG("writeFlash: %08x %d\n", addr, size);
 
     // erase the sector if the write begins on a sector boundary
     if (addr == sectorAddr) {
-os_printf("writeFlash: erase %08x\n", sectorAddr);
+DBG("writeFlash: erase %08x\n", sectorAddr);
         if (spi_flash_erase_sector(sectorAddr / SPI_FLASH_SEC_SIZE) != SPI_FLASH_RESULT_OK) {
-os_printf("writeFlash: erase failed\n");
+DBG("writeFlash: erase failed\n");
             return SPI_FLASH_RESULT_ERR;
         }
     }
@@ -456,9 +595,9 @@ os_printf("writeFlash: erase failed\n");
         int writeSize = sectorAddr + SPI_FLASH_SEC_SIZE - addr;
         
         // write the next sector or partial sector
-os_printf("writeFlash: write %08x %d\n", addr, writeSize);
+DBG("writeFlash: write %08x %d\n", addr, writeSize);
         if (spi_flash_write(addr, (uint32 *)p, writeSize) != SPI_FLASH_RESULT_OK) {
-os_printf("writeFlash: write failed\n");
+DBG("writeFlash: write failed\n");
             return SPI_FLASH_RESULT_ERR;
         }
         
@@ -469,18 +608,18 @@ os_printf("writeFlash: write failed\n");
         
         // erase the next sector
         sectorAddr = addr & ~sectorMask;
-os_printf("writeFlash: erase %08x\n", sectorAddr);
+DBG("writeFlash: erase %08x\n", sectorAddr);
         if (spi_flash_erase_sector(sectorAddr / SPI_FLASH_SEC_SIZE) != SPI_FLASH_RESULT_OK) {
-os_printf("writeFlash: erase failed\n");
+DBG("writeFlash: erase failed\n");
             return SPI_FLASH_RESULT_ERR;
         }
     }
     
     // write the last partial sector
     if (size > 0) {
-os_printf("writeFlash: write %08x %d\n", addr, size);
+DBG("writeFlash: write %08x %d\n", addr, size);
         if (spi_flash_write(addr, (uint32 *)p, size) != SPI_FLASH_RESULT_OK) {
-os_printf("writeFlash: write failed\n");
+DBG("writeFlash: write failed\n");
             return SPI_FLASH_RESULT_ERR;
         }
     }
@@ -490,9 +629,9 @@ os_printf("writeFlash: write failed\n");
 
 static int ICACHE_FLASH_ATTR updateFlash(uint32_t addr, void *buf, int size)
 {
-os_printf("updateFlash: %08x %d\n", addr, size);
+DBG("updateFlash: %08x %d\n", addr, size);
     if (spi_flash_write(addr, (uint32 *)buf, size) != SPI_FLASH_RESULT_OK) {
-os_printf("updateFlash: failed\n");
+DBG("updateFlash: failed\n");
         return SPI_FLASH_RESULT_ERR;
     }
     return SPI_FLASH_RESULT_OK;

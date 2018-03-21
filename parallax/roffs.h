@@ -31,6 +31,8 @@ typedef struct ROFFS_FILE_STRUCT ROFFS_FILE;
 uint32_t roffs_base_address(void);
 int roffs_mount(uint32_t flashAddress);
 int roffs_format(uint32_t flashAddress);
+int roffs_filecount(int *pCount);
+int roffs_fileinfo(int index, char *fileName, int *pFileSize);
 ROFFS_FILE *roffs_open(const char *fileName);
 int roffs_file_size(ROFFS_FILE *file);
 int roffs_file_flags(ROFFS_FILE *file);

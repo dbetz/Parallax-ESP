@@ -13,7 +13,7 @@
 #include "httpd.h"
 #include "roffs.h"
 
-#define PROP_DBG
+//#define PROP_DBG
 
 #ifdef PROP_DBG
 #define DBG(format, ...) os_printf(format, ## __VA_ARGS__)

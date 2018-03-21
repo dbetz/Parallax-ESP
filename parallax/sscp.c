@@ -321,6 +321,9 @@ static cmd_def cmds[] = {
 {   "CONNECT",          tcp_do_connect      },
 {   "APSCAN",           wifi_do_apscan      },
 {   "APGET",            wifi_do_apget       },
+{   "FINFO",            fs_do_finfo         },
+{   "FCOUNT",           fs_do_fcount        },
+{   "FRUN",             fs_do_frun          },
 {   NULL,               NULL                }
 };
 
@@ -499,6 +502,9 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
                     case SSCP_TKN_CONNECT:  name = "CONNECT"; sep = ':'; break;
                     case SSCP_TKN_APSCAN:   name = "APSCAN";  sep = ':'; break;
                     case SSCP_TKN_APGET:    name = "APGET";   sep = ':'; break;
+                    case SSCP_TKN_FINFO:    name = "FINFO";   sep = ':'; break;
+                    case SSCP_TKN_FCOUNT:   name = "FCOUNT";  sep = ':'; break;
+                    case SSCP_TKN_FRUN:     name = "FRUN";    sep = ':'; break;
                     case SSCP_TKN_HTTP:     name = "HTTP";    sep = ','; break;
                     case SSCP_TKN_WS:       name = "WS";      sep = ','; break;
                     case SSCP_TKN_TCP:      name = "TCP";     sep = ','; break;

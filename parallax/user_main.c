@@ -130,6 +130,46 @@ CgiUploadFlashDef uploadParams={
 #define INCLUDE_FLASH_FNS
 #endif
 
+static int ICACHE_FLASH_ATTR cgiGetFirmwareNextFilter(HttpdConnData *connData) {
+#ifdef WIFI_BADGE
+    if (connData->conn != NULL && IsAutoLoadEnabled()) {
+        httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
+        return HTTPD_CGI_DONE;
+    }
+#endif
+    return cgiGetFirmwareNext(connData);
+}
+
+int ICACHE_FLASH_ATTR cgiUploadFirmwareFilter(HttpdConnData *connData) {
+#ifdef WIFI_BADGE
+    if (connData->conn != NULL && IsAutoLoadEnabled()) {
+        httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
+        return HTTPD_CGI_DONE;
+    }
+#endif
+    return cgiUploadFirmware(connData);
+}
+
+int ICACHE_FLASH_ATTR cgiWiFiConnectFilter(HttpdConnData *connData) {
+#ifdef WIFI_BADGE
+    if (connData->conn != NULL && IsAutoLoadEnabled()) {
+        httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
+        return HTTPD_CGI_DONE;
+    }
+#endif
+    return cgiWiFiConnect(connData);
+}
+
+int ICACHE_FLASH_ATTR cgiWiFiSetModeFilter(HttpdConnData *connData) {
+#ifdef WIFI_BADGE
+    if (connData->conn != NULL && IsAutoLoadEnabled()) {
+        httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
+        return HTTPD_CGI_DONE;
+    }
+#endif
+    return cgiWiFiSetMode(connData);
+}
+
 /*
 This is the main url->function dispatching data struct.
 In short, it's a struct with various URLs plus their handlers. The handlers can
@@ -144,8 +184,8 @@ HttpdBuiltInUrl builtInUrls[]={
 	{"*", cgiRedirectApClientToHostname, "esp8266.nonet"},
 	{"/", cgiRedirect, "/index.html"},
 #ifdef INCLUDE_FLASH_FNS
-	{"/flash/next", cgiGetFirmwareNext, &uploadParams},
-	{"/flash/upload", cgiUploadFirmware, &uploadParams},
+	{"/flash/next", cgiGetFirmwareNextFilter, &uploadParams},
+	{"/flash/upload", cgiUploadFirmwareFilter, &uploadParams},
 #endif
 	{"/flash/reboot", cgiRebootFirmware, NULL},
 
@@ -162,9 +202,9 @@ HttpdBuiltInUrl builtInUrls[]={
 	{"/wifi", cgiRedirect, "/wifi/wifi.html"},
 	{"/wifi/", cgiRedirect, "/wifi/wifi.html"},
 	{"/wifi/wifiscan.cgi", cgiWiFiScan, NULL},
-	{"/wifi/connect.cgi", cgiWiFiConnect, NULL},
+	{"/wifi/connect.cgi", cgiWiFiConnectFilter, NULL},
 	{"/wifi/connstatus.cgi", cgiWiFiConnStatus, NULL},
-	{"/wifi/setmode.cgi", cgiWiFiSetMode, NULL},
+	{"/wifi/setmode.cgi", cgiWiFiSetModeFilter, NULL},
 
     {"/log/text", ajaxLog, NULL },
 

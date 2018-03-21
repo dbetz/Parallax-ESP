@@ -20,14 +20,7 @@ Connector to let httpd use the espfs filesystem to serve the files in it.
 #include "httpdroffs.h"
 #include "roffs.h"
 #include "proploader.h"
-
-#define HTTPDROFFS_DBG
-
-#ifdef HTTPDROFFS_DBG
-#define DBG(format, ...) os_printf(format, ## __VA_ARGS__)
-#else
-#define DBG(format, ...)
-#endif
+#include "cgiprop.h"
 
 #define FLASH_PREFIX    "/files/"
 
@@ -116,6 +109,12 @@ cgiRoffsHook(HttpdConnData *connData) {
 
 int ICACHE_FLASH_ATTR cgiRoffsFormat(HttpdConnData *connData)
 {
+#ifdef WIFI_BADGE
+    if (IsAutoLoadEnabled()) {
+        httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
+        return HTTPD_CGI_DONE;
+    }
+#endif
     if (connData->conn == NULL)
         return HTTPD_CGI_DONE;
     if (roffs_format(roffs_base_address()) != 0) {
@@ -134,6 +133,13 @@ int ICACHE_FLASH_ATTR cgiRoffsWriteFile(HttpdConnData *connData)
 {
     ROFFS_FILE *file = connData->cgiData;
     
+#ifdef WIFI_BADGE
+    if (IsAutoLoadEnabled()) {
+        httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
+        return HTTPD_CGI_DONE;
+    }
+#endif
+
     // check for the cleanup call
     if (connData->conn == NULL) {
 		if (file) {
@@ -157,8 +163,6 @@ int ICACHE_FLASH_ATTR cgiRoffsWriteFile(HttpdConnData *connData)
             return HTTPD_CGI_DONE;
         }
         connData->cgiData = file;
-
-        DBG("write-file: file %s\n", fileName);
     }
 
     // append data to the file

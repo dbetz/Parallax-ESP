@@ -116,6 +116,15 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     }
     os_printf("Flash filesystem mounted!\n");
     
+{ int i=0;
+  char fileName[100];
+  int fileSize;
+  while (roffs_fileinfo(i, fileName, &fileSize) == 0) {
+    os_printf("file %d: %s %d\n", i, fileName, fileSize);
+    ++i;
+  }
+}
+    
 #ifdef WIFI_BADGE
     if (IsAutoLoadEnabled()) {
         int sts;
