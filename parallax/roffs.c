@@ -141,7 +141,7 @@ DBG("open: %08x bad magic number\n", (int)p);
 
 		// check for the end of image marker
         if (h.flags & FLAG_LASTFILE)
-            return -1;
+            break;
 
 		// terminate on a leftover pending file
 		else if (h.flags & FLAG_PENDING) {
