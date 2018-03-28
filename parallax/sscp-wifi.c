@@ -16,12 +16,13 @@ static void ICACHE_FLASH_ATTR send_scan_complete_event(int prefix)
 static void ICACHE_FLASH_ATTR scan_complete(void *data, int count)
 {
     os_printf("scan done callback, found %d\n", count);
+    
+    scanCount = count;
+
     if (flashConfig.sscp_events)
         send_scan_complete_event('!');
-    else {
+    else
         scanDone = 1;
-        scanCount = count;
-    }
 }
 
 int ICACHE_FLASH_ATTR wifi_check_for_events(void)
