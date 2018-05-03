@@ -84,7 +84,8 @@ static int setWiFiMode(void *data, char *value)
 static int getWiFiSSID(void *data, char *value)
 {
 	struct station_config config;
-	wifi_station_get_config(&config);
+	if (!wifi_station_get_config(&config))
+	    return -1;
 	strcpy(value, (char *)config.ssid);
 	return 0;
 }
@@ -547,7 +548,7 @@ int ICACHE_FLASH_ATTR cgiPropRestoreDefaultSettings(HttpdConnData *connData)
         return HTTPD_CGI_DONE;
     }
 #endif
-    httpdStartResponse(connData, configRestoreDefaults() ? 200 : 400);
+     httpdStartResponse(connData, configRestoreDefaults() ? 200 : 400);
     httpdStartResponse(connData, 200);
     httpdEndHeaders(connData);
     httpdSend(connData, "", -1);
