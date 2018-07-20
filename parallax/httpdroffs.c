@@ -109,7 +109,7 @@ cgiRoffsHook(HttpdConnData *connData) {
 
 int ICACHE_FLASH_ATTR cgiRoffsFormat(HttpdConnData *connData)
 {
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
     if (IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;
@@ -133,7 +133,7 @@ int ICACHE_FLASH_ATTR cgiRoffsWriteFile(HttpdConnData *connData)
 {
     ROFFS_FILE *file = connData->cgiData;
     
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
     if (IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;

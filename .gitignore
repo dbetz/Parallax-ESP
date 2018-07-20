@@ -1,8 +1,11 @@
 build/
+nbproject/
 release/release
 release/patch
 *.zip
 *.bin
 *.elf
+*.ld
+*.bak
 *~
 test-framework-*

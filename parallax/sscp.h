@@ -37,8 +37,8 @@ enum {
     SSCP_TKN_STA                = 0xF4,
     SSCP_TKN_AP                 = 0xF3,
     SSCP_TKN_STA_AP             = 0xF2,
-    
-    // gap for more tokens
+    SSCP_TKN_APSET              = 0xF1,
+    SSCP_TKN_RESTART            = 0xF0,
     
     SSCP_TKN_JOIN               = 0xEF,
     SSCP_TKN_CHECK              = 0xEE,
@@ -189,6 +189,7 @@ void cmds_do_path(int argc, char *argv[]);
 void cmds_do_send(int argc, char *argv[]);
 void cmds_do_recv(int argc, char *argv[]);
 void cmds_do_close(int argc, char *argv[]);
+void cmds_do_restart(int argc, char *argv[]);
 int cgiPropEnableSerialProtocol(HttpdConnData *connData);
 int cgiPropModuleInfo(HttpdConnData *connData);
 
@@ -217,6 +218,7 @@ void tcp_do_connect(int argc, char *argv[]);
 // from sscp-wifi.c
 void wifi_do_apscan(int argc, char *argv[]);
 void wifi_do_apget(int argc, char *argv[]);
+void wifi_do_apset(int argc, char *argv[]);
 int wifi_check_for_events(void);
 
 // from sscp-fs.c
