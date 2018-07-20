@@ -21,7 +21,15 @@ void ICACHE_FLASH_ATTR cmds_do_nothing(int argc, char *argv[])
 // JOIN,ssid,passwd
 void ICACHE_FLASH_ATTR cmds_do_join(int argc, char *argv[])
 {
-    if (argc != 3) {
+    if (argc == 1) {
+        
+        // Auto Join!
+        wifiJoinAuto();
+        sscp_sendResponse("S,0");
+        return;
+    }
+    
+    else if (argc != 3) {
         sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
         return;
     }
@@ -29,7 +37,7 @@ void ICACHE_FLASH_ATTR cmds_do_join(int argc, char *argv[])
     if (wifiJoin(argv[1], argv[2]) == 0)
         sscp_sendResponse("S,0");
     else
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT); // mm: This can never be called ???!! wifiJoin can only return 0 as currently coded
 }
 
 static void ICACHE_FLASH_ATTR path_handler(sscp_hdr *hdr)
@@ -159,6 +167,35 @@ void ICACHE_FLASH_ATTR cmds_do_close(int argc, char *argv[])
     hdr->type = TYPE_UNUSED;
         
     sscp_sendResponse("S,0");
+}
+
+// RESTART,hard
+void ICACHE_FLASH_ATTR cmds_do_restart(int argc, char *argv[])
+{
+    if (argc != 2) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
+        return;
+    }
+    
+    if (atoi(argv[1]) == 0) {
+        sscp_log("RESTART 0 : system_restart");
+        //ESP.restart();
+        system_restart();
+        sscp_sendResponse("S,0");
+        return;
+    
+    } else if (atoi(argv[1]) == 1) {
+        sscp_log("RESTART 1 : system_upgrade_reboot");
+        //ESP.reset();
+        system_upgrade_reboot();
+        sscp_sendResponse("S,0");
+        return;
+    
+    } else {
+        
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+        return;
+    }
 }
 
 // SEND,chan,count

@@ -316,11 +316,13 @@ static cmd_def cmds[] = {
 {   "SEND",             cmds_do_send        },
 {   "RECV",             cmds_do_recv        },
 {   "CLOSE",            cmds_do_close       },
+{   "RESTART",          cmds_do_restart     },
 {   "ARG",              http_do_arg         },
 {   "REPLY",            http_do_reply       },
 {   "CONNECT",          tcp_do_connect      },
 {   "APSCAN",           wifi_do_apscan      },
 {   "APGET",            wifi_do_apget       },
+{   "APSET",            wifi_do_apset       },
 {   "FINFO",            fs_do_finfo         },
 {   "FCOUNT",           fs_do_fcount        },
 {   "FRUN",             fs_do_frun          },
@@ -472,12 +474,14 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
             case SSCP_TKN_SEND:
             case SSCP_TKN_RECV:
             case SSCP_TKN_CLOSE:
+            case SSCP_TKN_RESTART:
             case SSCP_TKN_LISTEN:
             case SSCP_TKN_ARG:
             case SSCP_TKN_REPLY:
             case SSCP_TKN_CONNECT:
             case SSCP_TKN_APSCAN:
             case SSCP_TKN_APGET:
+            case SSCP_TKN_APSET:
             case SSCP_TKN_HTTP:
             case SSCP_TKN_WS:
             case SSCP_TKN_TCP:
@@ -496,12 +500,14 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
                     case SSCP_TKN_SEND:     name = "SEND";    sep = ':'; break;
                     case SSCP_TKN_RECV:     name = "RECV";    sep = ':'; break;
                     case SSCP_TKN_CLOSE:    name = "CLOSE";   sep = ':'; break;
+                    case SSCP_TKN_RESTART:  name = "RESTART"; sep = ':'; break;
                     case SSCP_TKN_LISTEN:   name = "LISTEN";  sep = ':'; break;
                     case SSCP_TKN_ARG:      name = "ARG";     sep = ':'; break;
                     case SSCP_TKN_REPLY:    name = "REPLY";   sep = ':'; break;
                     case SSCP_TKN_CONNECT:  name = "CONNECT"; sep = ':'; break;
                     case SSCP_TKN_APSCAN:   name = "APSCAN";  sep = ':'; break;
                     case SSCP_TKN_APGET:    name = "APGET";   sep = ':'; break;
+                    case SSCP_TKN_APSET:    name = "APSET";   sep = ':'; break;
                     case SSCP_TKN_FINFO:    name = "FINFO";   sep = ':'; break;
                     case SSCP_TKN_FCOUNT:   name = "FCOUNT";  sep = ':'; break;
                     case SSCP_TKN_FRUN:     name = "FRUN";    sep = ':'; break;

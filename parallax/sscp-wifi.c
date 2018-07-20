@@ -44,9 +44,13 @@ void ICACHE_FLASH_ATTR wifi_do_apscan(int argc, char *argv[])
         return;
     }
     
-    cgiWiFiStartScan(scan_complete, NULL);
-
-    sscp_sendResponse("S,0");
+    scanDone = 0;
+    
+    if (cgiWiFiStartScan(scan_complete, NULL) == 1) {
+        sscp_sendResponse("S,0");
+    } else {
+        sscp_sendResponse("E,%d", SSCP_ERROR_BUSY);
+    }
 }
 
 // APGET:index
@@ -68,10 +72,33 @@ void ICACHE_FLASH_ATTR wifi_do_apget(int argc, char *argv[])
     else {
         ApData *entry = cgiWiFiScanResult(index);
         if (entry)
-            sscp_sendResponse("S,%d,%s,%d", entry->enc, entry->ssid, entry->rssi);
+            //sscp_sendResponse("S,%d,%s,%d", entry->enc, entry->ssid, entry->rssi);  //Originally released with variable-length string as second-to-last field; inconsistent with rest of API
+            sscp_sendResponse("S,%d,%d,%s", entry->enc, entry->rssi, entry->ssid);        
         else
             sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
     }
 }
+
+
+
+// APSET,ssid,passwd, optional flag for restart
+void ICACHE_FLASH_ATTR wifi_do_apset(int argc, char *argv[])
+{
+    if (argc == 4) { // Special case- restart after command
+        sscp_sendResponse("S,0");
+        wifiSetCredentials(argv[1], argv[2], 1);
+        return;
+    }
+    else if (argc != 3) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
+        return;
+    }
+    
+    if (wifiSetCredentials(argv[1], argv[2], 0) == 0)
+        sscp_sendResponse("S,0");
+    else
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+}
+
 
 

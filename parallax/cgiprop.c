@@ -88,7 +88,7 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     os_timer_setfn(&resetButtonTimer, resetButtonTimerCallback, 0);
     os_timer_arm(&resetButtonTimer, RESET_BUTTON_SAMPLE_INTERVAL, 1);
     
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
     makeGpio(AUTO_LOAD_PIN);
     PIN_PULLUP_EN(PERIPHS_IO_MUX_MTMS_U);
     GPIO_DIS_OUTPUT(AUTO_LOAD_PIN);
@@ -125,7 +125,7 @@ int ICACHE_FLASH_ATTR cgiPropInit()
   }
 }
     
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
     if (IsAutoLoadEnabled()) {
         int sts;
         os_printf("Autoloading 'autorun.bin'\n");
@@ -154,7 +154,7 @@ int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
         return HTTPD_CGI_DONE;
     }
 
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
     if (IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;
@@ -217,7 +217,7 @@ int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
         return HTTPD_CGI_DONE;
     }
     
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
     if (IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;
@@ -268,7 +268,7 @@ int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
         return HTTPD_CGI_DONE;
     }
 
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
     if (IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;
@@ -603,10 +603,23 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
 #endif
 }
 
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
 int ICACHE_FLASH_ATTR IsAutoLoadEnabled(void)
 {
-    return GPIO_INPUT_GET(AUTO_LOAD_PIN) == AUTO_LOAD_PIN_STATE;
+    int autoLoadButtonState = GPIO_INPUT_GET(AUTO_LOAD_PIN);
+    static int lastAutoLoadButtonState = 0;
+    
+    static uint32_t lastAutoLoadTime = 0;
+    uint32_t autoLoadTime = system_get_time() / 1000;
+    
+    if (lastAutoLoadButtonState == 1 && autoLoadTime - lastAutoLoadTime < 5000) {
+       autoLoadButtonState = 1; // Override if less than 10 seconds ellapsed since last call
+    }
+    
+    lastAutoLoadButtonState = autoLoadButtonState;
+    lastAutoLoadTime = autoLoadTime;
+    
+    return ((autoLoadButtonState == AUTO_LOAD_PIN_STATE) && (GPIO_INPUT_GET(RESET_BUTTON_PIN) != 0));
 }
 #endif
 

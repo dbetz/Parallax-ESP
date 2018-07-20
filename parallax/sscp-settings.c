@@ -445,7 +445,7 @@ int ICACHE_FLASH_ATTR cgiPropSetting(HttpdConnData *connData)
     cmd_def *def = NULL;
     int i;
     
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
     if (connData->requestType == HTTPD_METHOD_POST && IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;
@@ -514,7 +514,7 @@ int ICACHE_FLASH_ATTR cgiPropSetting(HttpdConnData *connData)
 
 int ICACHE_FLASH_ATTR cgiPropSaveSettings(HttpdConnData *connData)
 {
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
     if (IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;
@@ -528,7 +528,7 @@ int ICACHE_FLASH_ATTR cgiPropSaveSettings(HttpdConnData *connData)
 
 int ICACHE_FLASH_ATTR cgiPropRestoreSettings(HttpdConnData *connData)
 {
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
     if (IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;
@@ -542,7 +542,7 @@ int ICACHE_FLASH_ATTR cgiPropRestoreSettings(HttpdConnData *connData)
 
 int ICACHE_FLASH_ATTR cgiPropRestoreDefaultSettings(HttpdConnData *connData)
 {
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
     if (IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;

@@ -131,7 +131,7 @@ CgiUploadFlashDef uploadParams={
 #endif
 
 static int ICACHE_FLASH_ATTR cgiGetFirmwareNextFilter(HttpdConnData *connData) {
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
     if (connData->conn != NULL && IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;
@@ -141,7 +141,7 @@ static int ICACHE_FLASH_ATTR cgiGetFirmwareNextFilter(HttpdConnData *connData) {
 }
 
 int ICACHE_FLASH_ATTR cgiUploadFirmwareFilter(HttpdConnData *connData) {
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
     if (connData->conn != NULL && IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;
@@ -151,7 +151,7 @@ int ICACHE_FLASH_ATTR cgiUploadFirmwareFilter(HttpdConnData *connData) {
 }
 
 int ICACHE_FLASH_ATTR cgiWiFiConnectFilter(HttpdConnData *connData) {
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
     if (connData->conn != NULL && IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;
@@ -161,7 +161,7 @@ int ICACHE_FLASH_ATTR cgiWiFiConnectFilter(HttpdConnData *connData) {
 }
 
 int ICACHE_FLASH_ATTR cgiWiFiSetModeFilter(HttpdConnData *connData) {
-#ifdef WIFI_BADGE
+#ifdef AUTO_LOAD
     if (connData->conn != NULL && IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;
@@ -240,8 +240,11 @@ static void ICACHE_FLASH_ATTR prHeapTimerCb(void *arg) {
 //Main routine. Initialize stdout, the I/O, filesystem and the webserver and we're done.
 void ICACHE_FLASH_ATTR user_init(void) {
     int restoreOk;
+    
+    //wifi_station_set_auto_connect(TRUE); // Default on; may be overwritten by valid flash config
 
     if (!(restoreOk = configRestore()))
+        //wifi_station_set_auto_connect(TRUE); // Default on; may be overwritten by valid flash config
         configSave();
 
     wifi_station_set_hostname(flashConfig.module_name);
