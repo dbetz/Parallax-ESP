@@ -2,7 +2,7 @@
 
 This project contains firmware for the Parallax WX Wi-Fi module. The code is based on
 the esp-httpd project by by Jeroen Domburg with some features added from the esp-link
-project by Thorsten von Eicken.
+project by Thorsten von Eicken. TESTING!
 
 It includes the following features:
 
