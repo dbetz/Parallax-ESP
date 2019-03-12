@@ -1,3 +1,12 @@
+# Version number notes!
+# Before building release version, bump the version number thus:
+# 
+# 1. Tag the master with: git tag -a v1.1 then enter an annotation message (it's like a commit message)
+# 2. The above snippet used v1.1 as example..... change that v number to whatever you need!
+# 3. Then try: git describe to see what version is displayed
+# 4. Then run make in usual way
+
+
 #You can build this example in three ways:
 # 'separate' - Separate espfs and binaries, no OTA upgrade
 # 'combined' - Combined firmware blob, no OTA upgrade
@@ -17,7 +26,10 @@ OUTPUT_TYPE=ota
 # commit is the number of commits since the last tag
 # date is the date of the build
 # hash is a unique substring of the hash of the last commit
-GITDESC=$(shell git describe master)
+
+# Ensure --long tag added: GITDESC=$(shell git describe --long master)
+
+GITDESC=$(shell git describe --long master)
 GITDESC_WORDS=$(subst -, ,$(GITDESC))
 GIT_VERSION=$(word 1,$(GITDESC_WORDS))
 GIT_COMMIT=$(word 2,$(GITDESC_WORDS))
@@ -28,6 +40,7 @@ else
   GIT_COMMIT_HASH_SUFFIX=$(subst -, ,-$(GIT_COMMIT))-$(GIT_HASH)
 endif
 VERSION=$(GIT_VERSION) ($(shell date "+%Y-%m-%d %H:%M:%S")$(GIT_COMMIT_HASH_SUFFIX))
+#VERSION=1.1 ($(shell date "+%Y-%m-%d %H:%M:%S")$(GIT_COMMIT_HASH_SUFFIX))
 $(info VERSION $(VERSION))
 
 #SPI flash size, in K

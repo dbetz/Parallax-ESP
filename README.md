@@ -38,9 +38,15 @@ Check out the submodules of Parallax-ESP:
     git submodule init
     git submodule update
 
-Build the firmware (from the Parallax-ESP directory):
+Build the firmware (from the Parallax-ESP directory) for Parallax WX Module:
 
     make
+
+Build the firmware (from the Parallax-ESP directory) for Parallax BadgeWX Module:
+
+    make EXTRA_CFLAGS=-DAUTO_LOAD
+
+# Discovery Protocol
 
 Here is a description of the discovery protocol used by the WX module:
 
