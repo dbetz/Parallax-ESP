@@ -19,7 +19,7 @@ void ICACHE_FLASH_ATTR fs_do_finfo(int argc, char *argv[])
         return;
     }
 
-    sscp_sendResponse("N,,0");
+    sscp_sendResponse("N,0");
 }
 
 // FCOUNT

@@ -36,6 +36,38 @@ int ICACHE_FLASH_ATTR wifi_check_for_events(void)
     return sentEvent;
  }
 
+
+// Connect using credentials already in flash memory
+int ICACHE_FLASH_ATTR wifiJoinAuto(void)
+{
+    struct station_config stconf;
+    wifi_station_get_config(&stconf);
+    
+    os_printf("Calling wifiJoin on stored AP %s\n", (char*)stconf.ssid);
+    return wifiJoin( (char*)stconf.ssid, (char*)stconf.password );
+
+}
+
+
+// Get Credentials already in flash memory
+void ICACHE_FLASH_ATTR wifi_do_creget(int argc, char *argv[])
+{
+    if (argc != 1) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
+        return;
+    }
+    
+    struct station_config stconf;
+    wifi_station_get_config(&stconf);
+    
+    os_printf("Calling getCred on stored AP %s\n", (char*)stconf.ssid);
+    
+    sscp_sendResponse("S,%s,%s", (char*)stconf.ssid, (char*)stconf.password);
+        
+    
+}
+
+
 // APSCAN
 void ICACHE_FLASH_ATTR wifi_do_apscan(int argc, char *argv[])
 {
@@ -78,27 +110,4 @@ void ICACHE_FLASH_ATTR wifi_do_apget(int argc, char *argv[])
             sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
     }
 }
-
-
-
-// APSET,ssid,passwd, optional flag for restart
-void ICACHE_FLASH_ATTR wifi_do_apset(int argc, char *argv[])
-{
-    if (argc == 4) { // Special case- restart after command
-        sscp_sendResponse("S,0");
-        wifiSetCredentials(argv[1], argv[2], 1);
-        return;
-    }
-    else if (argc != 3) {
-        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
-        return;
-    }
-    
-    if (wifiSetCredentials(argv[1], argv[2], 0) == 0)
-        sscp_sendResponse("S,0");
-    else
-        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
-}
-
-
 

@@ -11,11 +11,21 @@
 #include "config.h"
 #include "cgiprop.h"
 #include "cgiwifi.h"
+#include "user_interface.h"
+
+
+static int LockState = 0; // default state goes by the autoload pin
 
 // (nothing)
 void ICACHE_FLASH_ATTR cmds_do_nothing(int argc, char *argv[])
 {
     sscp_sendResponse("S,0");
+}
+
+int ICACHE_FLASH_ATTR cmds_check_lockstate(void) {
+    
+    return LockState;
+    
 }
 
 // JOIN,ssid,passwd
@@ -197,6 +207,92 @@ void ICACHE_FLASH_ATTR cmds_do_restart(int argc, char *argv[])
         return;
     }
 }
+
+
+
+// SLEEP:x,y
+// Where x is deep-sleep-set-option (0,1,2,4)
+// y is sleep duration in uSecs (0 to 4294967295) ie. max uint32
+// Note: 0 might get unlimited sleep- need to test in this firmware version!
+
+void ICACHE_FLASH_ATTR cmds_do_sleep(int argc, char *argv[])
+{
+  
+    if (argc != 3) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
+        return;
+    }
+    
+    
+    wifi_station_disconnect();
+    wifi_set_opmode(NULL_MODE);
+    
+    int i = atoi(argv[1]);
+    uint32 usecs = (uint32)strtoul(argv[2], NULL, 0);
+    
+    os_printf("Set Sleep Mode = %d, %d\n", i, usecs);
+    
+    if (i == 0 || i == 1 || i == 2 || i ==4) {
+        
+        sscp_sendResponse("S,0");
+        
+        //os_delay_us(1000000L); // 1 second
+    
+        system_deep_sleep_set_option((uint8)i); // 2 = Disable RF calibration at wake-up to save time and power.
+        
+        system_deep_sleep(usecs); // 4294967295);   // time in uSecs // strtoul will return 0 or maxlong if value invalid
+
+        // To wake up WiFi, toggle reset pin low, then input (it has 10K pull-up to 3v3))
+        // - When module wakes up, it resumes from the start! Beware of OLED clearing feature!
+
+        
+    
+    } else {
+        
+        sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT);
+    
+    }
+    
+    
+    return;
+    
+    
+}
+
+
+
+// LOCK:x
+// x=0, neutral-default (can be overriden by lock state on auto-load pin)
+// x=1, remove lock (overrides lock state on auto-load pin)
+// x=2, force lock (overrides lock state on auto-load pin)
+
+void ICACHE_FLASH_ATTR cmds_do_lock(int argc, char *argv[])
+{
+    if (argc != 2) {
+        sscp_sendResponse("E,%d", SSCP_ERROR_WRONG_ARGUMENT_COUNT);
+        return;
+    }
+    
+    int i = atoi(argv[1]);
+    
+    if ((i==0) || (i==1) || (i==2)) {
+        
+        os_printf("Set Lock Mode = %d\n", i);
+        LockState = i;
+        sscp_sendResponse("S,0");
+        
+    } else {
+        
+       sscp_sendResponse("E,%d", SSCP_ERROR_INVALID_ARGUMENT); 
+       
+    }
+       
+        
+    return;
+
+}
+
+
 
 // SEND,chan,count
 void ICACHE_FLASH_ATTR cmds_do_send(int argc, char *argv[])

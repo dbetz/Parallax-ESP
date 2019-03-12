@@ -84,7 +84,10 @@ struct PropellerConnection {
 #define RESET_BUTTON_SAMPLE_INTERVAL    5
 #define RESET_BUTTON_THRESHOLD          5
 #define RESET_BUTTON_PRESS_DELTA        500
+#define RESET_BUTTON_PRESS_DELTA_MAX    1000
 #define RESET_BUTTON_PRESS_COUNT        4
+#define RESET_BUTTON_PRESS_COUNT_OLED   3
+
 
 #define RESET_DELAY_1                   10
 #define RESET_DELAY_2                   100

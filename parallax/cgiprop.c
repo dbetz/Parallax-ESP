@@ -18,10 +18,14 @@
 
 //#define STATE_DEBUG
 
+#define FORCE_MODEM_SLEEP
+#define AUTO_LOAD_CLEAR_DISPLAY
+#define AUTO_LOAD_OLED_RESET_PIN 4  // MUST BE PIN 4 ! DO NOT CHANGE WITHOUT CHECKING RELEVANT CODE IN THIS FILE, ESPECIALLY INIT CODE FOR GPIO4, PIN_FUNC_SELECT
 #define AUTO_LOAD_PIN       14
 #define AUTO_LOAD_PIN_STATE 0
 
 #define MAX_SENDBUFF_LEN    2600
+
 
 void ICACHE_FLASH_ATTR httpdSendResponse(HttpdConnData *connData, int code, char *message, int len)
 {
@@ -74,26 +78,68 @@ static int8_t ICACHE_FLASH_ATTR getIntArg(HttpdConnData *connData, char *name, i
   return 1;
 }
 
+
+
+
 // this is statically allocated because the serial read callback has no context parameter
 PropellerConnection myConnection;
 
 int ICACHE_FLASH_ATTR cgiPropInit()
 {
+    
     os_printf("Version %s\n", VERSION);
+    
     memset(&myConnection, 0, sizeof(PropellerConnection));
     myConnection.state = stIdle;
     resetButtonState = 1;
     resetButtonCount = 0;
+    
     gpio_output_set(0, 0, 0, 1 << RESET_BUTTON_PIN);
     os_timer_setfn(&resetButtonTimer, resetButtonTimerCallback, 0);
     os_timer_arm(&resetButtonTimer, RESET_BUTTON_SAMPLE_INTERVAL, 1);
     
-#ifdef AUTO_LOAD
-    makeGpio(AUTO_LOAD_PIN);
-    PIN_PULLUP_EN(PERIPHS_IO_MUX_MTMS_U);
-    GPIO_DIS_OUTPUT(AUTO_LOAD_PIN);
-    gpio_output_set(0, 0, 0, 1 << AUTO_LOAD_PIN);
-#endif
+    
+    #ifdef AUTO_LOAD
+    
+        makeGpio(AUTO_LOAD_PIN);
+        PIN_PULLUP_EN(PERIPHS_IO_MUX_MTMS_U);
+        GPIO_DIS_OUTPUT(AUTO_LOAD_PIN); //gpio_output_set(0, 0, 0, 1 << AUTO_LOAD_PIN);
+
+        #ifdef AUTO_LOAD_CLEAR_DISPLAY
+
+            
+            // Init the pin (One time)). Pullup not required here as 10K pullup on BadgeWX
+            makeGpio(AUTO_LOAD_OLED_RESET_PIN);
+            GPIO_DIS_OUTPUT(AUTO_LOAD_OLED_RESET_PIN); // Set IO4 to input mode
+
+            if (IsAutoLoadEnabled()) { // DO NOT clear OLED if user has WX_BOOT asserted!
+            
+                os_printf("Autoload Clear Display at Startup\n");
+
+                // Pulse IO4 to clear display
+                GPIO_OUTPUT_SET(AUTO_LOAD_OLED_RESET_PIN, 0); // Set output, low
+                
+                //os_delay_us(100L);
+                //GPIO_DIS_OUTPUT(AUTO_LOAD_OLED_RESET_PIN); // Set IO4 to input mode (release Display RESET pin))
+
+                //os_printf("Autoload Clear Display done\n");
+                
+            }
+            
+        #endif
+
+            
+        #ifdef FORCE_MODEM_SLEEP
+            
+            // This could be useful in both auto-load and non-auto-load modes,
+            // but keep only in "badge" auto-load mode for initial testing.
+            wifi_set_sleep_type(MODEM_SLEEP_T);
+            
+        #endif    
+            
+
+    #endif
+
 
     os_printf("Using pin %d for reset\n", flashConfig.reset_pin);
     makeGpio(flashConfig.reset_pin);
@@ -116,25 +162,38 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     }
     os_printf("Flash filesystem mounted!\n");
     
-{ int i=0;
-  char fileName[100];
-  int fileSize;
-  while (roffs_fileinfo(i, fileName, &fileSize) == 0) {
-    os_printf("file %d: %s %d\n", i, fileName, fileSize);
-    ++i;
-  }
-}
-    
-#ifdef AUTO_LOAD
-    if (IsAutoLoadEnabled()) {
-        int sts;
-        os_printf("Autoloading 'autorun.bin'\n");
-        if ((sts = loadFile("autorun.bin")) == lsOK)
-            os_printf("Autoload started\n");
-        else
-            os_printf("Autoload failed: %d\n", sts);
+
+    int i=0;
+    char fileName[100];
+    int fileSize;
+    while (roffs_fileinfo(i, fileName, &fileSize) == 0) {
+        os_printf("file %d: %s %d\n", i, fileName, fileSize);
+        ++i;
     }
-#endif
+
+
+    #ifdef AUTO_LOAD
+
+        #ifdef AUTO_LOAD_CLEAR_DISPLAY
+
+            GPIO_DIS_OUTPUT(AUTO_LOAD_OLED_RESET_PIN); // Set IO4 to input mode (release Display RESET pin))
+            os_printf("Autoload Clear Display done\n");
+            
+        #endif
+
+        if (IsAutoLoadEnabledOnly()) {
+
+
+            int sts;
+            os_printf("Autoloading 'autorun.bin'\n");
+            if ((sts = loadFile("autorun.bin")) == lsOK)
+                os_printf("Autoload started\n");
+            else
+                os_printf("Autoload failed: %d\n", sts);
+
+        }
+
+    #endif
 
     return 0;
 }
@@ -142,7 +201,7 @@ int ICACHE_FLASH_ATTR cgiPropInit()
 int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
 {
     PropellerConnection *connection = &myConnection;
-    
+
     // check for the cleanup call
     if (connData->conn == NULL)
         return HTTPD_CGI_DONE;
@@ -160,7 +219,7 @@ int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
         return HTTPD_CGI_DONE;
     }
 #endif
-    
+
     if (connData->post->len == 0) {
         httpdSendResponse(connData, 400, "No data\r\n", -1);
         return HTTPD_CGI_DONE;
@@ -169,7 +228,7 @@ int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
         httpdSendResponse(connData, 400, "Data too large\r\n", -1);
         return HTTPD_CGI_DONE;
     }
-    
+
     connData->cgiData = connection;
     connection->connData = connData;
 
@@ -183,7 +242,7 @@ int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
         connection->responseSize = 0;
     if (!getIntArg(connData, "response-timeout", &connection->responseTimeout))
         connection->responseTimeout = 1000;
-    
+
     DBG("load: size %d, baud-rate %d, final-baud-rate %d, reset-pin %d\n", connData->post->buffLen, connection->baudRate, connection->finalBaudRate, connection->resetPin);
     if (connection->responseSize > 0)
         DBG("  responseSize %d, responseTimeout %d\n", connection->responseSize, connection->responseTimeout);
@@ -200,7 +259,7 @@ int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
     PropellerConnection *connection = &myConnection;
     char fileName[128];
     int fileSize = 0;
-    
+
     // check for the cleanup call
     if (connData->conn == NULL) {
         if (connection->file) {
@@ -216,17 +275,17 @@ int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
         httpdSendResponse(connData, 400, buf, -1);
         return HTTPD_CGI_DONE;
     }
-    
+
 #ifdef AUTO_LOAD
     if (IsAutoLoadEnabled()) {
         httpdSendResponse(connData, 400, "Not allowed\r\n", -1);
         return HTTPD_CGI_DONE;
     }
 #endif
-    
+
     connData->cgiData = connection;
     connection->connData = connData;
-    
+
     if (httpdFindArg(connData->getArgs, "file", fileName, sizeof(fileName)) < 0) {
         httpdSendResponse(connData, 400, "Missing file argument\r\n", -1);
         return HTTPD_CGI_DONE;
@@ -244,7 +303,7 @@ int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
         connection->finalBaudRate = flashConfig.baud_rate;
 //    if (!getIntArg(connData, "reset-pin", &connection->resetPin))
         connection->resetPin = flashConfig.reset_pin;
-    
+
     DBG("load-file: file %s, size %d, baud-rate %d, final-baud-rate %d, reset-pin %d\n", fileName, fileSize, connection->baudRate, connection->finalBaudRate, connection->resetPin);
 
     connection->completionCB = wifiLoadCompletionCB;
@@ -256,7 +315,7 @@ int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
 int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
 {
     PropellerConnection *connection = &myConnection;
-    
+
     // check for the cleanup call
     if (connData->conn == NULL)
         return HTTPD_CGI_DONE;
@@ -274,7 +333,7 @@ int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
         return HTTPD_CGI_DONE;
     }
 #endif
-    
+
     connData->cgiData = connection;
     connection->connData = connData;
 
@@ -282,7 +341,7 @@ int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
     flashConfig.sscp_enable = 0;
 
     os_timer_setfn(&connection->timer, timerCallback, connection);
-    
+
 //    if (!getIntArg(connData, "reset-pin", &connection->resetPin))
         connection->resetPin = flashConfig.reset_pin;
 
@@ -340,7 +399,7 @@ static void ICACHE_FLASH_ATTR wifiLoadCompletionCB(PropellerConnection *connecti
         msg = "Internal error\r\n";
         break;
     }
-    
+
     if (msg) {
         httpdSendResponse(connection->connData, status < lsFirstError ? 200 : 400, msg, -1);
     }
@@ -353,16 +412,16 @@ LoadStatus ICACHE_FLASH_ATTR loadBuffer(const uint8_t *image, int imageSize)
     if (connection->state != stIdle) {
         return lsBusy;
     }
-    
+
     connection->baudRate = flashConfig.loader_baud_rate;
     connection->finalBaudRate = flashConfig.baud_rate;
     connection->resetPin = flashConfig.reset_pin;
     connection->responseSize = 0;
-    
+
     connection->file = NULL;
     connection->completionCB = loadCompletionCB;
     startLoading(connection, image, imageSize);
-    
+
     return lsOK;
 }
 
@@ -384,10 +443,10 @@ LoadStatus ICACHE_FLASH_ATTR loadFile(char *fileName)
     connection->finalBaudRate = flashConfig.baud_rate;
     connection->resetPin = flashConfig.reset_pin;
     connection->responseSize = 0;
-    
+
     connection->completionCB = loadCompletionCB;
     startLoading(connection, NULL, fileSize);
-    
+
     return lsOK;
 }
 
@@ -403,7 +462,7 @@ static void ICACHE_FLASH_ATTR startLoading(PropellerConnection *connection, cons
 {
     connection->image = image;
     connection->imageSize = imageSize;
-    
+
     // turn off SSCP during loading
     flashConfig.sscp_enable = 0;
 
@@ -445,7 +504,7 @@ static void ICACHE_FLASH_ATTR timerCallback(void *data)
 {
     PropellerConnection *connection = (PropellerConnection *)data;
     int finished;
-    
+
 #ifdef STATE_DEBUG
     DBG("TIMER %s", stateName(connection->state));
 #endif
@@ -504,7 +563,7 @@ static void ICACHE_FLASH_ATTR timerCallback(void *data)
     default:
         break;
     }
-    
+
 #ifdef STATE_DEBUG
     DBG(" -> %s\n", stateName(connection->state));
 #endif
@@ -514,7 +573,7 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
 {
     PropellerConnection *connection = &myConnection;
     int cnt, finished;
-    
+
 #ifdef STATE_DEBUG
     DBG("READ: length %d, state %s", length, stateName(connection->state));
 #endif
@@ -548,7 +607,7 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
         if ((connection->bytesRemaining -= cnt) == 0) {
             switch (connection->state) {
             case stRxHandshakeStart:
-            case stRxHandshake:        
+            case stRxHandshake:
                 if (ploadVerifyHandshakeResponse(connection) != 0) {
                     abortLoading(connection, lsRXHandshakeFailed);
                 }
@@ -597,29 +656,53 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
     default:
         break;
     }
-    
+
 #ifdef STATE_DEBUG
     DBG(" -> %s\n", stateName(connection->state));
 #endif
 }
 
 #ifdef AUTO_LOAD
-int ICACHE_FLASH_ATTR IsAutoLoadEnabled(void)
+int ICACHE_FLASH_ATTR IsAutoLoadEnabled(void) {
+   
+    
+    // Check if Override set by API "LOCK:" command
+    
+    int lockstate = cmds_check_lockstate();
+    
+    // LOCK:x
+    // x=0, neutral-default (does nothing - lock state set by auto-load pin (WX_BOOT pin), as has been the case on last firmware)
+    // x=1, remove lock (overrides lock state on auto-load pin)
+    // x=2, force lock (overrides lock state on auto-load pin)
+    
+    if (lockstate == 1) { return 0; } // No lock
+    else if (lockstate == 2) { return 1; } // Lock ON
+    
+    // Otherwise… Lock according to WX_BOOT pin state (or pwr-button controlled lock/unlock override)
+
+    return IsAutoLoadEnabledOnly(); 
+
+    
+}
+
+int ICACHE_FLASH_ATTR IsAutoLoadEnabledOnly(void)
 {
     int autoLoadButtonState = GPIO_INPUT_GET(AUTO_LOAD_PIN);
     static int lastAutoLoadButtonState = 0;
-    
+
     static uint32_t lastAutoLoadTime = 0;
     uint32_t autoLoadTime = system_get_time() / 1000;
-    
+
     if (lastAutoLoadButtonState == 1 && autoLoadTime - lastAutoLoadTime < 5000) {
-       autoLoadButtonState = 1; // Override if less than 10 seconds ellapsed since last call
+       autoLoadButtonState = 1; // Override if less than 5 seconds ellapsed since last call
     }
-    
+
     lastAutoLoadButtonState = autoLoadButtonState;
     lastAutoLoadTime = autoLoadTime;
     
     return ((autoLoadButtonState == AUTO_LOAD_PIN_STATE) && (GPIO_INPUT_GET(RESET_BUTTON_PIN) != 0));
+
+    
 }
 #endif
 
@@ -630,25 +713,81 @@ static void ICACHE_FLASH_ATTR resetButtonTimerCallback(void *data)
     static int buttonPressCount = 0;
     static uint32_t lastButtonTime;
     int newState = GPIO_INPUT_GET(RESET_BUTTON_PIN);
+
     if (newState != previousState)
         matchingSampleCount = 0;
     else if (matchingSampleCount < RESET_BUTTON_THRESHOLD) {
         if (++matchingSampleCount == RESET_BUTTON_THRESHOLD) {
             if (newState != resetButtonState) {
                 resetButtonState = newState;
+                
                 if (resetButtonState == 0) {
                     uint32_t buttonTime = system_get_time() / 1000;
+                    
                     //os_printf("Reset button press: count %d, last %u, this %u\n", buttonPressCount, (unsigned)lastButtonTime, (unsigned)buttonTime);
-                    if (buttonPressCount == 0 || buttonTime - lastButtonTime > RESET_BUTTON_PRESS_DELTA)
+                    
+                    
+                    /* Feature removed - does not fire reliabily. Timing issue probably.
+                      
+                      
+                    #ifdef AUTO_LOAD
+                    #ifdef AUTO_LOAD_CLEAR_DISPLAY
+
+                    if (buttonPressCount > 0 && (buttonTime - lastButtonTime > RESET_BUTTON_PRESS_DELTA) && (buttonTime - lastButtonTime < RESET_BUTTON_PRESS_DELTA_MAX)) {
+                        
+                        os_printf("Autoload Clear Display = %d\n", buttonPressCount);
+                        
+                        // Pulse IO4 to clear display
+                        GPIO_OUTPUT_SET(AUTO_LOAD_OLED_RESET_PIN, 0); // Set output, low
+                        os_delay_us(100L);
+                        GPIO_DIS_OUTPUT(AUTO_LOAD_OLED_RESET_PIN); // Set IO4 to input mode (release Display RESET pin))
+                        
+                        //os_printf("Autoload Clear Display done\n");
+                        
+                    }
+                    #endif
+                    #endif*/
+                    
+                    
+                    
+                    if (buttonPressCount == 0 || buttonTime - lastButtonTime > RESET_BUTTON_PRESS_DELTA) {
+                        
                         buttonPressCount = 1;
+                        
+                    }
+                                        
+
                     else if (++buttonPressCount == RESET_BUTTON_PRESS_COUNT) {
                         os_printf("Entering STA+AP mode\n");
                         wifi_set_opmode(STATIONAP_MODE);
                         buttonPressCount = 0;
                     }
+                    
+                    
+                    /*#ifdef AUTO_LOAD
+                    #ifdef AUTO_LOAD_CLEAR_DISPLAY
+                    
+                    else if (buttonPressCount == RESET_BUTTON_PRESS_COUNT_OLED) {
+                    
+                        os_printf("Autoload Clear Display at bc = %d\n", buttonPressCount);
+                        
+                        // Pulse IO4 to clear display
+                        GPIO_OUTPUT_SET(AUTO_LOAD_OLED_RESET_PIN, 0); // Set output, low
+                        os_delay_us(10L);
+                        GPIO_DIS_OUTPUT(AUTO_LOAD_OLED_RESET_PIN); // Set IO4 to input mode (release Display RESET pin))
+                        
+                        os_printf("Autoload Clear Display done\n");
+                    }
+                    
+                    #endif
+                    #endif*/
+                    
+                    
                     lastButtonTime = buttonTime;
                 }
+
             }
+
         }
     }
     previousState = newState;

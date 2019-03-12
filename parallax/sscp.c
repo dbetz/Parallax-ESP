@@ -317,12 +317,14 @@ static cmd_def cmds[] = {
 {   "RECV",             cmds_do_recv        },
 {   "CLOSE",            cmds_do_close       },
 {   "RESTART",          cmds_do_restart     },
+{   "SLEEP",            cmds_do_sleep       },
+{   "LOCK",             cmds_do_lock        },
 {   "ARG",              http_do_arg         },
 {   "REPLY",            http_do_reply       },
 {   "CONNECT",          tcp_do_connect      },
 {   "APSCAN",           wifi_do_apscan      },
 {   "APGET",            wifi_do_apget       },
-{   "APSET",            wifi_do_apset       },
+{   "CREGET",           wifi_do_creget      },
 {   "FINFO",            fs_do_finfo         },
 {   "FCOUNT",           fs_do_fcount        },
 {   "FRUN",             fs_do_frun          },
@@ -475,19 +477,22 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
             case SSCP_TKN_RECV:
             case SSCP_TKN_CLOSE:
             case SSCP_TKN_RESTART:
+            case SSCP_TKN_SLEEP:
+            case SSCP_TKN_LOCK:
             case SSCP_TKN_LISTEN:
             case SSCP_TKN_ARG:
             case SSCP_TKN_REPLY:
             case SSCP_TKN_CONNECT:
             case SSCP_TKN_APSCAN:
             case SSCP_TKN_APGET:
-            case SSCP_TKN_APSET:
+            case SSCP_TKN_CREGET:
             case SSCP_TKN_HTTP:
             case SSCP_TKN_WS:
             case SSCP_TKN_TCP:
             case SSCP_TKN_STA:
             case SSCP_TKN_AP:
             case SSCP_TKN_STA_AP:
+            
                 {
                     int length, sep;
                     char *name;
@@ -501,13 +506,15 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
                     case SSCP_TKN_RECV:     name = "RECV";    sep = ':'; break;
                     case SSCP_TKN_CLOSE:    name = "CLOSE";   sep = ':'; break;
                     case SSCP_TKN_RESTART:  name = "RESTART"; sep = ':'; break;
+                    case SSCP_TKN_SLEEP:    name = "SLEEP";   sep = ':'; break;
+                    case SSCP_TKN_LOCK:     name = "LOCK";    sep = ':'; break;
                     case SSCP_TKN_LISTEN:   name = "LISTEN";  sep = ':'; break;
                     case SSCP_TKN_ARG:      name = "ARG";     sep = ':'; break;
                     case SSCP_TKN_REPLY:    name = "REPLY";   sep = ':'; break;
                     case SSCP_TKN_CONNECT:  name = "CONNECT"; sep = ':'; break;
                     case SSCP_TKN_APSCAN:   name = "APSCAN";  sep = ':'; break;
                     case SSCP_TKN_APGET:    name = "APGET";   sep = ':'; break;
-                    case SSCP_TKN_APSET:    name = "APSET";   sep = ':'; break;
+                    case SSCP_TKN_CREGET:   name = "CREGET";  sep = ':'; break;
                     case SSCP_TKN_FINFO:    name = "FINFO";   sep = ':'; break;
                     case SSCP_TKN_FCOUNT:   name = "FCOUNT";  sep = ':'; break;
                     case SSCP_TKN_FRUN:     name = "FRUN";    sep = ':'; break;
@@ -517,6 +524,7 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
                     case SSCP_TKN_STA:      name = "STA";     sep = ','; break;
                     case SSCP_TKN_AP:       name = "AP";      sep = ','; break;
                     case SSCP_TKN_STA_AP:   name = "STA+AP";  sep = ','; break;
+                                                            
                     default:
                         // internal error
                         name = "";
@@ -649,4 +657,3 @@ static void ICACHE_FLASH_ATTR dump(char *tag, uint8_t *buf, int len)
     os_printf("'\n");
 }
 #endif
-

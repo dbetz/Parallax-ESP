@@ -37,8 +37,9 @@ enum {
     SSCP_TKN_STA                = 0xF4,
     SSCP_TKN_AP                 = 0xF3,
     SSCP_TKN_STA_AP             = 0xF2,
-    SSCP_TKN_APSET              = 0xF1,
+    SSCP_TKN_SLEEP              = 0xF1,
     SSCP_TKN_RESTART            = 0xF0,
+    
     
     SSCP_TKN_JOIN               = 0xEF,
     SSCP_TKN_CHECK              = 0xEE,
@@ -57,7 +58,8 @@ enum {
     SSCP_TKN_FINFO              = 0xE1,
     SSCP_TKN_FCOUNT             = 0xE0,
     SSCP_TKN_FRUN               = 0xDF,
-    
+    SSCP_TKN_LOCK               = 0xDD,
+    SSCP_TKN_CREGET             = 0xDA,   
     SSCP_MIN_TOKEN              = 0x80
 };
 
@@ -190,8 +192,12 @@ void cmds_do_send(int argc, char *argv[]);
 void cmds_do_recv(int argc, char *argv[]);
 void cmds_do_close(int argc, char *argv[]);
 void cmds_do_restart(int argc, char *argv[]);
+void cmds_do_sleep(int argc, char *argv[]);
+void cmds_do_lock(int argc, char *argv[]);
 int cgiPropEnableSerialProtocol(HttpdConnData *connData);
 int cgiPropModuleInfo(HttpdConnData *connData);
+int cmds_check_lockstate(void);
+
 
 // from sscp-settings.c
 void cmds_do_get(int argc, char *argv[]);
@@ -218,8 +224,9 @@ void tcp_do_connect(int argc, char *argv[]);
 // from sscp-wifi.c
 void wifi_do_apscan(int argc, char *argv[]);
 void wifi_do_apget(int argc, char *argv[]);
-void wifi_do_apset(int argc, char *argv[]);
+void wifi_do_creget(int argc, char *argv[]);
 int wifi_check_for_events(void);
+int wifiJoinAuto(void);
 
 // from sscp-fs.c
 void fs_do_finfo(int argc, char *argv[]);
