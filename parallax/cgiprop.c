@@ -146,16 +146,19 @@ int ICACHE_FLASH_ATTR cgiPropInit()
 //    GPIO_OUTPUT_SET(flashConfig.reset_pin, 1);
     GPIO_DIS_OUTPUT(flashConfig.reset_pin);
 
+    uint32_t fs_base, fs_size;
+    fs_base = roffs_base_address(&fs_size);
+    
     int ret;
-    if ((ret = roffs_mount(roffs_base_address())) != 0) {
+    if ((ret = roffs_mount(fs_base, fs_size)) != 0) {
         os_printf("Mounting flash filesystem failed: %d\n", ret);
         os_printf("Attempting to format...");
-        if ((ret = roffs_format(roffs_base_address())) != 0) {
+        if ((ret = roffs_format(fs_base)) != 0) {
             os_printf("Error formatting filesystem: %d\n", ret);
             return -1;
         }
         os_printf("Flash filesystem formatted.\n");
-        if ((ret = roffs_mount(roffs_base_address())) != 0) {
+        if ((ret = roffs_mount(fs_base, fs_size)) != 0) {
             os_printf("Mounting newly formatted flash filesystem failed: %d\n", ret);
             return -1;
         }

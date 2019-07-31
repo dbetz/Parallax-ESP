@@ -30,9 +30,14 @@ Connector to let httpd use the espfs filesystem to serve the files in it.
 
 #include "roffsformat.h"
 
+// default filesystem size in flash
+#define FLASH_FILESYSTEM_SIZE_1M    (128*1024)
+#define FLASH_FILESYSTEM_SIZE_2M    (1*1024*1024)
+#define FLASH_FILESYSTEM_SIZE_4M    (3*1024*1024)
+
 // default filesystem base address in flash
-#define FLASH_FILESYSTEM_BASE_1M    (512*1024 - 128*1024)
-#define FLASH_FILESYSTEM_BASE_2M    (1024*1024)
+#define FLASH_FILESYSTEM_BASE_1M    (512*1024-FLASH_FILESYSTEM_SIZE_1M)
+#define FLASH_FILESYSTEM_BASE_2M_4M (1024*1024)
 
 // open file structure
 struct ROFFS_FILE_STRUCT {
@@ -48,30 +53,41 @@ struct ROFFS_FILE_STRUCT {
 
 // initialize to an invalid address to indicate that no filesystem is mounted
 static uint32_t fsData = BAD_FILESYSTEM_BASE;
+static uint32_t fsSize = 0;
+static uint32_t fsTop = 0;
 
 static int readFlash(uint32_t addr, void *buf, int size);
 static int writeFlash(uint32_t addr, void *buf, int size);
 static int updateFlash(uint32_t addr, void *buf, int size);
 
-uint32_t roffs_base_address(void)
+uint32_t roffs_base_address(uint32_t *pSize)
 {
     uint32_t base;
     switch (system_get_flash_size_map()) {
-    case FLASH_SIZE_8M_MAP_512_512:
+    case FLASH_SIZE_8M_MAP_512_512:     // 1MB
         base = FLASH_FILESYSTEM_BASE_1M;
+        *pSize = FLASH_FILESYSTEM_SIZE_1M;
+        os_printf("1MB flash: base %08x, size %d\n", base, *pSize);
         break;
-    case FLASH_SIZE_16M_MAP_512_512:
-    case FLASH_SIZE_32M_MAP_512_512:
-        base = FLASH_FILESYSTEM_BASE_2M;
+    case FLASH_SIZE_16M_MAP_512_512:    // 2MB
+        base = FLASH_FILESYSTEM_BASE_2M_4M;
+        *pSize = FLASH_FILESYSTEM_SIZE_2M;
+        os_printf("2MB flash: base %08x, size %d\n", base, *pSize);
+        break;
+    case FLASH_SIZE_32M_MAP_512_512:    // 4MB
+        base = FLASH_FILESYSTEM_BASE_2M_4M;
+        *pSize = FLASH_FILESYSTEM_SIZE_4M;
+        os_printf("4MB flash: base %08x, size %d\n", base, *pSize);
         break;
     default:
         base = 0;
+        os_printf("Unknown flash size\n");
         break;
     }
     return base;
 }
 
-int ICACHE_FLASH_ATTR roffs_mount(uint32_t flashAddress)
+int ICACHE_FLASH_ATTR roffs_mount(uint32_t flashAddress, uint32_t flashSize)
 {
 	RoFsHeader testHeader;
 
@@ -91,8 +107,11 @@ int ICACHE_FLASH_ATTR roffs_mount(uint32_t flashAddress)
 		return -3;
 
 	// filesystem is mounted successfully
-    DBG("mount: flash filesystem mounted at %08x\n", flashAddress);
+    DBG("mount: flash filesystem mounted at %08x, size %d\n", flashAddress, flashSize);
     fsData = flashAddress;
+    fsSize = flashSize;
+    fsTop = fsData + fsSize;
+    
     return 0;
 }
 
@@ -509,6 +528,11 @@ DBG("create: can't find insertion point\n");
         return NULL;
     }
 
+    if (insertionOffset + 2 * sizeof(RoFsHeader) > fsTop) {
+DBG("write: insufficient space\n");
+        return NULL;
+    }
+    
     if (!(file = (ROFFS_FILE *)os_malloc(sizeof(ROFFS_FILE)))) {
 DBG("create: insufficient memory\n");
         return NULL;
@@ -559,6 +583,10 @@ DBG("create: error reading new file name\n");
 int ICACHE_FLASH_ATTR roffs_write(ROFFS_FILE *file, char *buf, int len)
 {
     int roundedLen = (len + 3) & ~3;
+    if (file->start + file->size + roundedLen > fsTop) {
+DBG("write: insufficient space\n");
+        return -1;
+    }
     if (writeFlash(file->start + file->size, (uint32 *)buf, roundedLen) != SPI_FLASH_RESULT_OK) {
 DBG("write: error writing to file\n");
         return -1;

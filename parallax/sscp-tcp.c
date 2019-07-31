@@ -72,6 +72,7 @@ void ICACHE_FLASH_ATTR tcp_do_connect(int argc, char *argv[])
             sscp_log("TCP: looking up '%s'", argv[1]);
             return;
         default:
+            sscp_close_connection(c);
             sscp_sendResponse("E,%d", SSCP_ERROR_LOOKUP_FAILED);
             return;
         }
@@ -80,6 +81,7 @@ void ICACHE_FLASH_ATTR tcp_do_connect(int argc, char *argv[])
     memcpy(conn->proto.tcp->remote_ip, &ipAddr.addr, 4);
 
     if (espconn_connect(conn) != ESPCONN_OK) {
+        sscp_close_connection(c);
         sscp_sendResponse("E,%d", SSCP_ERROR_CONNECT_FAILED);
         return;
     }

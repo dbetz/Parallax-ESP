@@ -28,8 +28,8 @@ Connector to let httpd use the espfs filesystem to serve the files in it.
 #include "roffsformat.h"
 typedef struct ROFFS_FILE_STRUCT ROFFS_FILE;
 
-uint32_t roffs_base_address(void);
-int roffs_mount(uint32_t flashAddress);
+uint32_t roffs_base_address(uint32_t *pSize);
+int roffs_mount(uint32_t flashAddress, uint32_t flashSize);
 int roffs_format(uint32_t flashAddress);
 int roffs_filecount(int *pCount);
 int roffs_fileinfo(int index, char *fileName, int *pFileSize);

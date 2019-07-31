@@ -117,11 +117,15 @@ int ICACHE_FLASH_ATTR cgiRoffsFormat(HttpdConnData *connData)
 #endif
     if (connData->conn == NULL)
         return HTTPD_CGI_DONE;
-    if (roffs_format(roffs_base_address()) != 0) {
+        
+    uint32_t fs_base, fs_size;
+    fs_base = roffs_base_address(&fs_size);
+    
+    if (roffs_format(fs_base) != 0) {
         httpdSendResponse(connData, 400, "Error formatting filesystem\r\n", -1);
         return HTTPD_CGI_DONE;
     }
-    if (roffs_mount(roffs_base_address()) != 0) {
+    if (roffs_mount(fs_base, fs_size) != 0) {
         httpdSendResponse(connData, 400, "Error mounting newly formatted flash filesystem\r\n", -1);
         return HTTPD_CGI_DONE;
     }
