@@ -146,6 +146,15 @@
               </select>
             </td>
           </tr>
+	  <tr>
+            <td>Hide from Loader:</td>
+            <td>
+              <select id="hide-loader">
+                <option value="0">No</option>
+                <option value="1">Yes</option>
+              </select>
+            </td>
+          </tr>
         </table>
         <h2>Save Settings</h2>
         <p>
@@ -192,6 +201,7 @@
   var pauseTimeCtl;
   var pauseCharsCtl;
   var eventsCtl;
+  var hideLoaderCtl;
 
   function init()
   {
@@ -208,6 +218,7 @@
     pauseTimeCtl = document.getElementById('pause-time');
     pauseCharsCtl = document.getElementById('pause-chars');
     enableEventsCtl = document.getElementById('enable-events');
+    hideLoaderCtl = document.getElementById('hide-loader');
     loadSettings();
   }
 
@@ -266,6 +277,11 @@
       enableEventsCtl.selectedIndex = 0;
     else
       enableEventsCtl.selectedIndex = 1;
+
+    if (getSetting('cmd-loader') == "0")
+      hideLoaderCtl.selectedIndex = 0;
+    else
+      hideLoaderCtl.selectedIndex = 1;
   }
 
   function on_save() {
@@ -283,6 +299,7 @@
     setSetting('cmd-pause-time', pauseTimeCtl.value);
     setSetting('cmd-pause-chars', pauseCharsCtl.value);
     setSetting('cmd-events', enableEventsCtl.value);
+    setSetting('cmd-loader', hideLoaderCtl.value);
     setMessage("Settings saved");
   }
 

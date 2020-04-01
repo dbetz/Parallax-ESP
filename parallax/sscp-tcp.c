@@ -97,6 +97,7 @@ static void ICACHE_FLASH_ATTR dns_cb(const char *name, ip_addr_t *ipaddr, void *
 
     if (!ipaddr) {
         sscp_log("TCP: no IP address found for '%s'", name);
+        sscp_close_connection(c);
         sscp_sendResponse("E,%d", SSCP_ERROR_LOOKUP_FAILED);
         return;
     }
@@ -143,16 +144,21 @@ static void ICACHE_FLASH_ATTR tcp_discon_cb(void *arg)
 
 static void ICACHE_FLASH_ATTR tcp_recv_cb(void *arg, char *data, unsigned short len)
 {
+    int i;
+
     struct espconn *conn = (struct espconn *)arg;
     sscp_connection *c = (sscp_connection *)conn->reverse;
     sscp_log("TCP: %d received %d bytes", c->hdr.handle, len);
     if (!(c->flags & CONNECTION_RXFULL)) {
-        if (len > SSCP_RX_BUFFER_MAX)
-            len = SSCP_RX_BUFFER_MAX;
-        os_memcpy(c->rxBuffer, data, len);
-        c->rxCount = len;
+        i = c->rxCount;
+        if ((len + i)> SSCP_RX_BUFFER_MAX)
+            len = SSCP_RX_BUFFER_MAX - i;
+        os_memcpy(c->rxBuffer + i, data, len);
+        c->rxCount = i + len;
         c->rxIndex = 0;
-        c->flags |= CONNECTION_RXFULL;
+        if (c->rxCount >= SSCP_RX_BUFFER_MAX)
+            c->flags |= CONNECTION_RXFULL;
+        sscp_log("TCP: added %d bytes to buffer", len);
         if (flashConfig.sscp_events)
             send_data_event(c, '!');
     }
@@ -248,7 +254,7 @@ static void ICACHE_FLASH_ATTR recv_handler(sscp_hdr *hdr, int size)
 {
     sscp_connection *connection = (sscp_connection *)hdr;
     
-    if (!(connection->flags & CONNECTION_RXFULL)) {
+    if (connection->rxCount == 0) {
         sscp_sendResponse("S,0");
         return;
     }

@@ -26,6 +26,7 @@ typedef struct {
   uint8_t  sscp_start;
   int8_t   sscp_events;
   int8_t   dbg_enable;
+  int8_t   sscp_loader;
 } FlashConfig;
 
 extern FlashConfig flashConfig;

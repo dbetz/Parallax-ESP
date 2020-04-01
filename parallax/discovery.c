@@ -44,6 +44,9 @@ os_printf("DISCOVER: myAddress %d.%d.%d.%d\n", conn->proto.udp->local_ip[0],
 #endif
 
     // check to see if we already replied to this request
+    if (flashConfig.sscp_loader != 0)
+        return;
+
     rxNext = (uint32_t *)data;
     if (len > sizeof(uint32_t)) {
         if (*rxNext++ != 0) {

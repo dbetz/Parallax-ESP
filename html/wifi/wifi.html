@@ -56,7 +56,7 @@
         if (xhr.readyState==4 && xhr.status>=200 && xhr.status<300) {
           var data=JSON.parse(xhr.responseText);
           currAp=getSelectedEssid();
-          if (data.result.inProgress=="0" && data.result.APs.length>1) {
+          if (data.result.inProgress=="0" && data.result.APs.length>0) {
             $("#aps").innerHTML="";
             for (var i=0; i<data.result.APs.length; i++) {
               if (data.result.APs[i].essid=="" && data.result.APs[i].rssi==0) continue;
