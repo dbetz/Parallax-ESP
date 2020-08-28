@@ -109,7 +109,59 @@ static int getIPAddress(void *data, char *value)
 
 static int setIPAddress(void *data, char *value)
 {
-    return -1;
+    char sep = '&';
+    char *p;
+    struct ip_info info;
+    ip_addr_t dns1;
+    ip_addr_t dns2;
+    char *v;
+
+    p = os_strchr(value, sep);
+    if (p != NULL)
+    {
+      v = value;
+      *p = 0;
+      info.ip.addr = ipaddr_addr(v);
+      *p = sep;
+      v = p + 1;
+      p = os_strchr(v, sep);
+      if (p != NULL)
+      {
+        *p = 0;
+        info.gw.addr = ipaddr_addr(v);
+        *p = sep;
+        v = p + 1;
+        p = os_strchr(v, sep);
+        if (p != NULL)
+        {
+          *p = 0;
+          info.netmask.addr = ipaddr_addr(v);
+          *p = sep;
+          v = p + 1;
+          p = os_strchr(v, sep);
+          if (p != NULL)
+          {
+            *p = 0;
+            dns1.addr = ipaddr_addr(v);
+            *p = sep;
+            v = p + 1;
+            dns2.addr = ipaddr_addr(v);
+          }
+          else
+          {
+            dns1.addr = ipaddr_addr(v);
+          }
+        }
+      }
+      wifi_station_dhcpc_stop();
+      if (dns1.addr != 0)
+        espconn_dns_setserver(0, &dns1);
+      if (dns2.addr != 0)
+        espconn_dns_setserver(1, &dns2);
+      wifi_set_ip_info(STATION_IF, &info);
+      return 0;
+    }
+  return -1;
 }
 
 static int getMACAddress(void *data, char *value)
@@ -360,6 +412,7 @@ static cmd_def vars[] = {
 {   "cmd-pause-chars",  getPauseChars,      setPauseChars,      NULL                            },
 {   "cmd-events",       int8GetHandler,     int8SetHandler,     &flashConfig.sscp_events        },
 {   "cmd-enable",       int8GetHandler,     int8SetHandler,     &flashConfig.sscp_enable        },
+{   "cmd-loader",       int8GetHandler,     int8SetHandler,     &flashConfig.sscp_loader        },
 {   "loader-baud-rate", intGetHandler,      setLoaderBaudrate,  &flashConfig.loader_baud_rate   },
 {   "baud-rate",        intGetHandler,      setBaudrate,        &flashConfig.baud_rate          },
 {   "stop-bits",        int8GetHandler,     setStopBits,        &flashConfig.stop_bits          },

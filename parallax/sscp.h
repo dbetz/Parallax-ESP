@@ -16,7 +16,7 @@
 #define SSCP_PATH_MAX       32
 
 #define SSCP_CONNECTION_MAX 4
-#define SSCP_RX_BUFFER_MAX  1024
+#define SSCP_RX_BUFFER_MAX  4096
 #define SSCP_TX_BUFFER_MAX  1024
 
 #define SSCP_HANDLE_MAX     (SSCP_LISTENER_MAX + SSCP_CONNECTION_MAX)
@@ -58,6 +58,7 @@ enum {
     SSCP_TKN_FINFO              = 0xE1,
     SSCP_TKN_FCOUNT             = 0xE0,
     SSCP_TKN_FRUN               = 0xDF,
+    SSCP_TKN_UDP                = 0xDE,
     SSCP_TKN_LOCK               = 0xDD,
     SSCP_TKN_CREGET             = 0xDA,   
     SSCP_MIN_TOKEN              = 0x80
@@ -92,7 +93,8 @@ enum {
     TYPE_TCP_LISTENER,
     TYPE_HTTP_CONNECTION,
     TYPE_WEBSOCKET_CONNECTION,
-    TYPE_TCP_CONNECTION
+    TYPE_TCP_CONNECTION,
+    TYPE_UDP_CONNECTION
 };
 
 typedef struct {
@@ -152,6 +154,11 @@ struct sscp_connection {
             struct espconn conn;
             esp_tcp tcp;
         } tcp;
+        struct {
+            int state;
+            struct espconn conn;
+            esp_udp udp;
+        } udp;
     } d;
     char rxBuffer[SSCP_RX_BUFFER_MAX];
     int rxCount;
@@ -220,6 +227,9 @@ void sscp_websocketConnect(Websock *ws);
 
 // from sscp-tcp.c
 void tcp_do_connect(int argc, char *argv[]);
+
+// from sscp-udp.c
+void udp_do_connect(int argc, char *argv[]);
 
 // from sscp-wifi.c
 void wifi_do_apscan(int argc, char *argv[]);

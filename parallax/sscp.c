@@ -497,7 +497,7 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
                     int length, sep;
                     char *name;
                     switch (*p++) {
-                    case SSCP_TKN_JOIN:     name = "HTTP";    sep = ':'; break;
+                    case SSCP_TKN_JOIN:     name = "JOIN";    sep = ':'; break;
                     case SSCP_TKN_CHECK:    name = "CHECK";   sep = ':'; break;
                     case SSCP_TKN_SET:      name = "SET";     sep = ':'; break;
                     case SSCP_TKN_POLL:     name = "POLL";    sep = ':'; break;

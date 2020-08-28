@@ -71,7 +71,7 @@ XTENSA_TOOLS_ROOT ?=
 # base directory of the ESP8266 SDK package, absolute
 #SDK_BASE	?= /opt/Espressif/ESP8266_SDK
 #SDK_BASE	?= $(abspath ../esp_iot_sdk_v1.5.2)
-SDK_BASE	?= $(abspath ./esp_iot_sdk_v2.0.0.p1)
+SDK_BASE	?= $(abspath ./ESP8266_NONOS_SDK)
 #SDK_BASE ?= $(abspath ./new/ESP8266_NONOS_SDK)
 
 # Opensdk patches stdint.h when compiled with an internal SDK. If you run into compile problems pertaining to

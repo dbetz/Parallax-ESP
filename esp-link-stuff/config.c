@@ -43,7 +43,8 @@ FlashConfig flashDefault = {
   .sscp_need_pause_cnt  = 2,
   .sscp_pause_time_ms   = 0,
   .sscp_events          = 0,
-  .dbg_enable           = 0
+  .dbg_enable           = 0,
+  .sscp_loader          = 0
 };
 
 typedef union {
