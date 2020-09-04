@@ -4,3 +4,6 @@
 [submodule "ESP8266_NONOS_SDK"]
 	path = ESP8266_NONOS_SDK
 	url = https://github.com/espressif/ESP8266_NONOS_SDK.git
+[submodule "esptool-ck"]
+	path = esptool-ck
+	url = https://github.com/igrr/esptool-ck
