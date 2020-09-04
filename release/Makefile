@@ -10,7 +10,6 @@ release/Parallax-ESP.ota \
 release/blank.bin \
 release/esp_init_data_default_v08.bin
 
-#IMAGES+=release/boot_v1.5.bin
 IMAGES+=release/boot_v1.6.bin
 
 CP=cp

@@ -24,5 +24,5 @@ esptool \
 -bz $FLASH_SIZE \
 -bf $FLASH_SPEED \
 -bm $FLASH_INTERFACE \
--ca $BOOT_LOADER -cf boot_v1.6.bin \
+-ca $BOOT_LOADER -cf boot_v1.7.bin \
 -ca $USER1_IMAGE -cf httpd.user1.bin
