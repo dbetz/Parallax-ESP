@@ -38,6 +38,12 @@ Check out the submodules of Parallax-ESP:
     git submodule init
     git submodule update
 
+Check out the correct ESP SDK version:
+
+    cd ESP8266_NONOS_SDK
+    git checkout v2.2.1
+    cd ..
+
 Build the firmware (from the Parallax-ESP directory) for Parallax WX Module:
 
     make
