@@ -10,7 +10,8 @@ release/Parallax-ESP.ota \
 release/blank.bin \
 release/esp_init_data_default_v08.bin
 
-IMAGES+=release/boot_v1.6.bin
+BOOTBIN=boot_v1.7.bin
+IMAGES+=release/$(BOOTBIN)
 
 CP=cp
 
@@ -32,7 +33,7 @@ staged-files:	release release/release-notes.txt $(IMAGES)
 release/release-notes.txt:	release-notes.txt
 	$(CP) release-notes.txt release
 
-release/boot_v1.%.bin:	$(SDK)/bin/boot_v1.%.bin patch
+release/$(BOOTBIN):	$(SDK)/bin/$(BOOTBIN) patch
 	./patch $< $@ 2M
 
 release/%:	../build/%

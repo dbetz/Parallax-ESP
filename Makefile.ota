@@ -44,7 +44,7 @@ $(3): $(1)
 	$$(Q) cd build; COMPILE=gcc PATH=$$(XTENSA_TOOLS_ROOT):$$(PATH) python $$(APPGEN) $(1:build/%=%) 2 $$(ESP_FLASH_MODE) $$(ESP_FLASH_FREQ_DIV) $$(ESP_FLASH_SIZE_IX) $(4)
 	$$(Q) rm -f eagle.app.v6.*.bin
 	$$(Q) mv build/eagle.app.flash.bin $$@
-	@echo "** user1.bin uses $$$$(stat -c '%s' $$@) bytes of" $$(ESP_FLASH_MAX) "available"
+	@echo "** "$$@ " uses $$$$(stat -c '%s' $$@) bytes of" $$(ESP_FLASH_MAX) "available"
 endef
 
 $(eval $(call genappbin,$(TARGET_OUT_USR1),$$(LD_SCRIPT_USR1),$$(TARGET_BIN_USR1),1))
