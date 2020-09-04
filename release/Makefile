@@ -1,5 +1,4 @@
-#SDK=../../esp_iot_sdk_v1.5.2
-SDK=../esp_iot_sdk_v2.0.0.p1
+SDK=../ESP8266_NONOS_SDK
 
 ZIP=parallax-esp-$(shell date "+%Y-%m-%d-%H%M").zip
 $(info ZIP $(ZIP))
@@ -9,7 +8,7 @@ release/httpd.user1.bin \
 release/httpd.user2.bin \
 release/Parallax-ESP.ota \
 release/blank.bin \
-release/esp_init_data_default.bin
+release/esp_init_data_default_v08.bin
 
 #IMAGES+=release/boot_v1.5.bin
 IMAGES+=release/boot_v1.6.bin
@@ -46,7 +45,7 @@ release/Parallax-ESP.ota:	../build/httpd.ota
 release/blank.bin:	$(SDK)/bin/blank.bin
 	$(CP) $< $@
 
-release/esp_init_data_default.bin:	$(SDK)/bin/esp_init_data_default.bin
+release/esp_init_data_default_v08.bin:	$(SDK)/bin/esp_init_data_default_v08.bin
 	$(CP) $< $@
 
 release:
