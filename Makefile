@@ -62,7 +62,6 @@ endif
 # Output directors to store intermediate compiled files
 # relative to the project directory
 BUILD_BASE	= build
-FW_BASE		= firmware
 
 # Base directory for the compiler. Needs a / at the end; if not set it'll use the tools that are in
 # the PATH.
@@ -232,7 +231,7 @@ endef
 
 .PHONY: all checkdirs clean libesphttpd default-tgt
 
-all: checkdirs $(TARGET_OUT) $(FW_BASE)
+all: checkdirs $(TARGET_OUT)
 
 libesphttpd/Makefile:
 	$(Q) echo "No libesphttpd submodule found. Using git to fetch it..."
@@ -253,10 +252,6 @@ $(BUILD_DIR):
 
 clean:
 	$(Q) make -C libesphttpd clean
-	$(Q) rm -f $(APP_AR)
-	$(Q) rm -f $(TARGET_OUT)
-	$(Q) find $(BUILD_BASE) -type f | xargs rm -f
-	$(Q) rm -rf $(FW_BASE)
+	$(Q) rm -rf $(BUILD_BASE)
 	
-
 $(foreach bdir,$(BUILD_DIR),$(eval $(call compile-objects,$(bdir))))
