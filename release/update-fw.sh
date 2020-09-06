@@ -17,7 +17,7 @@ FLASH_INTERFACE=qio
 BOOT_LOADER=0x000000
 USER1_IMAGE=0x001000
 
-esptool \
+./esptool \
 -cp $PORT \
 -cd $BOARD \
 -cb $BAUD \

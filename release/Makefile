@@ -10,6 +10,9 @@ release/Parallax-ESP.ota \
 release/blank.bin \
 release/esp_init_data_default_v08.bin
 
+TOOLS=\
+release/esptool
+
 BOOTBIN=boot_v1.7.bin
 IMAGES+=release/$(BOOTBIN)
 
@@ -27,7 +30,10 @@ build:
 	$(MAKE) -C .. STA_SSID= STA_PASS= clean
 	$(MAKE) -C .. STA_SSID= STA_PASS=
 
-staged-files:	release release/release-notes.txt $(IMAGES)
+../esptool-ck/esptool:
+	$(MAKE) -C ../esptool-ck
+	
+staged-files:	release release/release-notes.txt $(IMAGES) $(TOOLS)
 	$(CP) flash-all.sh update-fw.sh clear.sh clear-ffs.sh release
 
 release/release-notes.txt:	release-notes.txt
@@ -48,6 +54,9 @@ release/blank.bin:	$(SDK)/bin/blank.bin
 release/esp_init_data_default_v08.bin:	$(SDK)/bin/esp_init_data_default_v08.bin
 	$(CP) $< $@
 
+release/esptool:	../esptool-ck/esptool
+	$(CP) $< $@
+
 release:
 	mkdir -p release
 
@@ -55,4 +64,4 @@ patch:	patch.c
 	cc -o $@ $<
 
 clean:
-	rm -rf release patch esp-httpd.zip
+	rm -rf release patch ../esptool-ck/esptool

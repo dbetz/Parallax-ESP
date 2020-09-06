@@ -37,7 +37,7 @@ fi
 #flash filesystem base
 FFS_BASE=0x100000
 
-esptool \
+./esptool \
 -cp $PORT \
 -cd $BOARD \
 -cb $BAUD \
