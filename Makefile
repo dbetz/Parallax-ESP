@@ -62,6 +62,7 @@ endif
 # Output directors to store intermediate compiled files
 # relative to the project directory
 BUILD_BASE	= build
+FW_BASE         = firmware
 
 # Base directory for the compiler. Needs a / at the end; if not set it'll use the tools that are in
 # the PATH.
@@ -231,7 +232,7 @@ endef
 
 .PHONY: all checkdirs clean libesphttpd default-tgt
 
-all: checkdirs $(TARGET_OUT)
+all: checkdirs $(TARGET_OUT) $(FW_BASE)
 
 libesphttpd/Makefile:
 	$(Q) echo "No libesphttpd submodule found. Using git to fetch it..."
