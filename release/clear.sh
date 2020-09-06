@@ -46,7 +46,7 @@ esptool \
 -bm $FLASH_INTERFACE \
 -ca $USER_SETTINGS1 -cf blank.bin \
 -ca $USER_SETTINGS2 -cf blank.bin \
--ca $WIFI_SETTINGS1 -cf esp_init_data_default.bin \
+-ca $WIFI_SETTINGS1 -cf esp_init_data_default_v08.bin \
 -ca $WIFI_SETTINGS2 -cf blank.bin \
 -ca $WIFI_SETTINGS3 -cf blank.bin \
 -ca $FFS_BASE -cf blank.bin
