@@ -322,6 +322,7 @@ static cmd_def cmds[] = {
 {   "ARG",              http_do_arg         },
 {   "REPLY",            http_do_reply       },
 {   "CONNECT",          tcp_do_connect      },
+{   "UDP",              udp_do_connect      },
 {   "APSCAN",           wifi_do_apscan      },
 {   "APGET",            wifi_do_apget       },
 {   "CREGET",           wifi_do_creget      },
@@ -483,6 +484,7 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
             case SSCP_TKN_ARG:
             case SSCP_TKN_REPLY:
             case SSCP_TKN_CONNECT:
+            case SSCP_TKN_UDP:
             case SSCP_TKN_APSCAN:
             case SSCP_TKN_APGET:
             case SSCP_TKN_CREGET:
@@ -512,6 +514,7 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
                     case SSCP_TKN_ARG:      name = "ARG";     sep = ':'; break;
                     case SSCP_TKN_REPLY:    name = "REPLY";   sep = ':'; break;
                     case SSCP_TKN_CONNECT:  name = "CONNECT"; sep = ':'; break;
+		    case SSCP_TKN_UDP:      name = "UDP";     sep = ':'; break;
                     case SSCP_TKN_APSCAN:   name = "APSCAN";  sep = ':'; break;
                     case SSCP_TKN_APGET:    name = "APGET";   sep = ':'; break;
                     case SSCP_TKN_CREGET:   name = "CREGET";  sep = ':'; break;
