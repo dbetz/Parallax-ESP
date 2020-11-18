@@ -514,7 +514,7 @@ void ICACHE_FLASH_ATTR sscp_filter(char *buf, short len, void (*outOfBand)(void 
                     case SSCP_TKN_ARG:      name = "ARG";     sep = ':'; break;
                     case SSCP_TKN_REPLY:    name = "REPLY";   sep = ':'; break;
                     case SSCP_TKN_CONNECT:  name = "CONNECT"; sep = ':'; break;
-		    case SSCP_TKN_UDP:      name = "UDP";     sep = ':'; break;
+		            case SSCP_TKN_UDP:      name = "UDP";     sep = ':'; break;
                     case SSCP_TKN_APSCAN:   name = "APSCAN";  sep = ':'; break;
                     case SSCP_TKN_APGET:    name = "APGET";   sep = ':'; break;
                     case SSCP_TKN_CREGET:   name = "CREGET";  sep = ':'; break;

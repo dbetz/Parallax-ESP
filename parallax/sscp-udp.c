@@ -3,6 +3,7 @@
 
 	Copyright (c) 2019 Parallax Inc.
     See the file LICENSE.txt for licensing information.
+	
 */
 
 #include "esp8266.h"
@@ -50,13 +51,16 @@ void ICACHE_FLASH_ATTR udp_do_connect(int argc, char *argv[])
 	conn->state = ESPCONN_NONE;
 	conn->proto.udp = &c->d.udp.udp;
 	conn->proto.udp->remote_port = atoi(argv[2]);
+	if (conn->proto.udp->remote_port > 1023) {
+ 	   conn->proto.udp->local_port = conn->proto.udp->remote_port;
+        }
 	conn->reverse = (void *)c;
 
 	espconn_regist_recvcb(conn, udp_recv_cb);
 	espconn_regist_sentcb(conn, udp_sent_cb);
 	
 	if (isdigit((int)*argv[1]))
-		ipAddr.addr = ipaddr_addr(argv[1]);
+	   ipAddr.addr = ipaddr_addr(argv[1]);
 	else {
 		switch (espconn_gethostbyname(conn, argv[1], &ipAddr, dns_cb)) {
 		case ESPCONN_OK:
@@ -124,7 +128,7 @@ static void ICACHE_FLASH_ATTR udp_recv_cb(void *arg, char *data, unsigned short 
 {
 	struct espconn *conn = (struct espconn *)arg;
 	sscp_connection *c = (sscp_connection *)conn->reverse;
-	sscp_log("UDP: %d received %d bytes", c->hdr.handle, len);
+	sscp_log("UDP Handle: %d received %d bytes", c->hdr.handle, len);
 	if (!(c->flags & CONNECTION_RXFULL)) {
 		if (len > SSCP_RX_BUFFER_MAX)
                    len = SSCP_RX_BUFFER_MAX;
@@ -143,6 +147,7 @@ static void ICACHE_FLASH_ATTR udp_sent_cb(void *arg)
 	sscp_connection *c = (sscp_connection *)conn->reverse;
 	c->flags &= ~CONNECTION_TXFULL;
 	c->flags |= CONNECTION_TXDONE;
+	sscp_log("UDP Handle: %d sent %d bytes", c->hdr.handle, c->rxCount);
 	sscp_sendResponse("S,0");
 }
 
