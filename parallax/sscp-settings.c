@@ -413,6 +413,7 @@ static cmd_def vars[] = {
 {   "cmd-events",       int8GetHandler,     int8SetHandler,     &flashConfig.sscp_events        },
 {   "cmd-enable",       int8GetHandler,     int8SetHandler,     &flashConfig.sscp_enable        },
 {   "cmd-loader",       int8GetHandler,     int8SetHandler,     &flashConfig.sscp_loader        },
+{   "cmd-p2-ddloader",  int8GetHandler,     int8SetHandler,     &flashConfig.p2_ddloader_enable },
 {   "loader-baud-rate", intGetHandler,      setLoaderBaudrate,  &flashConfig.loader_baud_rate   },
 {   "baud-rate",        intGetHandler,      setBaudrate,        &flashConfig.baud_rate          },
 {   "stop-bits",        int8GetHandler,     setStopBits,        &flashConfig.stop_bits          },

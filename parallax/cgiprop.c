@@ -91,6 +91,7 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     
     memset(&myConnection, 0, sizeof(PropellerConnection));
     myConnection.state = stIdle;
+    myConnection.p2LoaderMode = 0;
     resetButtonState = 1;
     resetButtonCount = 0;
     
@@ -143,7 +144,7 @@ int ICACHE_FLASH_ATTR cgiPropInit()
 
     os_printf("Using pin %d for reset\n", flashConfig.reset_pin);
     makeGpio(flashConfig.reset_pin);
-//    GPIO_OUTPUT_SET(flashConfig.reset_pin, 1);
+    // GPIO_OUTPUT_SET(flashConfig.reset_pin, 1);
     GPIO_DIS_OUTPUT(flashConfig.reset_pin);
 
     uint32_t fs_base, fs_size;
@@ -257,9 +258,37 @@ int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
     return HTTPD_CGI_MORE;
 }
 
+int ICACHE_FLASH_ATTR cgiPropLoadP1File(HttpdConnData *connData)
+{
+    PropellerConnection *connection = &myConnection;
+    
+    connection->p2LoaderMode = off;
+    connection->st_load_segment_delay = P1_LOAD_SEGMENT_DELAY;
+    connection->st_load_segment_max_size = P1_LOAD_SEGMENT_MAX_SIZE;
+    connection->st_reset_delay_2 = P1_RESET_DELAY_2;
+
+    return cgiPropLoadFile(connData);
+
+}
+
+int ICACHE_FLASH_ATTR cgiPropLoadP2File(HttpdConnData *connData)
+{
+    PropellerConnection *connection = &myConnection;
+    
+    connection->p2LoaderMode = off;
+    connection->st_load_segment_delay = P2_LOAD_SEGMENT_DELAY;
+    connection->st_load_segment_max_size = P2_LOAD_SEGMENT_MAX_SIZE;
+    connection->st_reset_delay_2 = P2_RESET_DELAY_2;
+
+    return cgiPropLoadFile(connData);
+
+}
+
 int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
 {
     PropellerConnection *connection = &myConnection;
+    
+    
     char fileName[128];
     int fileSize = 0;
 
@@ -313,6 +342,7 @@ int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
     startLoading(connection, NULL, fileSize);
 
     return HTTPD_CGI_MORE;
+
 }
 
 int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
@@ -473,7 +503,7 @@ static void ICACHE_FLASH_ATTR startLoading(PropellerConnection *connection, cons
 
     uart0_config(connection->baudRate, ONE_STOP_BIT);
 
-//    makeGpio(connection->resetPin);
+    // makeGpio(connection->resetPin);
     GPIO_OUTPUT_SET(connection->resetPin, 0);
     armTimer(connection, RESET_DELAY_1);
     connection->state = stReset;
@@ -519,7 +549,7 @@ static void ICACHE_FLASH_ATTR timerCallback(void *data)
     case stReset:
 //        GPIO_OUTPUT_SET(connection->resetPin, 1);
         GPIO_DIS_OUTPUT(connection->resetPin);
-        armTimer(connection, RESET_DELAY_2);
+        armTimer(connection, connection->st_reset_delay_2);
         if (connection->image || connection->file) {
             connection->state = stTxHandshake;
             programmingCB = readCallback;
@@ -545,14 +575,18 @@ static void ICACHE_FLASH_ATTR timerCallback(void *data)
                 connection->state = stVerifyChecksum;
             }
             else {
-                armTimer(connection, LOAD_SEGMENT_DELAY);
+                armTimer(connection, connection->st_load_segment_delay);
                 connection->state = stLoadContinue;
             }
         }
         break;
     case stVerifyChecksum:
         if (connection->retriesRemaining > 0) {
-            uart_tx_one_char(UART0, 0xF9);
+            if (connection->p2LoaderMode == dragdrop) 
+                uart_tx_one_char(UART0, 0x20); // Space is ignored by P2 chip- included here for debugging clarity
+            else
+                uart_tx_one_char(UART0, 0xF9);
+            
             armTimer(connection, connection->retryDelay);
             --connection->retriesRemaining;
         }
@@ -575,7 +609,7 @@ static void ICACHE_FLASH_ATTR timerCallback(void *data)
 static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
 {
     PropellerConnection *connection = &myConnection;
-    int cnt, finished;
+    int cnt, finished, breakVal;
 
 #ifdef STATE_DEBUG
     DBG("READ: length %d, state %s", length, stateName(connection->state));
@@ -589,15 +623,23 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
         // just ignore data received when we're not expecting it
         break;
     case stRxHandshakeStart:    // skip junk before handshake
+        
+        if (connection->p2LoaderMode == dragdrop)
+            breakVal = 0x0d; // P2
+        else
+            breakVal = 0xee; // default P1
+                       
         while (length > 0) {
-            if (*buf == 0xEE) {
+            if (*buf == breakVal) {
                 connection->state = stRxHandshake;
                 break;
             }
-            DBG("Ignoring %02x looking for 0xEE\n", *buf);
+            DBG("Ignoring %02x looking for %02x\n", *buf, breakVal);
             --length;
             ++buf;
         }
+      
+
         if (connection->state == stRxHandshakeStart || length == 0)
             break;
         // fall through
@@ -618,19 +660,24 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
                     abortLoading(connection, lsWrongPropellerVersion);
                 }
                 else {
-                    if (ploadLoadImage(connection, ltDownloadAndRun, &finished) == 0) {
-                        if (finished) {
-                            armTimer(connection, connection->retryDelay);
-                            connection->state = stVerifyChecksum;
+                    
+                    
+                        
+                        if (ploadLoadImage(connection, ltDownloadAndRun, &finished) == 0) {
+                            if (finished) {
+                                armTimer(connection, connection->retryDelay);
+                                connection->state = stVerifyChecksum;
+                            }
+                            else {
+                                armTimer(connection, connection->st_load_segment_delay);
+                                connection->state = stLoadContinue;
+                            }
                         }
                         else {
-                            armTimer(connection, LOAD_SEGMENT_DELAY);
-                            connection->state = stLoadContinue;
+                            abortLoading(connection, lsLoadImageFailed);
                         }
-                    }
-                    else {
-                        abortLoading(connection, lsLoadImageFailed);
-                    }
+
+                   
                 }
                 break;
             case stStartAck:

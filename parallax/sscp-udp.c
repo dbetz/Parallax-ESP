@@ -4,7 +4,7 @@
 	Copyright (c) 2019 Parallax Inc.
     See the file LICENSE.txt for licensing information.
 	
-*/
+	*/
 
 #include "esp8266.h"
 #include "sscp.h"
@@ -52,15 +52,16 @@ void ICACHE_FLASH_ATTR udp_do_connect(int argc, char *argv[])
 	conn->proto.udp = &c->d.udp.udp;
 	conn->proto.udp->remote_port = atoi(argv[2]);
 	if (conn->proto.udp->remote_port > 1023) {
- 	   conn->proto.udp->local_port = conn->proto.udp->remote_port;
-        }
+		conn->proto.udp->local_port = conn->proto.udp->remote_port;
+		}
 	conn->reverse = (void *)c;
 
 	espconn_regist_recvcb(conn, udp_recv_cb);
 	espconn_regist_sentcb(conn, udp_sent_cb);
 	
-	if (isdigit((int)*argv[1]))
-	   ipAddr.addr = ipaddr_addr(argv[1]);
+	if (isdigit((int)*argv[1])) {
+		ipAddr.addr = ipaddr_addr(argv[1]);
+	}
 	else {
 		switch (espconn_gethostbyname(conn, argv[1], &ipAddr, dns_cb)) {
 		case ESPCONN_OK:
@@ -224,7 +225,5 @@ static void ICACHE_FLASH_ATTR close_handler(sscp_hdr *hdr)
 	sscp_connection *connection = (sscp_connection *)hdr;
 	struct espconn *conn = &connection->d.udp.conn;
 	if (conn)
-	{
 		espconn_delete(conn);
-	}
 }

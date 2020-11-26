@@ -213,6 +213,7 @@ HttpdBuiltInUrl builtInUrls[]={
     { "/userfs/write", cgiRoffsWriteFile, NULL },
     { "/propeller/load", cgiPropLoad, NULL },
     { "/propeller/load-file", cgiPropLoadFile, NULL },
+    { "/propeller/load-p2-file", cgiPropLoadP2File, NULL },
     { "/propeller/reset", cgiPropReset, NULL },
     { "/wx/module-info", cgiPropModuleInfo, NULL },
     { "/wx/setting", cgiPropSetting, NULL },
@@ -329,12 +330,12 @@ uint32 ICACHE_FLASH_ATTR user_rf_cal_sector_set(void)
 }
 
 #if defined(ESP_SDK_VERSION) && ESP_SDK_VERSION >= 030000
-// Add default function from ESP docs during V3 testing. 
+// Add default function from ESP docs during V3 testing.
 // TODO: Values/Addresses defined in this function may need adjusting
 
 // user_pre_init is required from SDK v3.0.0 onwards
 // It is used to register the parition map with the SDK, primarily to allow
-// the app to use the SDK's OTA capability.  We don't make use of that in 
+// the app to use the SDK's OTA capability.  We don't make use of that in
 // otb-iot and therefore the only info we provide is the mandatory stuff:
 // - RF calibration data
 // - Physical data
@@ -343,7 +344,7 @@ uint32 ICACHE_FLASH_ATTR user_rf_cal_sector_set(void)
 void ICACHE_FLASH_ATTR user_pre_init(void)
 {
   bool rc = false;
-  static const partition_item_t part_table[] = 
+  static const partition_item_t part_table[] =
   {
     {SYSTEM_PARTITION_RF_CAL,
      0x3fb000,
@@ -357,7 +358,7 @@ void ICACHE_FLASH_ATTR user_pre_init(void)
   };
 
   // This isn't an ideal approach but there's not much point moving on unless
-  // or until this has succeeded cos otherwise the SDK will just barf and 
+  // or until this has succeeded cos otherwise the SDK will just barf and
   // refuse to call user_init()
   while (!rc)
   {

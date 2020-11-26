@@ -55,6 +55,13 @@ typedef enum {
     lsChecksumError
 } LoadStatus;
 
+
+typedef enum {
+/* 0 */    off,
+/* 1 */    dragdrop
+
+} P2LoaderMode;
+
 typedef struct PropellerConnection PropellerConnection;
 
 struct PropellerConnection {
@@ -77,6 +84,10 @@ struct PropellerConnection {
     int bytesReceived;
     int bytesRemaining;
     int version;
+    int p2LoaderMode;
+    int st_load_segment_delay;
+    int st_load_segment_max_size;
+    int st_reset_delay_2;
     void (*completionCB)(PropellerConnection *connection, LoadStatus status);
 };
 
@@ -88,13 +99,9 @@ struct PropellerConnection {
 #define RESET_BUTTON_PRESS_COUNT        4
 #define RESET_BUTTON_PRESS_COUNT_OLED   3
 
-
 #define RESET_DELAY_1                   10
-#define RESET_DELAY_2                   100
 #define CALIBRATE_DELAY                 10
 
-#define LOAD_SEGMENT_MAX_SIZE           1024
-#define LOAD_SEGMENT_DELAY              50
 #define RX_HANDSHAKE_TIMEOUT            2000
 #define RX_CHECKSUM_TIMEOUT             250
 #define EEPROM_PROGRAM_TIMEOUT          5000
@@ -109,6 +116,18 @@ int ploadLoadImage(PropellerConnection *connection, LoadType loadType, int *pFin
 int ploadLoadImageContinue(PropellerConnection *connection, LoadType loadType, int *pFinished);
 
 void httpdSendResponse(HttpdConnData *connData, int code, char *message, int len);
+
+// P1
+#define P1_RESET_DELAY_2                   100
+#define P1_LOAD_SEGMENT_DELAY              50
+#define P1_LOAD_SEGMENT_MAX_SIZE           1024
+
+
+// P2
+#define P2_RESET_DELAY_2                35 // 20 // Delay after reset pulse, allowing Propeller to perform the reset (P2 needs 15ms))
+#define P2_LOAD_SEGMENT_DELAY           0
+#define P2_LOAD_SEGMENT_MAX_SIZE        1023 // multiple of 3 for base64 encoding
+
 
 #endif
 

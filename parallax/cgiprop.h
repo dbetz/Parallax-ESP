@@ -14,6 +14,8 @@ int cgiPropInit();
 int cgiPropVersion(HttpdConnData *connData);
 int cgiPropLoad(HttpdConnData *connData);
 int cgiPropLoadFile(HttpdConnData *connData);
+int cgiPropLoadP1File(HttpdConnData *connData);
+int cgiPropLoadP2File(HttpdConnData *connData);
 int cgiPropReset(HttpdConnData *connData);
 
 void httpdSendResponse(HttpdConnData *connData, int code, char *message, int len);
