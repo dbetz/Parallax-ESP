@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>Parallax P2 Loader - Drop P2 .bin binary code file for upload to P2</title>
+        <meta content="width=device-width, initial-scale=1" name="viewport">
+        <link rel="stylesheet" href="dropzone.min.css">
+        <link rel="stylesheet" type="text/css" href="style.css">
+        <script type="text/javascript" src="dropzone.min.js"></script>
+    </head>
+<body>
+    
+<div id="page">
+  <div id="header">
+    <h1>Parallax P2 Drag/Drop Binary Loader</h1>
+  </div>
+    
+  <div id="main" class="clearfix">
+    <div id="content">
+        <h3>Upload binary code files to the Propeller P2.</h3>
+        <p>Tip: If using Parallax WiFi module and the P2 WX Adapter, must set Reset Pin to CTS on the Settings Page!</p>
+        <p>Tip: To program the P2, ensure the P2 dipswitch no.4 (down-arrow) is OFF!</p>
+        <br/>
+      <div style="margin-bottom:20px; width:50%;"><form action="#" class="dropzone" id="myDropzone"></form></div>
+        
+        <h2>P2 Programming Progress</h2>
+        <p>
+          <progress id='progress' min="0" max="100" value="0">0% complete</progress>
+        <p id='message'>&nbsp;</p>
+        </p>
+      
+    
+    </div>
+    <nav id='navigation'>
+      <input type="checkbox" id="resp" /><label for="resp"></label>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="wifi/wifi.html">Networks</a></li>
+        <li><a href="update-ffs.html">Files</a></li>
+        <li id="p2-ddloaderitem" class=""><a href="p2-ddloader.html">P2 Drag/Drop Loader</a></li>
+        <li><a href="settings.html">Settings</a></li>
+        <li><a href="flash/index.html">Firmware</a></li>
+        <li><a href="log.html">Debug Log</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div id="ack"></div>
+  <div id="footer">
+    <a href="https://www.parallax.com">
+      <img src="logo.png">
+    </a>
+  </div>
+</div>
+
+    
+    <script type='text/javascript'>
+    
+    function on_uploadFile() {
+    var input, file, fr;
+    input = document.getElementById('file-input');
+    if (!input)
+      setMessage("Couldn't find the file-input element.");
+    else if (!input.files[0])
+      setMessage("No files selected.");
+    else {
+      uploadFile(input.files[0]);
+      input.value = "";
+    }
+  }
+
+  function on_emptyFilesystem() {
+    emptyFilesystem();
+  }
+  
+  function on_runFile() {
+    runFile("code.bin");
+  }
+
+  function setMessage(msg) {
+    var message = document.getElementById('message');
+    message.innerHTML = msg;
+  };
+
+  function uploadFile(file) {
+
+    var req = new XMLHttpRequest();
+    setMessage("Loading...");
+    req.open('POST', '/userfs/write?file=upcode.bin', true);
+    req.onload = function (e) {
+      if (this.readyState == 4) {
+        if (this.status == 200)
+          runFile("upcode.bin");
+        else
+          setMessage("File Upload Failed!");
+      }
+    };
+
+    var progressBar = document.getElementById('progress');
+    req.upload.onprogress = function (e) {
+      if (e.lengthComputable)
+        progressBar.value = (e.loaded / e.total) * 100;
+    };
+
+    req.send(file);
+  }
+
+  function emptyFilesystem() {
+
+    var req = new XMLHttpRequest();
+    setMessage("Emptying...");
+    req.open('POST', '/userfs/format', true);
+    req.onload = function (e) {
+      if (this.readyState == 4) {
+        if (this.status == 200)
+          setMessage("Filesystem Emptied!");
+        else
+          setMessage("Empty Filesystem Failed!");
+      }
+    };
+
+    var progressBar = document.getElementById('progress');
+    req.upload.onprogress = function (e) {
+      if (e.lengthComputable)
+        progressBar.value = (e.loaded / e.total) * 100;
+    };
+
+    req.send();
+  }
+  
+  function runFile(file) {
+
+    var req = new XMLHttpRequest();
+        
+    setMessage("Running...");
+    req.open('POST', '/propeller/load-p2-file?file=' + file, true);
+    req.onload = function (e) {
+      if (this.readyState == 4) {
+        if (this.status == 200)
+          setMessage("File Executed!");
+        else
+          setMessage("Done!");
+          
+      progressBar.value = 0; 
+      
+      }
+    };
+
+    var progressBar = document.getElementById('progress');
+    req.upload.onprogress = function (e) {
+      if (e.lengthComputable)
+        progressBar.value = (e.loaded / e.total) * 100;
+    };
+    req.send();
+  }
+  
+  Dropzone.options.myDropzone = {
+  
+    
+    
+    init: function() {
+    
+        this.on("addedfile", function(file) { uploadFile(file); });
+        this.on("complete", function(file) { this.removeAllFiles(); }); 
+    }
+    };
+
+  
+  
+</script>
+</body>
+</html>
+

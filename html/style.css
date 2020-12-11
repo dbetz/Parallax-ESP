@@ -1,0 +1,276 @@
+/** HTML and Body Normalizing, excluding IE and non-modern browsers **/
+html{
+  /* Declaration for all normalized fonts on the page */
+  font-family:Calibri,Arial,Helvetica,Tahoma,Segoe,"Segoe UI",Verdana,sans-serif;
+  /* 14px base font size. 16px x .875 = 14px */
+  font-size: 100%; /* 16px */
+  line-height: 1.3em;
+}
+* {
+  box-sizing: border-box;
+}
+button,
+input,
+select,
+textarea,
+progress {
+  font-family: Calibri, Arial, Helvetica, Tahoma, Segoe, "Segoe UI", Verdana, sans-serif;
+}
+body {
+  margin: 0;
+  padding: 0;
+}
+body, h1, h2, h3, h4, h5, h6, h1 img, h2 img, h3 img, h4 img, h5 img, h6 img, em, dfn, del, ins, a, tbody, tfoot, thead, tr, li, label, legend, figure, figcaption {
+  margin: 0;
+  padding: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  margin-bottom: 0.5em;
+}
+h1 {
+  font-size: 1.8em;
+}
+h2 {
+  font-size: 1.416em;
+}
+h3 {
+  font-size: 1.25em;
+}
+h4, h5, h6 {
+  font-size: 1em;
+}
+img {
+  border: 0 none;
+  height: auto;
+  max-width: 100%;
+  width: auto;
+}
+a:link,
+a:visited {
+  color: #4c7897;
+}
+a:hover,
+a:focus {
+  color: #3694D6;
+  text-decoration: underline;
+}
+.clearfix::after {
+  clear: both;
+  content: ".";
+  display: block;
+  height: 0;
+  visibility: hidden;
+}
+
+/** Main Content Block Styling **/
+/* Static */
+body {
+  background-color: #001E42;
+}
+.title {
+  text-align: center;
+}
+#header {
+  height: 3em;
+  /* Some lengths of header titles overflow into content due to static height */
+  overflow: hidden;
+}
+#main {
+  background-color: #EEEEEE;
+}
+#page {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 900px;
+}
+#content > *:first-child {
+  margin-top: 0.5em;
+}
+#content > * {
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+}
+#ack {
+  width: 100%;
+}
+/* Responsive Handling */
+@media all and (min-width: 481px)  {
+  #content {
+    float: left;
+    margin-left: 15%;
+    margin-right: -100%;
+    width: 85%;
+  }
+  #navigation {
+    float: left;
+    margin-left: 0;
+    margin-right: -15%;
+    width: 15%;
+    margin-bottom: 0.5em
+  }
+  #footer {
+    background: #001E42;
+    text-align: right;
+    padding: 10px 0px 0px 0px;
+    margin: 0 auto;
+  }
+}
+@media (max-width: 480px)  {
+  #content {
+    float: left;
+    width: 100%;
+  }
+  #navigation {
+    float: left;
+    width: 100%;
+  }
+  #footer {
+    background: #001E42;
+    text-align: right;
+    padding: 10px 0px 0px 0px;
+    margin: 0 auto;
+  }
+}
+
+/** Navigational Styling **/
+/*  Static */
+nav [type="checkbox"],
+nav label {
+  display: none;
+}
+#navigation ul {
+  margin: 0;
+  padding: 0;
+}
+#navigation li {
+  list-style: outside none none;
+}
+nav li a:link,
+nav li a:visited {
+  color: #000;
+  background:#95afc0;
+  text-decoration: none;
+}
+nav li a:hover,
+nav li a:focus {
+  background: #4c7897;
+}
+/* Responsive Handling */
+@media all and (min-width: 481px) {
+  nav li a {
+    display: block;
+    line-height: 2em;
+    text-decoration: none;
+    border: 1px solid #777;
+    margin: 0.5em 2px 0px;
+    border-radius: 5px;
+    font-weight: bold;
+    width: 100%;
+    padding: 0px 5px;
+  }
+}
+@media (max-width: 480px)  {
+  nav ul {
+    display: none;
+    position: absolute;
+    top: 3em;
+    right: 0;
+    background: #001E42;
+    width: 100%;
+    box-shadow: 0 3px 20px #000;
+  }
+  nav label {
+    display: block;
+    background: #001E42;
+    width: 2.7em;
+    height: 3em;
+    cursor: pointer;
+    position: absolute;
+    left: 0.5em;
+    top: 0px;
+  }
+  nav label:after{
+    content:'';
+    display: block;
+    width: 2em;
+    height: 5px;
+    background: #95afc0;
+    margin: 7px 5px;
+    box-shadow: 0px 10px 0px #95afc0, 0px 20px 0px #95afc0;
+  }
+  nav [type="checkbox"]:checked ~ ul {
+    display: block;
+    z-index: 9999;
+    position: absolute;
+  }
+  nav li a {
+    display: inline-block;
+    width: 50%;
+    min-width: 100px;
+    margin: 0.3em;
+    padding: 0.2em;
+    font-weight: bold;
+    border-radius: 5px;
+    text-align: left;
+  }
+}
+
+/** Content and Page styles **/
+/*  Static */
+#header h1 {
+  background: radial-gradient(black 15%, transparent 16%) 0 0, radial-gradient(black 15%, transparent 16%) 8px 8px, radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 0 1px, radial-gradient(rgba(255,255,255,.1) 15%, transparent 20%) 8px 9px;
+  background-color:#282828;
+  background-size:16px 16px;
+  line-height: 1.64em;
+  color:#fff;
+  padding-left: 2.5em;
+  margin: 0;
+}
+#settings td {
+  text-align: left;
+  height: 35px;
+  overflow: hidden;
+}
+progress {
+  padding: 0;
+  border: 1px solid #000;
+  height: 20px;
+  width: 200px;
+  background-color: #DDD;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.10) inset;
+  border-radius: 5px;
+}
+progress[value]::-webkit-progress-value {
+  background-image:
+  -webkit-linear-gradient(-45deg, transparent 33%, rgba(0, 0, 0, .1) 33%, rgba(0,0, 0, .1) 66%, transparent 66%), -webkit-linear-gradient(left, #001E42, #E9FE04);
+  border-radius: 5px;
+  background-size: 35px 20px, 100% 100%, 100% 100%;
+}
+progress[value]::-moz-progress-bar {
+  background-image:
+  -moz-linear-gradient(135deg, transparent 33%, rgba(0, 0, 0, 0.1) 33%, rgba(0, 0, 0, 0.1) 66%, transparent 66%),
+  -moz-linear-gradient(left, #001E42, #E9FE04);
+  border-radius: 5px;
+  background-size: 35px 20px, 100% 100%, 100% 100%;
+}
+#ack > p {
+  display: block;
+  background: #4c7897;
+  margin: 0px;
+  font-style: italic;
+  color: #DDD;
+}
+/* Responsive Handling */
+@media all and (min-width: 481px) {
+  #ack > p {
+    padding: 0.5em 15%;
+  }
+}
+@media (max-width: 480px) {
+  #ack > p {
+    padding: 0.5em;
+  }
+}
+
+.nodisplay { display: none !important; }
+

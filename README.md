@@ -1,5 +1,36 @@
 # Parallax-ESP README #
 
+# Work-In-Progress programming details
+
+Compile the binaries from the root of the Parallax-ESP folder
+
+    make clean
+    make
+
+
+Run these commands to program the Parallax WiFi module with 4MB flash
+Note that the Makefile is set for 4096 flash size, and 1024 image size
+Tip: If experimenting with 2048 image size, then adjust the second command : 4MB becomes 4MB-c1
+
+1. 
+
+sudo python -m esptool --baud 921600 --port /dev/ttyUSB0 --before no_reset --after no_reset erase_flash
+
+2.
+
+sudo python -m esptool --baud 921600 --port /dev/ttyUSB0 \
+--before no_reset --after no_reset write_flash \
+--flash_size 4MB --flash_freq 80m --flash_mode qio \
+0x000000 resources/boot_v1.7.bin \
+0x001000 build/httpd.user1.bin \
+0x3fc000 resources/esp_init_data_default_v08.bin \
+0x3fe000 resources/blank.bin
+    
+
+
+
+# Original README.md content continues...
+
 This project contains firmware for the Parallax WX Wi-Fi module. The code is based on
 the esp-httpd project by by Jeroen Domburg with some features added from the esp-link
 project by Thorsten von Eicken.

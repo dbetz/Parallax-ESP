@@ -44,7 +44,7 @@ VERSION=$(GIT_VERSION) ($(shell date "+%Y-%m-%d %H:%M:%S")$(GIT_COMMIT_HASH_SUFF
 $(info VERSION $(VERSION))
 
 #SPI flash size, in K
-ESP_SPI_FLASH_SIZE_K=2048
+ESP_SPI_FLASH_SIZE_K=4096
 #Amount of the flash to use for the image(s)
 ESP_SPI_IMAGE_SIZE_K=1024
 #0: QIO, 1: QOUT, 2: DIO, 3: DOUT
@@ -72,6 +72,7 @@ XTENSA_TOOLS_ROOT ?=
 #SDK_BASE	?= /opt/Espressif/ESP8266_SDK
 #SDK_BASE	?= $(abspath ../esp_iot_sdk_v1.5.2)
 SDK_BASE	?= $(abspath ./ESP8266_NONOS_SDK)
+#SDK_BASE	?= $(abspath ./esp_iot_sdk_v2.0.0.p1)
 #SDK_BASE ?= $(abspath ./new/ESP8266_NONOS_SDK)
 
 # Opensdk patches stdint.h when compiled with an internal SDK. If you run into compile problems pertaining to

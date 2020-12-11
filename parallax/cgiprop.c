@@ -275,7 +275,7 @@ int ICACHE_FLASH_ATTR cgiPropLoadP2File(HttpdConnData *connData)
 {
     PropellerConnection *connection = &myConnection;
     
-    connection->p2LoaderMode = off;
+    connection->p2LoaderMode = dragdrop;
     connection->st_load_segment_delay = P2_LOAD_SEGMENT_DELAY;
     connection->st_load_segment_max_size = P2_LOAD_SEGMENT_MAX_SIZE;
     connection->st_reset_delay_2 = P2_RESET_DELAY_2;
@@ -337,6 +337,7 @@ int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
         connection->resetPin = flashConfig.reset_pin;
 
     DBG("load-file: file %s, size %d, baud-rate %d, final-baud-rate %d, reset-pin %d\n", fileName, fileSize, connection->baudRate, connection->finalBaudRate, connection->resetPin);
+    httpd_printf("p2-load-file: file %s, size %d, baud-rate %d, final-baud-rate %d, reset-pin %d\n", fileName, fileSize, connection->baudRate, connection->finalBaudRate, connection->resetPin);
 
     connection->completionCB = wifiLoadCompletionCB;
     startLoading(connection, NULL, fileSize);
@@ -582,11 +583,9 @@ static void ICACHE_FLASH_ATTR timerCallback(void *data)
         break;
     case stVerifyChecksum:
         if (connection->retriesRemaining > 0) {
-            if (connection->p2LoaderMode == dragdrop) 
-                uart_tx_one_char(UART0, 0x20); // Space is ignored by P2 chip- included here for debugging clarity
-            else
-                uart_tx_one_char(UART0, 0xF9);
             
+            uart_tx_one_char(UART0, (connection->p2LoaderMode == dragdrop) ? 0x20 : 0xF9); // Space is ignored by P2 chip- included here for debugging clarity
+                        
             armTimer(connection, connection->retryDelay);
             --connection->retriesRemaining;
         }
@@ -609,7 +608,7 @@ static void ICACHE_FLASH_ATTR timerCallback(void *data)
 static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
 {
     PropellerConnection *connection = &myConnection;
-    int cnt, finished, breakVal;
+    int cnt, finished;
 
 #ifdef STATE_DEBUG
     DBG("READ: length %d, state %s", length, stateName(connection->state));
@@ -624,22 +623,15 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
         break;
     case stRxHandshakeStart:    // skip junk before handshake
         
-        if (connection->p2LoaderMode == dragdrop)
-            breakVal = 0x0d; // P2
-        else
-            breakVal = 0xee; // default P1
-                       
         while (length > 0) {
-            if (*buf == breakVal) {
+            if (*buf == (connection->p2LoaderMode == dragdrop)? 0x0d : 0xee) { // 0x0d = P2, 0xee = P1
                 connection->state = stRxHandshake;
                 break;
             }
-            DBG("Ignoring %02x looking for %02x\n", *buf, breakVal);
+            //httpd_printf("Ignoring %02x looking for %02x\n", *buf, (connection->p2LoaderMode == dragdrop)? 0x0d : 0xee);
             --length;
             ++buf;
-        }
-      
-
+        }      
         if (connection->state == stRxHandshakeStart || length == 0)
             break;
         // fall through
@@ -660,9 +652,6 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
                     abortLoading(connection, lsWrongPropellerVersion);
                 }
                 else {
-                    
-                    
-                        
                         if (ploadLoadImage(connection, ltDownloadAndRun, &finished) == 0) {
                             if (finished) {
                                 armTimer(connection, connection->retryDelay);
@@ -676,8 +665,6 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
                         else {
                             abortLoading(connection, lsLoadImageFailed);
                         }
-
-                   
                 }
                 break;
             case stStartAck:

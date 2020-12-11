@@ -10,6 +10,9 @@
 #include "proploader.h"
 #include "uart.h"
 
+#define P2LOADER_DEBUG
+          
+
 // Propeller Download Stream Translator array.  Index into this array using the "Binary Value" (usually 5 bits) to translate,
 // the incoming bit size (again, usually 5), and the desired data element to retrieve (encoding = translation, bitCount = bit count
 // actually translated.
@@ -186,7 +189,7 @@ static const uint8_t encoding_table[] = {
     'w', 'x', 'y', 'z', '0', '1', '2', '3',
     '4', '5', '6', '7', '8', '9', '+', '/' };
 
-static int base64_encode(const unsigned char *data, int input_length, char *encoded_data, int output_length) {
+static int ICACHE_FLASH_ATTR base64_encode(const unsigned char *data, int input_length, char *encoded_data, int output_length) {
 
     int i,j;
     
@@ -258,11 +261,17 @@ int ICACHE_FLASH_ATTR ploadVerifyHandshakeResponse(PropellerConnection *connecti
         if (memcmp(buf, p2_rxHandshake, sizeof(p2_rxHandshake)) != 0)
             return -1;
 
+        #ifdef P2LOADER_DEBUG
+            httpd_printf("P2: HandshakeRX-OK\n");
+        #endif
+
         /* verify the hardware version */
-        version = 0;
-        for (i = sizeof(p2_rxHandshake); i < sizeof(p2_rxHandshake) + 4; ++i)
-            version = ((version >> 2) & 0x3F) | ((buf[i] & 0x01) << 6) | ((buf[i] & 0x20) << 2);
+        version = (buf[11] == 71) ? 1 : 0; // Should be "G" 0x47 for RevB silicon. 1 is OK, 0 for mismatch
         connection->version = version;
+        
+        #ifdef P2LOADER_DEBUG
+            httpd_printf("P2: HardwareVer-OK\n");
+        #endif
 
 
     }
@@ -270,6 +279,10 @@ int ICACHE_FLASH_ATTR ploadVerifyHandshakeResponse(PropellerConnection *connecti
     else {
 
         // P1
+        
+        #ifdef P2LOADER_DEBUG
+            httpd_printf("P1: Handshake !WARN!\n");
+        #endif
 
         /* verify the rx handshake */
         if (memcmp(buf, rxHandshake, sizeof(rxHandshake)) != 0)
@@ -321,6 +334,10 @@ int ICACHE_FLASH_ATTR ploadLoadImageContinue(PropellerConnection *connection, Lo
 static int ICACHE_FLASH_ATTR startLoad(PropellerConnection *connection, LoadType loadType, int imageSize)
 {
     if (connection->p2LoaderMode == dragdrop) { // P2
+        
+        #ifdef P2LOADER_DEBUG
+            httpd_printf("P2: startLoad\n");
+        #endif
 
         switch (loadType) {
             case ltShutdown:
@@ -346,6 +363,10 @@ static int ICACHE_FLASH_ATTR startLoad(PropellerConnection *connection, LoadType
 
     }
     else { // P1
+        
+        #ifdef P2LOADER_DEBUG
+            httpd_printf("P1: startLoad - !WARNING!\n");
+        #endif
 
         switch (loadType) {
                 case ltShutdown:
@@ -409,6 +430,10 @@ static int ICACHE_FLASH_ATTR encodeBuffer(PropellerConnection *connection, const
 
     if (connection->p2LoaderMode == dragdrop) { // P2
         
+        #ifdef P2LOADER_DEBUG
+            httpd_printf("P2: encodeBuffer\n");
+        #endif
+        
         int enclen = 4 * ((size + 2) / 3);
         char *enc = (char*)malloc(enclen);
         
@@ -432,6 +457,10 @@ static int ICACHE_FLASH_ATTR encodeBuffer(PropellerConnection *connection, const
         
            
     } else { // P1 
+        
+        #ifdef P2LOADER_DEBUG
+            httpd_printf("P1: encodeBuffer\n");
+        #endif
     
         uint32_t *p = (uint32_t *)buffer;
         while ((size -= sizeof(uint32_t)) >= 0) {
@@ -454,8 +483,19 @@ static void ICACHE_FLASH_ATTR finishLoad(PropellerConnection *connection)
         uart_tx_one_char(UART0, 0x20);
         uart_tx_one_char(UART0, 0x7e); // Send tilde for P2 code load without checksum
         uart_tx_one_char(UART0, 0x0d);
+        
+        #ifdef P2LOADER_DEBUG
+            httpd_printf("P2: finishLoad Done\n");
+        #endif
     
+    } 
+    
+    #ifdef P2LOADER_DEBUG
+    else {
+        httpd_printf("P1: finishLoad !WARN!\n");
     }
+    #endif
+   
 }
 
 static void ICACHE_FLASH_ATTR txLong(uint32_t x)

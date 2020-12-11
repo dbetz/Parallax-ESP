@@ -212,7 +212,7 @@ HttpdBuiltInUrl builtInUrls[]={
     { "/userfs/format", cgiRoffsFormat, NULL },
     { "/userfs/write", cgiRoffsWriteFile, NULL },
     { "/propeller/load", cgiPropLoad, NULL },
-    { "/propeller/load-file", cgiPropLoadFile, NULL },
+    { "/propeller/load-file", cgiPropLoadP1File, NULL },
     { "/propeller/load-p2-file", cgiPropLoadP2File, NULL },
     { "/propeller/reset", cgiPropReset, NULL },
     { "/wx/module-info", cgiPropModuleInfo, NULL },

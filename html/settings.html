@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Parallax Wi-Fi Module Configuration - Update Settings</title>
+  <meta content="width=device-width, initial-scale=1" name="viewport">
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+<div id="page">
+  <div id="header">
+    <h1>Settings</h1>
+  </div>
+  <div id="main" class="clearfix">
+    <div id="content">
+      <form action='#' onsubmit="return false;">
+        <table id="settings">
+          <tr>
+            <td>Module name:</td>
+            <td><input id="module-name" type="text"></td>
+          </tr>
+          <tr>
+            <td>Loader Baud Rate:</td>
+            <td>
+              <select id="loader-baud-rate">
+                <option value="1200">1200</option>
+                <option value="4800">4800</option>
+                <option value="9600">9600</option>
+                <option value="19200">19200</option>
+                <option value="38400">38400</option>
+                <option value="57600">57600</option>
+                <option value="74880">74880</option>
+                <option value="115200">115200</option>
+                <option value="230400">230400</option>
+                <option value="460800">460800</option>
+                <option value="921600">921600</option>
+                <option value="2000000">2000000</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Reset Pin:</td>
+            <td>
+              <select id="reset-pin">
+                <option value="12">DTR (GPIO12)</option>
+                <option value="13">CTS (GPIO13)</option>
+                <option value="15">RTS (GPIO15)</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Communications Baud Rate:</td>
+            <td>
+              <select id="baud-rate">
+                <option value="1200">1200</option>
+                <option value="4800">4800</option>
+                <option value="9600">9600</option>
+                <option value="19200">19200</option>
+                <option value="38400">38400</option>
+                <option value="57600">57600</option>
+                <option value="74880">74880</option>
+                <option value="115200">115200</option>
+                <option value="230400">230400</option>
+                <option value="460800">460800</option>
+                <option value="921600">921600</option>
+                <option value="2000000">2000000</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Communications Stop Bits:</td>
+            <td>
+              <select id="stop-bits">
+                <option value="1">1 Stop Bit</option>
+                <option value="2">1.5 Stop Bits</option>
+                <option value="3">2 Stop Bits</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Debug Baud Rate:</td>
+            <td>
+              <select id="dbg-baud-rate">
+                <option value="1200">1200</option>
+                <option value="4800">4800</option>
+                <option value="9600">9600</option>
+                <option value="19200">19200</option>
+                <option value="38400">38400</option>
+                <option value="57600">57600</option>
+                <option value="74880">74880</option>
+                <option value="115200">115200</option>
+                <option value="230400">230400</option>
+                <option value="460800">460800</option>
+                <option value="921600">921600</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Debug Stop Bits:</td>
+            <td>
+              <select id="dbg-stop-bits">
+                <option value="1">1 Stop Bit</option>
+                <option value="2">1.5 Stop Bits</option>
+                <option value="3">2 Stop Bits</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Debug Output:</td>
+            <td>
+              <select id="enable-debug">
+                <option value="0">Disabled</option>
+                <option value="1">Enabled</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Serial Commands (aka CMD):</td>
+            <td>
+              <select id="enable-serial-protocol">
+                <option value="0">Disabled</option>
+                <option value="1">Enabled</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Command Start Character:</td>
+            <td>
+              <select id="start-char">
+                <option value="254">0xFE</option>
+                <option value="36">'$'</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Command Pause Time in MS:</td>
+            <td><input id="pause-time" type="text"></td>
+          </tr>
+          <tr>
+            <td>Command Pause After Characters:</td>
+            <td><input id="pause-chars" type="text"></td>
+          </tr>
+          <tr>
+            <td>Command Events:</td>
+            <td>
+              <select id="enable-events">
+                <option value="0">Disabled</option>
+                <option value="1">Enabled</option>
+              </select>
+            </td>
+          </tr>
+	        <tr>
+            <td>Hide from Loader:</td>
+            <td>
+              <select id="hide-loader">
+                <option value="0">No</option>
+                <option value="1">Yes</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>P2 Drag/Drop Loader:</td>
+            <td>
+              <select id="p2-drag-drop-loader" onchange="on_p2_ddloader_change();">
+                <option value="0">Disabled</option>
+                <option value="1">Enabled</option>
+              </select>
+            </td>
+          </tr>
+        </table>
+        <br />
+        <h2>Save Settings</h2>
+        <p>
+          <input type='button' value='Save' onclick='on_save();'>
+          <input type='button' value='Save to Flash' onclick='on_saveToFlash();'>
+          <input type='button' value='Restore from Flash' onclick='on_restore();'>
+          <input type='button' value='Restore Defaults' onclick='on_restoreDefaults();'>
+        </p>
+      </form>
+      <p id='message'></p>
+    </div>
+    <nav id='navigation'>
+      <input type="checkbox" id="resp" /><label for="resp"></label>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="wifi/wifi.html">Networks</a></li>
+        <li><a href="update-ffs.html">Files</a></li>
+        <li id="p2-ddloaderitem" class="nodisplay"><a href="p2-ddloader.html">P2 Drag/Drop Loader</a></li>
+        <li><a href="settings.html">Settings</a></li>
+        <li><a href="flash/index.html">Firmware</a></li>
+        <li><a href="log.html">Debug Log</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div id="ack"></div>
+  <div id="footer">
+    <a href="https://www.parallax.com">
+      <img src="logo.png">
+    </a>
+  </div>
+</div>
+
+<script type='text/javascript'>
+
+  var moduleNameCtl;
+  var loaderBaudRateCtl;
+  var baudRateCtl;
+  var resetPinCtl;
+  var stopBitsCtl;
+  var dbgBaudRateCtl;
+  var dbgStopBitsCtl;
+  var dbgEnableCtl;
+  var enableSerialProtocolCtl;
+  var startCharCtl;
+  var pauseTimeCtl;
+  var pauseCharsCtl;
+  var eventsCtl;
+  var hideLoaderCtl;
+  var p2DragDropCtl;
+
+  function init()
+  {
+    moduleNameCtl = document.getElementById('module-name');
+    loaderBaudRateCtl = document.getElementById('loader-baud-rate');
+    resetPinCtl = document.getElementById('reset-pin');
+    baudRateCtl = document.getElementById('baud-rate');
+    stopBitsCtl = document.getElementById('stop-bits');
+    dbgBaudRateCtl = document.getElementById('dbg-baud-rate');
+    dbgStopBitsCtl = document.getElementById('dbg-stop-bits');
+    dbgEnableCtl = document.getElementById('enable-debug');
+    enableSerialProtocolCtl = document.getElementById('enable-serial-protocol');
+    startCharCtl = document.getElementById('start-char');
+    pauseTimeCtl = document.getElementById('pause-time');
+    pauseCharsCtl = document.getElementById('pause-chars');
+    enableEventsCtl = document.getElementById('enable-events');
+    hideLoaderCtl = document.getElementById('hide-loader');
+    p2DragDropCtl = document.getElementById('p2-drag-drop-loader');
+    loadSettings();
+  }
+
+  function loadSettings() {
+    var loaderBaudRate, resetPin, baudRate, dbgBaudRate;
+
+    moduleNameCtl.value = getSetting('module-name');
+
+    loaderBaudRate = getSetting('loader-baud-rate');
+    for (var i = 0; i < loaderBaudRateCtl.length; ++i)
+      if (loaderBaudRate == loaderBaudRateCtl[i].value) {
+        loaderBaudRateCtl.selectedIndex = i;
+        break;
+      }
+
+    resetPin = getSetting('reset-pin');
+    for (var i = 0; i < resetPinCtl.length; ++i)
+      if (resetPin == resetPinCtl[i].value) {
+        resetPinCtl.selectedIndex = i;
+        break;
+      }
+
+    baudRate = getSetting('baud-rate');
+    for (var i = 0; i < baudRateCtl.length; ++i)
+      if (baudRate == baudRateCtl[i].value) {
+        baudRateCtl.selectedIndex = i;
+        break;
+      }
+    stopBitsCtl.selectedIndex = getSetting('stop-bits') - 1;
+
+    dbgBaudRate = getSetting('dbg-baud-rate');
+    for (var i = 0; i < dbgBaudRateCtl.length; ++i)
+      if (dbgBaudRate == dbgBaudRateCtl[i].value) {
+        dbgBaudRateCtl.selectedIndex = i;
+        break;
+      }
+    dbgStopBitsCtl.selectedIndex = getSetting('debug-stop-bits') - 1;
+    if (getSetting('dbg-enable') == "0")
+      dbgEnableCtl.selectedIndex = 0;
+    else
+      dbgEnableCtl.selectedIndex = 1;
+
+    if (getSetting('cmd-enable') == "0")
+      enableSerialProtocolCtl.selectedIndex = 0;
+    else
+      enableSerialProtocolCtl.selectedIndex = 1;
+    if (getSetting('cmd-start-char') == 254)
+      startCharCtl.selectedIndex = 0;
+    else
+      startCharCtl.selectedIndex = 1;
+
+    pauseTimeCtl.value = getSetting('cmd-pause-time');
+    pauseCharsCtl.value = getSetting('cmd-pause-chars');
+
+    if (getSetting('cmd-events') == "0")
+      enableEventsCtl.selectedIndex = 0;
+    else
+      enableEventsCtl.selectedIndex = 1;
+
+    if (getSetting('cmd-loader') == "0")
+      hideLoaderCtl.selectedIndex = 0;
+    else
+      hideLoaderCtl.selectedIndex = 1;
+
+    if (getSetting('cmd-p2-ddloader') == "0") {
+      p2DragDropCtl.selectedIndex = 0;
+      document.getElementById("p2-ddloaderitem").className = "nodisplay"; }
+    else {
+      p2DragDropCtl.selectedIndex = 1; 
+      document.getElementById("p2-ddloaderitem").className = ""; } 
+  }
+
+  function on_p2_ddloader_change() {
+
+    if (document.getElementById("p2-drag-drop-loader").value == "0") 
+      document.getElementById("p2-ddloaderitem").className = "nodisplay"; 
+    else 
+      document.getElementById("p2-ddloaderitem").className = "";  
+
+  }
+
+  function on_save() {
+    setMessage("Saving...");
+    setSetting('module-name', moduleNameCtl.value);
+    setSetting('loader-baud-rate', loaderBaudRateCtl.value);
+    setSetting('reset-pin', resetPinCtl.value);
+    setSetting('baud-rate', baudRateCtl.value);
+    setSetting('stop-bits', stopBitsCtl.value);
+    setSetting('dbg-baud-rate', dbgBaudRateCtl.value);
+    setSetting('dbg-stop-bits', dbgStopBitsCtl.value);
+    setSetting('dbg-enable', dbgEnableCtl.value);
+    setSetting('cmd-enable', enableSerialProtocolCtl.value);
+    setSetting('cmd-start-char', startCharCtl.value);
+    setSetting('cmd-pause-time', pauseTimeCtl.value);
+    setSetting('cmd-pause-chars', pauseCharsCtl.value);
+    setSetting('cmd-events', enableEventsCtl.value);
+    setSetting('cmd-loader', hideLoaderCtl.value);
+    setSetting('cmd-p2-ddloader', p2DragDropCtl.value);
+    setMessage("Settings saved");
+  }
+
+  function on_saveToFlash() {
+    on_save();
+    var req = new XMLHttpRequest();
+    req.open('POST', '/wx/save-settings', false);
+    req.send();
+    setMessage("Settings saved to flash");
+  }
+
+  function on_restore() {
+    setMessage("Restoring settings...");
+    var req = new XMLHttpRequest();
+    req.open('POST', '/wx/restore-settings', false);
+    req.send();
+    loadSettings();
+    setMessage("Settings restored from flash");
+  }
+
+  function on_restoreDefaults() {
+    setMessage("Restoring default settings...");
+    var req = new XMLHttpRequest();
+    req.open('POST', '/wx/restore-default-settings', false);
+    req.send();
+    loadSettings();
+    setMessage("Default settings restored");
+  }
+
+  function getSetting(name) {
+    var req = new XMLHttpRequest();
+    var url = '/wx/setting?name=' + name;
+    req.open('GET', url, false);
+    req.send();
+    return req.responseText;
+  }
+
+  function setSetting(name, value) {
+    var req = new XMLHttpRequest();
+    var url = '/wx/setting?name=' + name + '&value=' + value;
+    req.open('POST', url, false);
+    req.send();
+  }
+
+  function setMessage(msg) {
+    var message = document.getElementById('message');
+    message.innerHTML = msg;
+  }
+
+  window.addEventListener("load", init, false);
+
+</script>
+</body>
+</html>
+
