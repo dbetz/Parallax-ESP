@@ -380,6 +380,9 @@ int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
         connection->resetPin = flashConfig.reset_pin;
 
     DBG("reset: reset-pin %d\n", connection->resetPin);
+    
+    if (!getIntArg(connData, "reset-delay", &connection->st_reset_delay_2))
+        connection->st_reset_delay_2 = P1_RESET_DELAY_2; // default to P1 reset delay
 
     connection->image = NULL;
 
