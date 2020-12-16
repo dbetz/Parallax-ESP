@@ -679,6 +679,7 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
         }
         break;
     case stVerifyChecksum:
+                   
         if (buf[0] == 0xFE) {
             if ((connection->bytesRemaining = connection->responseSize) > 0) {
                 connection->bytesReceived = 0;
