@@ -15,18 +15,18 @@ Tip: If experimenting with 2048 image size, then consider adjusting the second c
 
 1. Clear entire flash <optional>
 
-sudo python -m esptool --baud 921600 --port /dev/ttyUSB0 --before no_reset --after no_reset erase_flash
+    sudo python -m esptool --baud 921600 --port /dev/ttyUSB0 --before no_reset --after no_reset erase_flash
 
 
 2. Program new firmware, bootloader and inital settings. Note: Adjust the com port to your setup
 
-sudo python -m esptool --baud 921600 --port /dev/ttyUSB0 \
---before no_reset --after no_reset write_flash \
---flash_size 4MB --flash_freq 80m --flash_mode qio \
-0x000000 resources/boot_v1.7.bin \
-0x001000 build/httpd.user1.bin \
-0x3fc000 resources/esp_init_data_default_v08.bin \
-0x3fe000 resources/blank.bin 
+    sudo python -m esptool --baud 921600 --port /dev/ttyUSB0 \
+    --before no_reset --after no_reset write_flash \
+    --flash_size 4MB --flash_freq 80m --flash_mode qio \
+    0x000000 resources/boot_v1.7.bin \
+    0x001000 build/httpd.user1.bin \
+    0x3fc000 resources/esp_init_data_default_v08.bin \
+    0x3fe000 resources/blank.bin 
 
 
 
