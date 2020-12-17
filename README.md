@@ -4,10 +4,9 @@
 
 Compile the binaries from the root of the Parallax-ESP folder
 
-    ```
     make clean
     make
-    ```
+    
 
 Run these commands to program the Parallax WiFi module with 4MB flash
 Note that the Makefile is set for 4096 flash size, and 1024 image size
