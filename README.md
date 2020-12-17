@@ -1,6 +1,6 @@
 # Parallax-ESP README #
 
-# Work-In-Progress programming details
+# Firmware over serial programming details
 
 Compile the binaries from the root of the Parallax-ESP folder
 
@@ -10,13 +10,15 @@ Compile the binaries from the root of the Parallax-ESP folder
 
 Run these commands to program the Parallax WiFi module with 4MB flash
 Note that the Makefile is set for 4096 flash size, and 1024 image size
-Tip: If experimenting with 2048 image size, then adjust the second command : 4MB becomes 4MB-c1
+Tip: If experimenting with 2048 image size, then consider adjusting the second command : 4MB becomes 4MB-c1
 
-1. 
+
+1. Clear entire flash <optional>
 
 sudo python -m esptool --baud 921600 --port /dev/ttyUSB0 --before no_reset --after no_reset erase_flash
 
-2.
+
+2. Program new firmware, bootloader and inital settings. Note: Adjust the com port to your setup
 
 sudo python -m esptool --baud 921600 --port /dev/ttyUSB0 \
 --before no_reset --after no_reset write_flash \
@@ -24,8 +26,7 @@ sudo python -m esptool --baud 921600 --port /dev/ttyUSB0 \
 0x000000 resources/boot_v1.7.bin \
 0x001000 build/httpd.user1.bin \
 0x3fc000 resources/esp_init_data_default_v08.bin \
-0x3fe000 resources/blank.bin
-    
+0x3fe000 resources/blank.bin 
 
 
 
