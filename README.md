@@ -1,7 +1,7 @@
 # Parallax-ESP README #
 
 # Firmware compilation summary 
-  (refer to build environment setup instructions later in this document)
+##### (refer to build environment setup instructions later in this document)
 
 Compile the binaries from the root of the Parallax-ESP folder
 
@@ -40,15 +40,17 @@ Compile the binaries from the root of the Parallax-ESP folder
     ```
 
 
-Tip: If wanting to use a module with 4MB flash, then either use the above 2MB firmware (in which case only 2MB of flash will be used), 
+- Tip: If wanting to use a module with 4MB flash, then either use the above 2MB firmware (in which case only 2MB of flash will be used), 
 or re-compile the firmware after adjusting makefile to use the larger flash size. And then change the 2MB to 4MB in the esptool command.
 
 
-Tip: Verify flash memory size of the Parallax WiFi module <optional>
-     In the reply, "Device: 4015" means 2MB, "Device: 4016" means 4MB.
+- Tip: Verify flash memory size of the Parallax WiFi module
+       (In the reply, "Device: 4015" means 2MB, "Device: 4016" means 4MB).
+
 
     ```python
-    sudo python -m esptool --baud 921600 --port /dev/ttyUSB0 --before no_reset --after no_reset flash_id
+    sudo python -m esptool --baud 921600 --port /dev/ttyUSB0 \
+    --before no_reset --after no_reset flash_id
     ```
 
 
