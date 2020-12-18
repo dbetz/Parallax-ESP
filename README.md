@@ -1,6 +1,7 @@
 # Parallax-ESP README #
 
-# Firmware compilation summary (refer to build environment setup instructions later in this document)
+# Firmware compilation summary 
+  (refer to build environment setup instructions later in this document)
 
 Compile the binaries from the root of the Parallax-ESP folder
 
@@ -14,9 +15,9 @@ Compile the binaries from the root of the Parallax-ESP folder
 
  # Firmware over serial programming details
 
- Run these commands to program the Parallax WiFi module with either 2MB or 4MB flash
- Note that the Makefile is set for 2048 flash size, and 1024 image size (512+512), leaving 1024 bytes free for user files.
- Note that the following example commands are for linux. Adjust the com port appropriately, and for Windows use "COMx" notation instead of "/dev/ttyUSBx"
+ Run these commands to program the Parallax WiFi module with either 2MB or 4MB flash.
+ - Note that the Makefile is set for 2048 flash size, and 1024 image size (512+512), leaving 1024 bytes free for user files.
+ - Note that the following example commands are for linux. Adjust the com port appropriately, and for Windows use "COMx" notation instead of "/dev/ttyUSBx"
 
 
 1. Clear entire flash <optional>
