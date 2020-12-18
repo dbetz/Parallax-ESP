@@ -44,7 +44,7 @@ VERSION=$(GIT_VERSION) ($(shell date "+%Y-%m-%d %H:%M:%S")$(GIT_COMMIT_HASH_SUFF
 $(info VERSION $(VERSION))
 
 #SPI flash size, in K
-ESP_SPI_FLASH_SIZE_K=4096
+ESP_SPI_FLASH_SIZE_K=2048
 #Amount of the flash to use for the image(s)
 ESP_SPI_IMAGE_SIZE_K=1024
 #0: QIO, 1: QOUT, 2: DIO, 3: DOUT
