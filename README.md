@@ -20,7 +20,7 @@ Compile the binaries from the root of the Parallax-ESP folder
  - Note that the following example commands are for linux. Adjust the com port appropriately, and for Windows use "COMx" notation instead of "/dev/ttyUSBx"
 
 
-1. Clear entire flash <optional>
+1. Clear entire flash `optional`
 
     ```python
     sudo python -m esptool --baud 921600 --port /dev/ttyUSB0 --before no_reset --after no_reset erase_flash
@@ -36,7 +36,8 @@ Compile the binaries from the root of the Parallax-ESP folder
     0x000000 resources/boot_v1.7.bin \
     0x001000 build/httpd.user1.bin \
     0x1fc000 resources/esp_init_data_default_v08.bin \
-    0x1fe000 resources/blank.bin 0x07e000 resources/blank.bin 
+    0x1fe000 resources/blank.bin 0x1fa000 resources/blank.bin \
+    0x07e000 resources/blank.bin 0x07f000 resources/blank.bin 
     ```
 
 
