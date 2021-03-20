@@ -149,19 +149,20 @@ static void ICACHE_FLASH_ATTR tcp_recv_cb(void *arg, char *data, unsigned short 
     struct espconn *conn = (struct espconn *)arg;
     sscp_connection *c = (sscp_connection *)conn->reverse;
     sscp_log("TCP: %d received %d bytes", c->hdr.handle, len);
-    if (!(c->flags & CONNECTION_RXFULL)) {
-        i = c->rxCount;
-        if ((len + i)> SSCP_RX_BUFFER_MAX)
-            len = SSCP_RX_BUFFER_MAX - i;
+    i = c->rxCount;
+    if ((len + i)> SSCP_RX_BUFFER_MAX)
+         len = SSCP_RX_BUFFER_MAX - i;
+    if (len > 0) {
         os_memcpy(c->rxBuffer + i, data, len);
         c->rxCount = i + len;
         c->rxIndex = 0;
         if (c->rxCount >= SSCP_RX_BUFFER_MAX)
             c->flags |= CONNECTION_RXFULL;
         sscp_log("TCP: added %d bytes to buffer", len);
-        if (flashConfig.sscp_events)
+        if (flashConfig.sscp_events && !(c->flags & CONNECTION_RXFULL))
             send_data_event(c, '!');
     }
+    c->flags |= CONNECTION_RXFULL;
 }
 
 static void ICACHE_FLASH_ATTR tcp_recon_cb(void *arg, sint8 errType)
