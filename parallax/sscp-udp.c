@@ -53,14 +53,14 @@ void ICACHE_FLASH_ATTR udp_do_connect(int argc, char *argv[])
 	conn->proto.udp->remote_port = atoi(argv[2]);
 	if (conn->proto.udp->remote_port > 1023) {
 		conn->proto.udp->local_port = conn->proto.udp->remote_port;
-		}
+	}
 	conn->reverse = (void *)c;
 
 	espconn_regist_recvcb(conn, udp_recv_cb);
 	espconn_regist_sentcb(conn, udp_sent_cb);
 	
 	if (isdigit((int)*argv[1])) {
-		ipAddr.addr = ipaddr_addr(argv[1]);
+            ipAddr.addr = ipaddr_addr(argv[1]);
 	}
 	else {
 		switch (espconn_gethostbyname(conn, argv[1], &ipAddr, dns_cb)) {
