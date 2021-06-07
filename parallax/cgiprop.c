@@ -277,6 +277,8 @@ int ICACHE_FLASH_ATTR cgiPropLoadP1File(HttpdConnData *connData)
     connection->st_load_segment_delay = P1_LOAD_SEGMENT_DELAY;
     connection->st_load_segment_max_size = P1_LOAD_SEGMENT_MAX_SIZE;
     connection->st_reset_delay_2 = P1_RESET_DELAY_2;
+    
+    DBG("cgiPropLoadP1File: reset-pin %d, reset-delay %d\n", connection->resetPin, connection->st_reset_delay_2);
 
     return cgiPropLoadFile(connData);
 
@@ -290,7 +292,9 @@ int ICACHE_FLASH_ATTR cgiPropLoadP2File(HttpdConnData *connData)
     connection->st_load_segment_delay = P2_LOAD_SEGMENT_DELAY;
     connection->st_load_segment_max_size = P2_LOAD_SEGMENT_MAX_SIZE;
     connection->st_reset_delay_2 = P2_RESET_DELAY_2;
-
+    
+    DBG("cgiPropLoadP2File: reset-pin %d, reset-delay %d\n", connection->resetPin, connection->st_reset_delay_2);
+    
     return cgiPropLoadFile(connData);
 
 }
@@ -345,7 +349,7 @@ int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
     if (!getIntArg(connData, "final-baud-rate", &connection->finalBaudRate))
         connection->finalBaudRate = flashConfig.baud_rate;
 //    if (!getIntArg(connData, "reset-pin", &connection->resetPin))
-        connection->resetPin = flashConfig.reset_pin;
+    connection->resetPin = flashConfig.reset_pin;
 
     DBG("load-file: file %s, size %d, baud-rate %d, final-baud-rate %d, reset-pin %d, reset-delay %d\n", fileName, fileSize, connection->baudRate, connection->finalBaudRate, connection->resetPin, connection->st_reset_delay_2);
     
@@ -392,7 +396,7 @@ int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
     if (!getIntArg(connData, "reset-delay", &connection->st_reset_delay_2))
         connection->st_reset_delay_2 = P1_RESET_DELAY_2; // default to P1 reset delay
 
-    httpd_printf("reset: pin %d, delay %d\n", connection->resetPin, connection->st_reset_delay_2);
+    DBG("reset: pin %d, delay %d\n", connection->resetPin, connection->st_reset_delay_2);
     
     connection->image = NULL;
 
