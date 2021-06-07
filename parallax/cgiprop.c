@@ -91,9 +91,13 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     
     memset(&myConnection, 0, sizeof(PropellerConnection));
     myConnection.state = stIdle;
-    myConnection.p2LoaderMode = 0;
     resetButtonState = 1;
     resetButtonCount = 0;
+    
+    myConnection.p2LoaderMode = ddoff;
+    myConnection.st_load_segment_delay = P1_LOAD_SEGMENT_DELAY;
+    myConnection.st_load_segment_max_size = P1_LOAD_SEGMENT_MAX_SIZE;
+    myConnection.st_reset_delay_2 = P1_RESET_DELAY_2;
     
     gpio_output_set(0, 0, 0, 1 << RESET_BUTTON_PIN);
     os_timer_setfn(&resetButtonTimer, resetButtonTimerCallback, 0);
@@ -202,7 +206,7 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     return 0;
 }
 
-int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
+int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData) // This func is called when SimpleIDE/BlocklyProp perform overair firmware programming of Propeller 1
 {
     PropellerConnection *connection = &myConnection;
 
@@ -246,8 +250,15 @@ int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
         connection->responseSize = 0;
     if (!getIntArg(connData, "response-timeout", &connection->responseTimeout))
         connection->responseTimeout = 1000;
+    
+    // P1 only feature, so force timing values to P1 mode
+    connection->p2LoaderMode = ddoff;
+    connection->st_load_segment_delay = P1_LOAD_SEGMENT_DELAY;
+    connection->st_load_segment_max_size = P1_LOAD_SEGMENT_MAX_SIZE;
+    connection->st_reset_delay_2 = P1_RESET_DELAY_2;
 
-    DBG("load: size %d, baud-rate %d, final-baud-rate %d, reset-pin %d\n", connData->post->buffLen, connection->baudRate, connection->finalBaudRate, connection->resetPin);
+    DBG("cgiPropLoad: size %d, baud-rate %d, final-baud-rate %d, reset-pin %d, reset-delay %d\n", connData->post->buffLen, connection->baudRate, connection->finalBaudRate, connection->resetPin, connection->st_reset_delay_2);
+    
     if (connection->responseSize > 0)
         DBG("  responseSize %d, responseTimeout %d\n", connection->responseSize, connection->responseTimeout);
 
@@ -262,7 +273,7 @@ int ICACHE_FLASH_ATTR cgiPropLoadP1File(HttpdConnData *connData)
 {
     PropellerConnection *connection = &myConnection;
     
-    connection->p2LoaderMode = off;
+    connection->p2LoaderMode = ddoff;
     connection->st_load_segment_delay = P1_LOAD_SEGMENT_DELAY;
     connection->st_load_segment_max_size = P1_LOAD_SEGMENT_MAX_SIZE;
     connection->st_reset_delay_2 = P1_RESET_DELAY_2;
@@ -336,9 +347,8 @@ int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
 //    if (!getIntArg(connData, "reset-pin", &connection->resetPin))
         connection->resetPin = flashConfig.reset_pin;
 
-    DBG("load-file: file %s, size %d, baud-rate %d, final-baud-rate %d, reset-pin %d\n", fileName, fileSize, connection->baudRate, connection->finalBaudRate, connection->resetPin);
-    httpd_printf("p2-load-file: file %s, size %d, baud-rate %d, final-baud-rate %d, reset-pin %d\n", fileName, fileSize, connection->baudRate, connection->finalBaudRate, connection->resetPin);
-
+    DBG("load-file: file %s, size %d, baud-rate %d, final-baud-rate %d, reset-pin %d, reset-delay %d\n", fileName, fileSize, connection->baudRate, connection->finalBaudRate, connection->resetPin, connection->st_reset_delay_2);
+    
     connection->completionCB = wifiLoadCompletionCB;
     startLoading(connection, NULL, fileSize);
 
@@ -379,11 +389,11 @@ int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
 //    if (!getIntArg(connData, "reset-pin", &connection->resetPin))
         connection->resetPin = flashConfig.reset_pin;
 
-    DBG("reset: reset-pin %d\n", connection->resetPin);
-    
     if (!getIntArg(connData, "reset-delay", &connection->st_reset_delay_2))
         connection->st_reset_delay_2 = P1_RESET_DELAY_2; // default to P1 reset delay
 
+    httpd_printf("reset: pin %d, delay %d\n", connection->resetPin, connection->st_reset_delay_2);
+    
     connection->image = NULL;
 
 //    makeGpio(connection->resetPin);

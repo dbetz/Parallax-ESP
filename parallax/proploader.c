@@ -10,7 +10,7 @@
 #include "proploader.h"
 #include "uart.h"
 
-#define P2LOADER_DEBUG
+//#define P2LOADER_DEBUG
           
 
 // Propeller Download Stream Translator array.  Index into this array using the "Binary Value" (usually 5 bits) to translate,

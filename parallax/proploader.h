@@ -57,7 +57,7 @@ typedef enum {
 
 
 typedef enum {
-/* 0 */    off,
+/* 0 */    ddoff,
 /* 1 */    dragdrop
 
 } P2LoaderMode;
