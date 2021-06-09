@@ -9,6 +9,22 @@
 
     var xhr=j();
 
+    window.onload=function(e) {
+
+      if (getSetting('cmd-p2-ddloader') == "0")
+        document.getElementById("p2-ddloaderitem").className = "nodisplay"; 
+      else 
+        document.getElementById("p2-ddloaderitem").className = ""; 
+    }
+
+    function getSetting(name) {
+        var req = new XMLHttpRequest();
+        var url = '/wx/setting?name=' + name;
+        req.open('GET', url, false);
+        req.send();
+        return req.responseText;
+    }
+
     function doReboot() {
       //Grab the /flash/reboot url in order to reboot into the new firmware.
       xhr.open("GET", "reboot");
@@ -80,6 +96,7 @@
         <li><a href="../index.html">Home</a></li>
         <li><a href="../wifi/wifi.html">Networks</a></li>
         <li><a href="../update-ffs.html">Files</a></li>
+        <li id="p2-ddloaderitem" class="nodisplay"><a href="../p2-ddloader.html">P2 Drag/Drop Loader</a></li>
         <li><a href="../settings.html">Settings</a></li>
         <li><a href="index.html">Firmware</a></li>
         <li><a href="../log.html">Debug Log</a></li>

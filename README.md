@@ -1,5 +1,63 @@
 # Parallax-ESP README #
 
+# Firmware compilation summary 
+##### (refer to build environment setup instructions later in this document)
+
+Compile the binaries from the root of the Parallax-ESP folder
+
+    make clean
+    make
+
+ or make with optional flags to compile for the Parallax Badge WX, SKU 20300, https://www.parallax.com/product/badge-wx-for-blocklyprop/
+
+    make EXTRA_CFLAGS=-DAUTO_LOAD    
+
+
+ # Firmware over serial programming details
+
+ Run these commands to program the Parallax WiFi module with either 2MB or 4MB flash.
+ - Note that the Makefile is set for 2048 flash size, and 1024 image size (512+512), leaving 1024 bytes free for user files.
+ - Note that the following example commands are for linux. Adjust the com port appropriately, and for Windows use "COMx" notation instead of "/dev/ttyUSBx"
+
+
+1. Clear entire flash `optional`
+
+    ```python
+    sudo python -m esptool --baud 921600 --port /dev/ttyUSB0 --before no_reset --after no_reset erase_flash
+    ```
+
+
+2. Program new firmware, bootloader and inital settings. Note: Adjust the com port to your setup
+
+    ```python
+    sudo python -m esptool --baud 921600 --port /dev/ttyUSB0 \
+    --before no_reset --after no_reset write_flash \
+    --flash_size 2MB --flash_freq 80m --flash_mode qio \
+    0x000000 resources/boot_v1.7.bin \
+    0x001000 build/httpd.user1.bin \
+    0x1fc000 resources/esp_init_data_default_v08.bin \
+    0x1fe000 resources/blank.bin 0x1fa000 resources/blank.bin \
+    0x07e000 resources/blank.bin 0x07f000 resources/blank.bin 
+    ```
+
+
+- Tip: If wanting to use a module with 4MB flash, then either use the above 2MB firmware (in which case only 2MB of flash will be used), 
+or re-compile the firmware after adjusting makefile to use the larger flash size. And then change the 2MB to 4MB in the esptool command.
+
+
+- Tip: Verify flash memory size of the Parallax WiFi module
+       (In the reply, "Device: 4015" means 2MB, "Device: 4016" means 4MB).
+
+
+    ```python
+    sudo python -m esptool --baud 921600 --port /dev/ttyUSB0 \
+    --before no_reset --after no_reset flash_id
+    ```
+
+
+
+# Original README.md content continues...
+
 This project contains firmware for the Parallax WX Wi-Fi module. The code is based on
 the esp-httpd project by by Jeroen Domburg with some features added from the esp-link
 project by Thorsten von Eicken.

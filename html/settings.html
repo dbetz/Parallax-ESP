@@ -33,6 +33,7 @@
                 <option value="230400">230400</option>
                 <option value="460800">460800</option>
                 <option value="921600">921600</option>
+                <option value="2000000">2000000</option>
               </select>
             </td>
           </tr>
@@ -61,6 +62,7 @@
                 <option value="230400">230400</option>
                 <option value="460800">460800</option>
                 <option value="921600">921600</option>
+                <option value="2000000">2000000</option>
               </select>
             </td>
           </tr>
@@ -146,7 +148,7 @@
               </select>
             </td>
           </tr>
-	  <tr>
+	        <tr>
             <td>Hide from Loader:</td>
             <td>
               <select id="hide-loader">
@@ -155,7 +157,17 @@
               </select>
             </td>
           </tr>
+          <tr>
+            <td>P2 Drag/Drop Loader:</td>
+            <td>
+              <select id="p2-drag-drop-loader" onchange="on_p2_ddloader_change();">
+                <option value="0">Disabled</option>
+                <option value="1">Enabled</option>
+              </select>
+            </td>
+          </tr>
         </table>
+        <br />
         <h2>Save Settings</h2>
         <p>
           <input type='button' value='Save' onclick='on_save();'>
@@ -172,6 +184,7 @@
         <li><a href="index.html">Home</a></li>
         <li><a href="wifi/wifi.html">Networks</a></li>
         <li><a href="update-ffs.html">Files</a></li>
+        <li id="p2-ddloaderitem" class="nodisplay"><a href="p2-ddloader.html">P2 Drag/Drop Loader</a></li>
         <li><a href="settings.html">Settings</a></li>
         <li><a href="flash/index.html">Firmware</a></li>
         <li><a href="log.html">Debug Log</a></li>
@@ -202,6 +215,7 @@
   var pauseCharsCtl;
   var eventsCtl;
   var hideLoaderCtl;
+  var p2DragDropCtl;
 
   function init()
   {
@@ -219,6 +233,7 @@
     pauseCharsCtl = document.getElementById('pause-chars');
     enableEventsCtl = document.getElementById('enable-events');
     hideLoaderCtl = document.getElementById('hide-loader');
+    p2DragDropCtl = document.getElementById('p2-drag-drop-loader');
     loadSettings();
   }
 
@@ -282,6 +297,22 @@
       hideLoaderCtl.selectedIndex = 0;
     else
       hideLoaderCtl.selectedIndex = 1;
+
+    if (getSetting('cmd-p2-ddloader') == "0") {
+      p2DragDropCtl.selectedIndex = 0;
+      document.getElementById("p2-ddloaderitem").className = "nodisplay"; }
+    else {
+      p2DragDropCtl.selectedIndex = 1; 
+      document.getElementById("p2-ddloaderitem").className = ""; } 
+  }
+
+  function on_p2_ddloader_change() {
+
+    if (document.getElementById("p2-drag-drop-loader").value == "0") 
+      document.getElementById("p2-ddloaderitem").className = "nodisplay"; 
+    else 
+      document.getElementById("p2-ddloaderitem").className = "";  
+
   }
 
   function on_save() {
@@ -300,6 +331,7 @@
     setSetting('cmd-pause-chars', pauseCharsCtl.value);
     setSetting('cmd-events', enableEventsCtl.value);
     setSetting('cmd-loader', hideLoaderCtl.value);
+    setSetting('cmd-p2-ddloader', p2DragDropCtl.value);
     setMessage("Settings saved");
   }
 

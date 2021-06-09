@@ -16,7 +16,7 @@
 #define SSCP_PATH_MAX       32
 
 #define SSCP_CONNECTION_MAX 4
-#define SSCP_RX_BUFFER_MAX  4096
+#define SSCP_RX_BUFFER_MAX  1024 // 4096 was OK from tablet/smartphone, but not from desktop Chrome
 #define SSCP_TX_BUFFER_MAX  1024
 
 #define SSCP_HANDLE_MAX     (SSCP_LISTENER_MAX + SSCP_CONNECTION_MAX)

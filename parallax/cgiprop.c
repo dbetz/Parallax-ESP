@@ -94,6 +94,11 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     resetButtonState = 1;
     resetButtonCount = 0;
     
+    myConnection.p2LoaderMode = ddoff;
+    myConnection.st_load_segment_delay = P1_LOAD_SEGMENT_DELAY;
+    myConnection.st_load_segment_max_size = P1_LOAD_SEGMENT_MAX_SIZE;
+    myConnection.st_reset_delay_2 = P1_RESET_DELAY_2;
+    
     gpio_output_set(0, 0, 0, 1 << RESET_BUTTON_PIN);
     os_timer_setfn(&resetButtonTimer, resetButtonTimerCallback, 0);
     os_timer_arm(&resetButtonTimer, RESET_BUTTON_SAMPLE_INTERVAL, 1);
@@ -143,7 +148,7 @@ int ICACHE_FLASH_ATTR cgiPropInit()
 
     os_printf("Using pin %d for reset\n", flashConfig.reset_pin);
     makeGpio(flashConfig.reset_pin);
-//    GPIO_OUTPUT_SET(flashConfig.reset_pin, 1);
+    // GPIO_OUTPUT_SET(flashConfig.reset_pin, 1);
     GPIO_DIS_OUTPUT(flashConfig.reset_pin);
 
     uint32_t fs_base, fs_size;
@@ -201,7 +206,7 @@ int ICACHE_FLASH_ATTR cgiPropInit()
     return 0;
 }
 
-int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
+int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData) // This func is called when SimpleIDE/BlocklyProp perform overair firmware programming of Propeller 1
 {
     PropellerConnection *connection = &myConnection;
 
@@ -245,8 +250,15 @@ int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
         connection->responseSize = 0;
     if (!getIntArg(connData, "response-timeout", &connection->responseTimeout))
         connection->responseTimeout = 1000;
+    
+    // P1 only feature, so force timing values to P1 mode
+    connection->p2LoaderMode = ddoff;
+    connection->st_load_segment_delay = P1_LOAD_SEGMENT_DELAY;
+    connection->st_load_segment_max_size = P1_LOAD_SEGMENT_MAX_SIZE;
+    connection->st_reset_delay_2 = P1_RESET_DELAY_2;
 
-    DBG("load: size %d, baud-rate %d, final-baud-rate %d, reset-pin %d\n", connData->post->buffLen, connection->baudRate, connection->finalBaudRate, connection->resetPin);
+    DBG("cgiPropLoad: size %d, baud-rate %d, final-baud-rate %d, reset-pin %d, reset-delay %d\n", connData->post->buffLen, connection->baudRate, connection->finalBaudRate, connection->resetPin, connection->st_reset_delay_2);
+    
     if (connection->responseSize > 0)
         DBG("  responseSize %d, responseTimeout %d\n", connection->responseSize, connection->responseTimeout);
 
@@ -257,9 +269,41 @@ int ICACHE_FLASH_ATTR cgiPropLoad(HttpdConnData *connData)
     return HTTPD_CGI_MORE;
 }
 
+int ICACHE_FLASH_ATTR cgiPropLoadP1File(HttpdConnData *connData)
+{
+    PropellerConnection *connection = &myConnection;
+    
+    connection->p2LoaderMode = ddoff;
+    connection->st_load_segment_delay = P1_LOAD_SEGMENT_DELAY;
+    connection->st_load_segment_max_size = P1_LOAD_SEGMENT_MAX_SIZE;
+    connection->st_reset_delay_2 = P1_RESET_DELAY_2;
+    
+    DBG("cgiPropLoadP1File: reset-pin %d, reset-delay %d\n", connection->resetPin, connection->st_reset_delay_2);
+
+    return cgiPropLoadFile(connData);
+
+}
+
+int ICACHE_FLASH_ATTR cgiPropLoadP2File(HttpdConnData *connData)
+{
+    PropellerConnection *connection = &myConnection;
+    
+    connection->p2LoaderMode = dragdrop;
+    connection->st_load_segment_delay = P2_LOAD_SEGMENT_DELAY;
+    connection->st_load_segment_max_size = P2_LOAD_SEGMENT_MAX_SIZE;
+    connection->st_reset_delay_2 = P2_RESET_DELAY_2;
+    
+    DBG("cgiPropLoadP2File: reset-pin %d, reset-delay %d\n", connection->resetPin, connection->st_reset_delay_2);
+    
+    return cgiPropLoadFile(connData);
+
+}
+
 int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
 {
     PropellerConnection *connection = &myConnection;
+    
+    
     char fileName[128];
     int fileSize = 0;
 
@@ -305,14 +349,15 @@ int ICACHE_FLASH_ATTR cgiPropLoadFile(HttpdConnData *connData)
     if (!getIntArg(connData, "final-baud-rate", &connection->finalBaudRate))
         connection->finalBaudRate = flashConfig.baud_rate;
 //    if (!getIntArg(connData, "reset-pin", &connection->resetPin))
-        connection->resetPin = flashConfig.reset_pin;
+    connection->resetPin = flashConfig.reset_pin;
 
-    DBG("load-file: file %s, size %d, baud-rate %d, final-baud-rate %d, reset-pin %d\n", fileName, fileSize, connection->baudRate, connection->finalBaudRate, connection->resetPin);
-
+    DBG("load-file: file %s, size %d, baud-rate %d, final-baud-rate %d, reset-pin %d, reset-delay %d\n", fileName, fileSize, connection->baudRate, connection->finalBaudRate, connection->resetPin, connection->st_reset_delay_2);
+    
     connection->completionCB = wifiLoadCompletionCB;
     startLoading(connection, NULL, fileSize);
 
     return HTTPD_CGI_MORE;
+
 }
 
 int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
@@ -348,8 +393,11 @@ int ICACHE_FLASH_ATTR cgiPropReset(HttpdConnData *connData)
 //    if (!getIntArg(connData, "reset-pin", &connection->resetPin))
         connection->resetPin = flashConfig.reset_pin;
 
-    DBG("reset: reset-pin %d\n", connection->resetPin);
+    if (!getIntArg(connData, "reset-delay", &connection->st_reset_delay_2))
+        connection->st_reset_delay_2 = P1_RESET_DELAY_2; // default to P1 reset delay
 
+    DBG("reset: pin %d, delay %d\n", connection->resetPin, connection->st_reset_delay_2);
+    
     connection->image = NULL;
 
 //    makeGpio(connection->resetPin);
@@ -473,7 +521,7 @@ static void ICACHE_FLASH_ATTR startLoading(PropellerConnection *connection, cons
 
     uart0_config(connection->baudRate, ONE_STOP_BIT);
 
-//    makeGpio(connection->resetPin);
+    // makeGpio(connection->resetPin);
     GPIO_OUTPUT_SET(connection->resetPin, 0);
     armTimer(connection, RESET_DELAY_1);
     connection->state = stReset;
@@ -519,7 +567,7 @@ static void ICACHE_FLASH_ATTR timerCallback(void *data)
     case stReset:
 //        GPIO_OUTPUT_SET(connection->resetPin, 1);
         GPIO_DIS_OUTPUT(connection->resetPin);
-        armTimer(connection, RESET_DELAY_2);
+        armTimer(connection, connection->st_reset_delay_2);
         if (connection->image || connection->file) {
             connection->state = stTxHandshake;
             programmingCB = readCallback;
@@ -545,14 +593,16 @@ static void ICACHE_FLASH_ATTR timerCallback(void *data)
                 connection->state = stVerifyChecksum;
             }
             else {
-                armTimer(connection, LOAD_SEGMENT_DELAY);
+                armTimer(connection, connection->st_load_segment_delay);
                 connection->state = stLoadContinue;
             }
         }
         break;
     case stVerifyChecksum:
         if (connection->retriesRemaining > 0) {
-            uart_tx_one_char(UART0, 0xF9);
+            
+            uart_tx_one_char(UART0, (connection->p2LoaderMode == dragdrop) ? 0x20 : 0xF9); // Space is ignored by P2 chip- included here for debugging clarity
+                        
             armTimer(connection, connection->retryDelay);
             --connection->retriesRemaining;
         }
@@ -589,15 +639,16 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
         // just ignore data received when we're not expecting it
         break;
     case stRxHandshakeStart:    // skip junk before handshake
+        
         while (length > 0) {
-            if (*buf == 0xEE) {
+            if (*buf == (connection->p2LoaderMode == dragdrop)? 0x0d : 0xee) { // 0x0d = P2, 0xee = P1
                 connection->state = stRxHandshake;
                 break;
             }
-            DBG("Ignoring %02x looking for 0xEE\n", *buf);
+            //httpd_printf("Ignoring %02x looking for %02x\n", *buf, (connection->p2LoaderMode == dragdrop)? 0x0d : 0xee);
             --length;
             ++buf;
-        }
+        }      
         if (connection->state == stRxHandshakeStart || length == 0)
             break;
         // fall through
@@ -618,19 +669,19 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
                     abortLoading(connection, lsWrongPropellerVersion);
                 }
                 else {
-                    if (ploadLoadImage(connection, ltDownloadAndRun, &finished) == 0) {
-                        if (finished) {
-                            armTimer(connection, connection->retryDelay);
-                            connection->state = stVerifyChecksum;
+                        if (ploadLoadImage(connection, ltDownloadAndRun, &finished) == 0) {
+                            if (finished) {
+                                armTimer(connection, connection->retryDelay);
+                                connection->state = stVerifyChecksum;
+                            }
+                            else {
+                                armTimer(connection, connection->st_load_segment_delay);
+                                connection->state = stLoadContinue;
+                            }
                         }
                         else {
-                            armTimer(connection, LOAD_SEGMENT_DELAY);
-                            connection->state = stLoadContinue;
+                            abortLoading(connection, lsLoadImageFailed);
                         }
-                    }
-                    else {
-                        abortLoading(connection, lsLoadImageFailed);
-                    }
                 }
                 break;
             case stStartAck:
@@ -642,6 +693,7 @@ static void ICACHE_FLASH_ATTR readCallback(char *buf, short length)
         }
         break;
     case stVerifyChecksum:
+                   
         if (buf[0] == 0xFE) {
             if ((connection->bytesRemaining = connection->responseSize) > 0) {
                 connection->bytesReceived = 0;
