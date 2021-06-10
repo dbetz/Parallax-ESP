@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
 	write(of, &hdr, sizeof(hdr));
 	write(of, fc1, l1);
 	write(of, fc2, l2);
-	printf("Header: %d bytes, user1: %d bytes, user2: %d bytes.\n", sizeof(hdr), (int)l1, (int)l2);
+	printf("Header: %ld bytes, user1: %d bytes, user2: %d bytes.\n", sizeof(hdr), (int)l1, (int)l2);
 	close(of);
 	exit(0);
 }
