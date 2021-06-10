@@ -5,7 +5,6 @@ release/patch
 *.zip
 *.bin
 *.elf
-*.ld
 *.bak
 *~
 test-framework-*
