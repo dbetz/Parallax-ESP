@@ -41,6 +41,7 @@ void ICACHE_FLASH_ATTR httpdSendResponse(HttpdConnData *connData, int code, char
 static ETSTimer resetButtonTimer;
 static int resetButtonState;
 static int resetButtonCount;
+static int resetFourPressFired;
 
 static void wifiLoadCompletionCB(PropellerConnection *connection, LoadStatus status);
 static void loadCompletionCB(PropellerConnection *connection, LoadStatus status);
@@ -813,9 +814,24 @@ static void ICACHE_FLASH_ATTR resetButtonTimerCallback(void *data)
                                         
 
                     else if (++buttonPressCount == RESET_BUTTON_PRESS_COUNT) {
-                        os_printf("Entering STA+AP mode\n");
-                        wifi_set_opmode(STATIONAP_MODE);
-                        buttonPressCount = 0;
+                        
+                        // - Update 2022.Oct.24.
+                        // - Only allow Reset Button recovery once after each power-cycle
+                        // - Note: Could disarm the timer after first call, but for customer remote debugging add a debuglog
+                        // -   message to represent if multiple attempts being made, and only disarm after the 2nd attempt.
+                        
+                        if (resetFourPressFired == 0) {
+                            os_printf("Entering STA+AP mode\n");
+                            wifi_set_opmode(STATIONAP_MODE);
+                            resetFourPressFired = 1;
+                            buttonPressCount = 0;
+                            
+                        } else {
+                            os_printf("Ignore 4-press recovery request. Powercycle required.\n");
+                            os_timer_disarm(&resetButtonTimer);
+                            buttonPressCount = 0;
+                        }
+                        
                     }
                     
                     
